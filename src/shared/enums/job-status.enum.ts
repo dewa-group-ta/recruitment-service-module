@@ -41,3 +41,11 @@ export enum EducationLevel {
   DOCTORATE = "doctorate",
   NO_REQUIREMENT = "no_requirement"
 }
+
+export enum CvEducationLevel {
+  SMA = 1,
+  D3 = 2,
+  S1 = 3,
+  S2 = 4,
+  S3 = 5
+}
