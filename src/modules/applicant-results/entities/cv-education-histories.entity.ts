@@ -8,7 +8,7 @@ import {
   JoinColumn
 } from "typeorm";
 import { CvDocument } from "./cv-documents.entity";
-import { CvEducationLevel } from "../../../shared/enums/job-status.enum";
+import { EducationLevel } from "../../../shared/enums/job-status.enum";
 
 @Entity("cv_education_histories")
 export class CvEducationHistory {
@@ -30,8 +30,8 @@ export class CvEducationHistory {
    * null jika tidak dapat ditentukan dari teks CV
    * Disimpan sebagai smallint, enum hanya untuk type safety di TypeScript
    */
-  @Column({ type: "enum", enum: CvEducationLevel, nullable: true })
-    level!: CvEducationLevel;
+  @Column({ type: "enum", enum: EducationLevel, nullable: true })
+    level!: EducationLevel;
 
   @Column({ type: "varchar", length: 255, nullable: true })
     major!: string;

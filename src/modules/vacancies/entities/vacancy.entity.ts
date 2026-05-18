@@ -132,6 +132,20 @@ export class Vacancy {
   @Column({ type: "int", nullable: true })
   requiredExperienceYears!: number;
 
+  // tambahan
+  //----------------------------------------------------------------
+  
+  @Column({ name: "relevant_major", type: "varchar", length: 255, nullable: true })
+  relevantMajor!: string;
+
+  @Column({ name: "role_description", type: "text", nullable: true })
+  roleDescription!: string;
+
+  @Column({ name: "required_skills", type: "text", array: true, nullable: true })
+  requiredSkills!: string[];
+  
+  //----------------------------------------------------------------
+
   // Working hours
   @Column({ type: "int", nullable: true })
   hoursPerWeekMin!: number;

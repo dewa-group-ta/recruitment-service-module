@@ -34,12 +34,12 @@ export enum SalaryPeriod {
 }
 
 export enum EducationLevel {
-  HIGH_SCHOOL = "high_school",
-  DIPLOMA = "diploma",
-  BACHELOR = "bachelor",
-  MASTER = "master",
-  DOCTORATE = "doctorate",
-  NO_REQUIREMENT = "no_requirement"
+  HIGH_SCHOOL = 1,
+  DIPLOMA = 2,
+  BACHELOR = 3,
+  MASTER = 4,
+  DOCTORATE = 5,
+  NO_REQUIREMENT = 0
 }
 
 export enum CvEducationLevel {
