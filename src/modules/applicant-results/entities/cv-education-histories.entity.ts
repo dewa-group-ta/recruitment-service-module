@@ -24,14 +24,10 @@ export class CvEducationHistory {
   @Column({ name: "cv_document_id" })
     cvDocumentId!: string;
 
-  /**
-   * Jenjang pendidikan hasil ekstraksi LLM
-   * SMA = 1, D3 = 2, S1/D4 = 3, S2 = 4, S3 = 5
-   * null jika tidak dapat ditentukan dari teks CV
-   * Disimpan sebagai smallint, enum hanya untuk type safety di TypeScript
-   */
+//baru
   @Column({ type: "enum", enum: EducationLevel, nullable: true })
     level!: EducationLevel;
+//-----
 
   @Column({ type: "varchar", length: 255, nullable: true })
     major!: string;

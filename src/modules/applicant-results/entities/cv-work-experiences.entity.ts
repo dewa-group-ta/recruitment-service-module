@@ -54,6 +54,23 @@ export class CvWorkExperience {
   @Column({ name: "duration_years", type: "float", nullable: true })
     durationYears!: number;
 
+  /**
+   * Nilai cosine similarity antara deskripsi pengalaman ini
+   * dengan role_description lowongan, hasil kalkulasi SBERT
+   * null = belum dinilai (scoring belum dijalankan)
+   */
+  @Column({ name: "similarity_score", type: "float", nullable: true })
+    similarityScore!: number;
+
+  /**
+   * Penanda apakah pengalaman ini diklasifikasikan relevan
+   * Ditetapkan true jika similarityScore >= threshold (0.4)
+   * Hanya pengalaman relevan yang dihitung durasi dan rata-rata similarity-nya
+   * null = belum dinilai (scoring belum dijalankan)
+   */
+  @Column({ name: "is_relevant", type: "boolean", nullable: true })
+    isRelevant!: boolean;
+
   @CreateDateColumn({ name: "created_at" })
     createdAt!: Date;
 

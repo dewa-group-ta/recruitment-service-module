@@ -233,6 +233,30 @@ export class VacancyResponseDto {
   })
   requiredExperienceYears: number;
 
+//-----------------------------------------------------------------
+  @ApiProperty({
+    description: "Relevant major",
+    example: "Teknik Informatika",
+    nullable: true
+  })
+  relevantMajor: string;
+
+  @ApiProperty({
+    description: "Role description",
+    example: "Membangun dan memelihara REST API, mengelola basis data PostgreSQL...",
+    nullable: true
+  })
+  roleDescription: string;
+
+  @ApiProperty({
+    description: "Required skills",
+    example: ["Node.js", "PostgreSQL", "Docker"],
+    nullable: true,
+    type: [String]
+  })
+  requiredSkills: string[];
+//-----------------------------------------------------------------
+
   @ApiProperty({
     description: "Minimum hours per week",
     example: 40,

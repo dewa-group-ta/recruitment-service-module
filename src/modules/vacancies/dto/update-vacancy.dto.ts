@@ -260,6 +260,38 @@ export class UpdateVacancyDto {
   @Min(0)
   requiredExperienceYears?: number;
 
+//-----------------------------------------------------------------
+  @ApiProperty({
+  description: "Bidang studi yang diharapkan, digunakan sebagai input SBERT untuk penilaian komponen pendidikan",
+  example: "Teknik Informatika",
+  required: false
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  relevantMajor?: string;
+
+  @ApiProperty({
+    description: "Deskripsi peran yang diharapkan, digunakan sebagai input SBERT untuk penilaian relevansi pengalaman kerja",
+    example: "Membangun dan memelihara REST API, mengelola basis data PostgreSQL...",
+    required: false
+  })
+  @IsString()
+  @IsOptional()
+  roleDescription?: string;
+
+  @ApiProperty({
+    description: "Daftar skill yang disyaratkan, akan dibandingkan secara semantik terhadap skill pelamar",
+    example: ["Node.js", "PostgreSQL", "Docker"],
+    required: false,
+    type: [String]
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  requiredSkills?: string[];
+//-----------------------------------------------------------------
+
   @ApiProperty({
     description: "Minimum hours per week",
     example: 40,
