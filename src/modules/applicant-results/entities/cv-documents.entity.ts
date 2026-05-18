@@ -25,13 +25,13 @@ export class CvDocument {
     applicationId!: string;
 
   @Column({ name: "applicant_name", type: "varchar", length: 255, nullable: true })
-    applicantName!: string;
+    applicantName!: string | null;
 
   @Column({ type: "text", array: true, nullable: true })
-    skills!: string[];
+    skills!: string[] | null;
 
   @Column({ name: "parsed_at", type: "timestamp", nullable: true })
-    parsedAt!: Date;
+    parsedAt!: Date | null;
 
   @OneToMany(() => CvEducationHistory, (edu) => edu.cvDocument, {
         cascade: true

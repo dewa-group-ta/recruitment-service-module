@@ -6,6 +6,7 @@ import { CvWorkExperience } from "./entities/cv-work-experiences.entity";
 import { EvaluationResult } from "./entities/evaluation-results.entity";
 import { Application } from "../applicants/entities/application.entity";
 import { Vacancy } from "../vacancies/entities/vacancy.entity";
+import { HttpModule } from "@nestjs/axios";
 
 @Module({
   imports: [
@@ -16,7 +17,8 @@ import { Vacancy } from "../vacancies/entities/vacancy.entity";
       EvaluationResult,
       Application,
       Vacancy
-    ])
+    ]),
+    HttpModule
   ],
   controllers: [],
   providers: [],

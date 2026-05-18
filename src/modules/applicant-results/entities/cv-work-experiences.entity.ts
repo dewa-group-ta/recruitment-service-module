@@ -24,27 +24,27 @@ export class CvWorkExperience {
     cvDocumentId!: string;
 
   @Column({ type: "varchar", length: 255, nullable: true })
-    role!: string;
+    role!: string | null;
 
   @Column({ type: "varchar", length: 255, nullable: true })
-    company!: string;
+    company!: string | null;
 
   /**
    * Deskripsi tanggung jawab — input SBERT untuk perhitungan
    * cosine similarity terhadap role_description lowongan
    */
   @Column({ type: "text", nullable: true })
-    description!: string;
+    description!: string | null;
 
   /**
    * Disimpan sebagai string karena format tanggal di CV sangat variatif
    * contoh: "Jan 2022", "2022-01", "Januari 2022", "sekarang", "present"
    */
   @Column({ name: "start_date", type: "varchar", length: 30, nullable: true })
-    startDate!: string;
+    startDate!: string | null;
 
   @Column({ name: "end_date", type: "varchar", length: 30, nullable: true })
-    endDate!: string;
+    endDate!: string | null;
 
   /**
    * Durasi dalam satuan tahun, hasil kalkulasi postprocess LLM
@@ -52,7 +52,7 @@ export class CvWorkExperience {
    * null jika tanggal tidak dapat dikomputasi
    */
   @Column({ name: "duration_years", type: "float", nullable: true })
-    durationYears!: number;
+    durationYears!: number | null;
 
   /**
    * Nilai cosine similarity antara deskripsi pengalaman ini
@@ -60,7 +60,7 @@ export class CvWorkExperience {
    * null = belum dinilai (scoring belum dijalankan)
    */
   @Column({ name: "similarity_score", type: "float", nullable: true })
-    similarityScore!: number;
+    similarityScore!: number | null;
 
   /**
    * Penanda apakah pengalaman ini diklasifikasikan relevan
@@ -69,7 +69,7 @@ export class CvWorkExperience {
    * null = belum dinilai (scoring belum dijalankan)
    */
   @Column({ name: "is_relevant", type: "boolean", nullable: true })
-    isRelevant!: boolean;
+    isRelevant!: boolean | null;
 
   @CreateDateColumn({ name: "created_at" })
     createdAt!: Date;

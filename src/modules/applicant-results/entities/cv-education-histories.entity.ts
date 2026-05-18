@@ -26,17 +26,17 @@ export class CvEducationHistory {
 
 //baru
   @Column({ type: "enum", enum: EducationLevel, nullable: true })
-    level!: EducationLevel;
+    level!: EducationLevel | null;
 //-----
 
   @Column({ type: "varchar", length: 255, nullable: true })
-    major!: string;
+    major!: string | null;
 
   @Column({ type: "varchar", length: 255, nullable: true })
-    institution!: string;
+    institution!: string | null;
 
   @Column({ name: "graduation_year", type: "int", nullable: true })
-    graduationYear!: number;
+    graduationYear!: number | null;
 
   @CreateDateColumn({ name: "created_at" })
     createdAt!: Date;

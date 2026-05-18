@@ -26,9 +26,9 @@
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/config/migration.config.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/migration.config.ts",
     "migration:show": "typeorm-ts-node-commonjs migration:show -d src/config/migration.config.ts"
-
   },
   "dependencies": {
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/cache-manager": "^3.0.1",
     "@nestjs/common": "^11.1.5",
     "@nestjs/config": "^4.0.2",
@@ -41,6 +41,7 @@
     "@nestjs/typeorm": "^11.0.0",
     "@types/multer": "^2.0.0",
     "@types/nodemailer": "^7.0.1",
+    "axios": "^1.16.1",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "cache-manager": "^7.2.4",
