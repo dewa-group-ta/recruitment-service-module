@@ -12,18 +12,16 @@ import { ConfigService } from "@nestjs/config";
 import { firstValueFrom } from "rxjs";
 
 import { CvDocument } from "../entities/cv-documents.entity";
-import { CvEducationHistory } from "../entities/cv-education-histories.entity";
-import { CvWorkExperience } from "../entities/cv-work-experiences.entity";
 import { EvaluationResult } from "../entities/evaluation-results.entity";
 import { Application } from "../../applicants/entities/application.entity";
 import { Vacancy } from "../../vacancies/entities/vacancy.entity";
+import { ApplicantEducation } from "../../applicants/entities/applicant-education.entity";
+import { ApplicantJobHistory } from "../../applicants/entities/applicant-job-history.entity";
 
 import {
   FastApiScoringRequestDto,
   FastApiScoringResponseDto,
   CvDocumentResponseDto,
-  CvEducationHistoryResponseDto,
-  CvWorkExperienceResponseDto,
   EvaluationResultResponseDto,
   ScoreDetailDto,
   UpdateDecisionDto
@@ -40,16 +38,16 @@ export class ApplicantResultsService {
     private readonly configService: ConfigService,
     @InjectRepository(CvDocument)
     private readonly cvDocumentRepository: Repository<CvDocument>,
-    @InjectRepository(CvEducationHistory)
-    private readonly cvEducationRepository: Repository<CvEducationHistory>,
-    @InjectRepository(CvWorkExperience)
-    private readonly cvWorkExperienceRepository: Repository<CvWorkExperience>,
     @InjectRepository(EvaluationResult)
     private readonly evaluationResultRepository: Repository<EvaluationResult>,
     @InjectRepository(Application)
     private readonly applicationRepository: Repository<Application>,
     @InjectRepository(Vacancy)
-    private readonly vacancyRepository: Repository<Vacancy>
+    private readonly vacancyRepository: Repository<Vacancy>,
+    @InjectRepository(ApplicantEducation)
+    private readonly applicantEducationRepository: Repository<ApplicantEducation>,
+    @InjectRepository(ApplicantJobHistory)
+    private readonly applicantJobHistoryRepository: Repository<ApplicantJobHistory>
   ) {
     this.fastApiBaseUrl = this.configService.get<string>(
       "FASTAPI_BASE_URL",
@@ -69,7 +67,6 @@ export class ApplicantResultsService {
    * @param applicationId - UUID lamaran yang baru di-submit
    */
   async triggerScoringAsync(applicationId: string): Promise<void> {
-    // Jalankan tanpa await agar response ke pelamar tidak tertunda
     this.runScoring(applicationId).catch((err: unknown) => {
       this.logger.error(
         `Scoring gagal untuk applicationId=${applicationId}`,
@@ -83,16 +80,16 @@ export class ApplicantResultsService {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /**
-   * Mengambil hasil parsing CV beserta riwayat pendidikan dan pengalaman.
-   * Digunakan HR saat membuka detail lamaran.
+   * Mengambil hasil parsing CV (nama, skills, waktu parsing).
+   * Data pendidikan dan pengalaman diakses via profil pelamar (applicant_educations,
+   * applicant_job_histories) yang sudah diisi saat scoring.
    *
    * @param applicationId - UUID lamaran
    * @throws NotFoundException jika hasil belum tersedia
    */
   async getCvResult(applicationId: string): Promise<CvDocumentResponseDto> {
     const cvDoc = await this.cvDocumentRepository.findOne({
-      where: { applicationId },
-      relations: ["educations", "workExperiences"]
+      where: { applicationId }
     });
 
     if (!cvDoc) {
@@ -169,7 +166,17 @@ export class ApplicantResultsService {
 
   /**
    * Orkestrasi lengkap: ambil data → kirim cvUrl ke FastAPI → simpan hasil.
-   * Ekstraksi teks CV sepenuhnya dilakukan oleh FastAPI, bukan NestJS.
+   *
+   * Alur:
+   *   1. Ambil Application + relasi applicant & vacancy
+   *   2. Validasi CV sudah diupload
+   *   3. Susun payload JSON (cvUrl + persyaratan lowongan) → kirim ke FastAPI
+   *   4. FastAPI parsing CV & scoring, kembalikan cvParsed + scores dalam 1 respons
+   *   5. Simpan hasil ke database:
+   *      - cv_documents          → nama, skills[], waktu parsing
+   *      - applicant_educations  → riwayat pendidikan per entry (linked cv_document_id)
+   *      - applicant_job_histories → riwayat pengalaman per entry (linked cv_document_id)
+   *      - evaluation_results    → skor WSM + scoreDetail JSON (termasuk entry breakdown)
    */
   private async runScoring(applicationId: string): Promise<void> {
     this.logger.log(`Memulai scoring untuk applicationId=${applicationId}`);
@@ -195,19 +202,20 @@ export class ApplicantResultsService {
       );
     }
 
-    // 3. Susun payload untuk FastAPI — kirim URL, bukan teks mentah
-    //    FastAPI yang bertanggung jawab download file & ekstrak teks
+    // 3. Susun payload untuk FastAPI
+    //    NestJS hanya mengirim URL CV + persyaratan lowongan sebagai JSON.
+    //    FastAPI yang bertanggung jawab: download file CV, ekstrak teks, parsing, scoring.
     const scoringRequest = this.buildScoringRequest(
       applicationId,
       applicant.cvUrl,
       vacancy
     );
 
-    // 4. Kirim ke FastAPI dan terima hasilnya
+    // 4. Kirim ke FastAPI — 1 endpoint menangani parsing + scoring sekaligus
     const scoringResponse = await this.callFastApiScoring(scoringRequest);
 
-    // 5. Simpan hasil ke database dalam satu transaksi
-    await this.saveResults(scoringResponse);
+    // 5. Simpan hasil ke database dalam satu transaksi atomik
+    await this.saveResults(scoringResponse, applicant.id);
 
     this.logger.log(
       `Scoring selesai untuk applicationId=${applicationId}, ` +
@@ -230,36 +238,47 @@ export class ApplicantResultsService {
   ): FastApiScoringRequestDto {
     const request = new FastApiScoringRequestDto();
 
-    request.applicationId = applicationId;
-    request.cvUrl = cvUrl;
-    request.requiredEducation = vacancy.requiredEducation ?? null;
+    request.applicationId       = applicationId;
+    request.cvUrl               = cvUrl;
+    request.requiredEducation       = vacancy.requiredEducation ?? null;
     request.requiredExperienceYears = vacancy.requiredExperienceYears ?? null;
-    request.relevantMajor = (vacancy as any).relevantMajor ?? null;
-    request.roleDescription = (vacancy as any).roleDescription ?? null;
-    request.requiredSkills = (vacancy as any).requiredSkills ?? null;
+    request.relevantMajor       = vacancy.relevantMajor ?? null;
+    request.roleDescription     = vacancy.roleDescription ?? null;
+    request.requiredSkills      = vacancy.requiredSkills ?? null;
 
     return request;
   }
 
   /**
    * Mengirim payload ke FastAPI Scoring Service dan mengembalikan hasilnya.
+   * Endpoint tunggal /process-cv menangani parsing + scoring dalam satu request.
    *
    * @throws InternalServerErrorException jika FastAPI tidak dapat dihubungi
    */
   private async callFastApiScoring(
     request: FastApiScoringRequestDto
   ): Promise<FastApiScoringResponseDto> {
-    const url = `${this.fastApiBaseUrl}/scoring`;
+    const url = `${this.fastApiBaseUrl}/process-cv`;
 
     try {
       const response = await firstValueFrom(
-        this.httpService.post<FastApiScoringResponseDto>(url, request, {
-          headers: { "Content-Type": "application/json" },
-          timeout: 120_000 // 2 menit — LLM bisa lambat
-        })
+        this.httpService.post<{ success: boolean; data: FastApiScoringResponseDto }>(
+          url,
+          request,
+          {
+            headers: { "Content-Type": "application/json" },
+            timeout: 120_000 // 2 menit — LLM & SBERT bisa lambat
+          }
+        )
       );
 
-      return response.data;
+      if (!response.data.success) {
+        throw new InternalServerErrorException(
+          "FastAPI Scoring Service mengembalikan success=false"
+        );
+      }
+
+      return response.data.data;
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Unknown error";
@@ -276,90 +295,161 @@ export class ApplicantResultsService {
 
   /**
    * Menyimpan seluruh hasil scoring dalam satu transaksi atomik.
-   * Jika record sudah ada (re-scoring), data lama ditimpa.
+   * Bersifat idempotent — jika record sudah ada (re-scoring), data lama ditimpa.
+   *
+   * Tabel yang diisi:
+   * ┌─ cv_documents             (1 row per application)
+   * │   ├─ applicant_educations    (N rows, linked ke cv_document_id + applicant_id)
+   * │   └─ applicant_job_histories (N rows, linked ke cv_document_id + applicant_id)
+   * └─ evaluation_results       (1 row per application)
+   *
+   * Catatan:
+   * - similarity_score & is_relevant per pengalaman TIDAK disimpan di
+   *   applicant_job_histories (vacancy-specific) — hanya masuk scoreDetail JSON.
+   * - Menghapus CvDocument akan CASCADE-delete education & jobHistory terkait.
+   *
+   * @param dto         - Respons FastAPI sudah di-unwrap dari envelope { success, data }
+   * @param applicantId - UUID pelamar, dibutuhkan untuk FK applicant_id
    */
-  private async saveResults(dto: FastApiScoringResponseDto): Promise<void> {
+  private async saveResults(
+    dto: FastApiScoringResponseDto,
+    applicantId: string
+  ): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       const { applicationId, cvParsed, scores } = dto;
 
       // ── Hapus data lama jika ada (idempotent) ──────────────────────────────
+      // DELETE CvDocument akan CASCADE ke ApplicantEducation & ApplicantJobHistory
+      // yang terkait lewat FK cv_document_id ON DELETE CASCADE.
       const existingCv = await manager.findOne(CvDocument, {
         where: { applicationId }
       });
-
       if (existingCv) {
-        await manager.delete(CvEducationHistory, {
-          cvDocumentId: existingCv.id
-        });
-        await manager.delete(CvWorkExperience, { cvDocumentId: existingCv.id });
         await manager.delete(CvDocument, { id: existingCv.id });
       }
-
       await manager.delete(EvaluationResult, { applicationId });
 
       // ── Simpan CvDocument ─────────────────────────────────────────────────
       const cvDoc = new CvDocument();
       cvDoc.applicationId = applicationId as string;
       cvDoc.applicantName = cvParsed.applicantName;
-      cvDoc.skills = cvParsed.skills;
-      cvDoc.parsedAt = new Date();
+      cvDoc.skills        = cvParsed.skills; // string[] — untuk Jaccard similarity
+      cvDoc.parsedAt      = new Date();
 
       const savedCvDoc = await manager.save(CvDocument, cvDoc);
 
-      // ── Simpan CvEducationHistory ─────────────────────────────────────────
+      // ── Simpan ApplicantEducation ─────────────────────────────────────────
+      // Mapping FastAPI → ApplicantEducation:
+      //   level          → level       (EducationLevel enum)
+      //   major          → major
+      //   institution    → schoolName
+      //   graduationYear → endMonth    (string "YYYY", nullable)
+      // Kolom lain (degree, gpa, startMonth, diplomaFileName) dibiarkan null
+      // karena LLM tidak mengekstrak data tersebut untuk scope TA ini.
       if (cvParsed.educations.length > 0) {
-        const educations = cvParsed.educations.map((edu) => {
-          const e = new CvEducationHistory();
-          e.cvDocumentId = savedCvDoc.id;
-          e.level = edu.level;
-          e.major = edu.major;
-          e.institution = edu.institution;
-          e.graduationYear = edu.graduationYear;
-          return e;
-        });
-        await manager.save(CvEducationHistory, educations);
+        const educations: ApplicantEducation[] = cvParsed.educations.map(
+          (edu, index) => {
+            const e = new ApplicantEducation();
+            e.applicantId   = applicantId;
+            e.cvDocumentId  = savedCvDoc.id;
+            e.level         = edu.level;
+            e.major         = edu.major;
+            e.schoolName    = edu.institution;
+            e.endMonth      = edu.graduationYear
+              ? String(edu.graduationYear)
+              : null;
+            e.order         = index + 1;
+            return e;
+          }
+        );
+        await manager.save(ApplicantEducation, educations);
       }
 
-      // ── Simpan CvWorkExperience ───────────────────────────────────────────
+      // ── Simpan ApplicantJobHistory ────────────────────────────────────────
+      // Mapping FastAPI → ApplicantJobHistory:
+      //   role          → position
+      //   company       → company
+      //   description   → description
+      //   startDate     → startDate   (Date | null — sudah dinormalisasi ISO oleh FastAPI)
+      //   endDate       → endDate     (Date | null — null jika masih aktif / tidak diketahui)
+      //   durationYears → durationYears
+      //
+      // TIDAK disimpan di sini (vacancy-specific, masuk scoreDetail JSON):
+      //   similarityScore, isRelevant
+      // Kolom lain (employeeStatus, location, achievements) dibiarkan null.
       if (cvParsed.workExperiences.length > 0) {
-        const workExperiences = cvParsed.workExperiences.map((exp) => {
-          const w = new CvWorkExperience();
-          w.cvDocumentId = savedCvDoc.id;
-          w.role = exp.role;
-          w.company = exp.company;
-          w.description = exp.description;
-          w.startDate = exp.startDate;
-          w.endDate = exp.endDate;
-          w.durationYears = exp.durationYears;
-          w.similarityScore = exp.similarityScore;
-          w.isRelevant = exp.isRelevant;
-          return w;
-        });
-        await manager.save(CvWorkExperience, workExperiences);
+        const jobHistories: ApplicantJobHistory[] = cvParsed.workExperiences.map(
+          (exp, index) => {
+            const j = new ApplicantJobHistory();
+            j.applicantId   = applicantId;
+            j.cvDocumentId  = savedCvDoc.id;
+            j.position      = exp.role;
+            j.company       = exp.company;
+            j.description   = exp.description;
+            j.startDate     = exp.startDate!;
+            j.endDate       = exp.endDate!;
+            j.durationYears = exp.durationYears;
+            j.order         = index + 1;
+            return j;
+          }
+        );
+        await manager.save(ApplicantJobHistory, jobHistories);
       }
 
       // ── Simpan EvaluationResult ───────────────────────────────────────────
+      // Menyimpan skor WSM dan breakdown lengkap dalam satu JSON column.
+      //
+      // scoreDetail JSON structure (sesuai kontrak FastAPI yang disepakati):
+      // {
+      //   education: {
+      //     selectedLevel, selectedMajor, levelScore, majorSimilarity,
+      //     entries: [{ level, major, levelScore, majorSimilarity }]
+      //   },
+      //   experience: {
+      //     durationScore, avgSimilarity, relevantDurationYears,
+      //     entries: [{ role, durationYears, similarityScore, isRelevant }]
+      //   },
+      //   skill: {
+      //     vacancySkills[], applicantSkills[], matchedSkills[], jaccardScore
+      //   }
+      // }
+      const sd = scores.scoreDetail;
+
       const evalResult = new EvaluationResult();
-      evalResult.applicationId = applicationId as string;
-      evalResult.educationScore = scores.educationScore;
+      evalResult.applicationId   = applicationId as string;
+      evalResult.educationScore  = scores.educationScore;
       evalResult.experienceScore = scores.experienceScore;
-      evalResult.skillScore = scores.skillScore;
-      evalResult.totalScore = scores.totalScore;
-      evalResult.scoreDetail = {
+      evalResult.skillScore      = scores.skillScore;
+      evalResult.totalScore      = scores.totalScore;
+      evalResult.scoreDetail     = {
         education: {
-          levelScore: scores.scoreDetail.education.levelScore,
-          majorSimilarity: scores.scoreDetail.education.majorSimilarity
+          selectedLevel:   sd.education.selectedLevel,
+          selectedMajor:   sd.education.selectedMajor,
+          levelScore:      sd.education.levelScore,
+          majorSimilarity: sd.education.majorSimilarity,
+          entries: sd.education.entries.map((e) => ({
+            level:           e.level,
+            major:           e.major,
+            levelScore:      e.levelScore,
+            majorSimilarity: e.majorSimilarity
+          }))
         },
         experience: {
-          durationScore: scores.scoreDetail.experience.durationScore,
-          avgSimilarity: scores.scoreDetail.experience.avgSimilarity,
-          relevantDurationYears:
-            scores.scoreDetail.experience.relevantDurationYears
+          durationScore:         sd.experience.durationScore,
+          avgSimilarity:         sd.experience.avgSimilarity,
+          relevantDurationYears: sd.experience.relevantDurationYears,
+          entries: sd.experience.entries.map((e) => ({
+            role:            e.role,
+            durationYears:   e.durationYears,
+            similarityScore: e.similarityScore,
+            isRelevant:      e.isRelevant
+          }))
         },
         skill: {
-          vacancySkills: scores.scoreDetail.skill.vacancySkills,
-          applicantSkills: scores.scoreDetail.skill.applicantSkills,
-          similarityScore: scores.scoreDetail.skill.similarityScore
+          vacancySkills:   sd.skill.vacancySkills,
+          applicantSkills: sd.skill.applicantSkills,
+          matchedSkills:   sd.skill.matchedSkills,
+          jaccardScore:    sd.skill.jaccardScore
         }
       };
       evalResult.evaluatedAt = new Date();
@@ -376,37 +466,13 @@ export class ApplicantResultsService {
   private mapCvDocumentToDto(cvDoc: CvDocument): CvDocumentResponseDto {
     const dto = new CvDocumentResponseDto();
 
-    dto.id = cvDoc.id;
+    dto.id            = cvDoc.id;
     dto.applicationId = cvDoc.applicationId;
     dto.applicantName = cvDoc.applicantName ?? null;
-    dto.skills = cvDoc.skills ?? null;
-    dto.parsedAt = cvDoc.parsedAt ?? null;
-    dto.createdAt = cvDoc.createdAt;
-    dto.updatedAt = cvDoc.updatedAt;
-
-    dto.educations = (cvDoc.educations ?? []).map((edu) => {
-      const eduDto = new CvEducationHistoryResponseDto();
-      eduDto.id = edu.id;
-      eduDto.level = edu.level ?? null;
-      eduDto.major = edu.major ?? null;
-      eduDto.institution = edu.institution ?? null;
-      eduDto.graduationYear = edu.graduationYear ?? null;
-      return eduDto;
-    });
-
-    dto.workExperiences = (cvDoc.workExperiences ?? []).map((exp) => {
-      const expDto = new CvWorkExperienceResponseDto();
-      expDto.id = exp.id;
-      expDto.role = exp.role ?? null;
-      expDto.company = exp.company ?? null;
-      expDto.description = exp.description ?? null;
-      expDto.startDate = exp.startDate ?? null;
-      expDto.endDate = exp.endDate ?? null;
-      expDto.durationYears = exp.durationYears ?? null;
-      expDto.similarityScore = exp.similarityScore ?? null;
-      expDto.isRelevant = exp.isRelevant ?? null;
-      return expDto;
-    });
+    dto.skills        = cvDoc.skills ?? null;
+    dto.parsedAt      = cvDoc.parsedAt ?? null;
+    dto.createdAt     = cvDoc.createdAt;
+    dto.updatedAt     = cvDoc.updatedAt;
 
     return dto;
   }
@@ -416,19 +482,19 @@ export class ApplicantResultsService {
   ): EvaluationResultResponseDto {
     const dto = new EvaluationResultResponseDto();
 
-    dto.id = result.id;
-    dto.applicationId = result.applicationId;
-    dto.educationScore = result.educationScore ?? null;
+    dto.id              = result.id;
+    dto.applicationId   = result.applicationId;
+    dto.educationScore  = result.educationScore ?? null;
     dto.experienceScore = result.experienceScore ?? null;
-    dto.skillScore = result.skillScore ?? null;
-    dto.totalScore = result.totalScore ?? null;
-    dto.decision = result.decision ?? null;
-    dto.scoreDetail = result.scoreDetail
+    dto.skillScore      = result.skillScore ?? null;
+    dto.totalScore      = result.totalScore ?? null;
+    dto.decision        = result.decision ?? null;
+    dto.scoreDetail     = result.scoreDetail
       ? (result.scoreDetail as unknown as ScoreDetailDto)
       : null;
-    dto.evaluatedAt = result.evaluatedAt ?? null;
-    dto.createdAt = result.createdAt;
-    dto.updatedAt = result.updatedAt;
+    dto.evaluatedAt     = result.evaluatedAt ?? null;
+    dto.createdAt       = result.createdAt;
+    dto.updatedAt       = result.updatedAt;
 
     return dto;
   }

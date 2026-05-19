@@ -27,6 +27,7 @@ import { EmailModule } from "../../shared/modules/email.module";
 import { IsCustomSourceRequiredConstraint } from "./validators/custom-source.validator";
 import { ApplicantSourceService } from "./services/applicant-source.service";
 import { ApplicantSourceController } from "./controllers/applicant-source.controller";
+import { ApplicantResultsModule } from "../applicant-results/applicant-results.module";
 
 @Module({
   imports: [
@@ -43,9 +44,10 @@ import { ApplicantSourceController } from "./controllers/applicant-source.contro
       PipelineStage,
       StageActivity,
       ApplicantSource,
-      AuthToken
+      AuthToken,
     ]),
-    EmailModule
+    EmailModule,
+    ApplicantResultsModule
   ],
   controllers: [
     ApplicationController,

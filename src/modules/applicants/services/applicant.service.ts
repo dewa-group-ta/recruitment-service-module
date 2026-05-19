@@ -39,6 +39,7 @@ import { StageActivity } from "../../vacancies/entities/stage-activity.entity";
 import { ApplicationTrackingResponseDto } from "../dto/application-tracking-response.dto";
 import { IApplicantService } from "../../../shared/interfaces/applicant.interface";
 import { StageActivityStatus } from "src/shared/enums/pipeline.enum";
+import { ApplicantResultsService } from "src/modules/applicant-results/services/applicant-results.service";
 
 /**
  * Service for managing applicant operations
@@ -74,7 +75,8 @@ export class ApplicantService implements IApplicantService {
     @InjectRepository(PipelineStage)
     private readonly pipelineStageRepository: Repository<PipelineStage>,
     @InjectRepository(StageActivity)
-    private readonly stageActivityRepository: Repository<StageActivity>
+    private readonly stageActivityRepository: Repository<StageActivity>,
+    private readonly applicantResultsService: ApplicantResultsService
   ) {}
 
   /**
@@ -822,7 +824,7 @@ export class ApplicantService implements IApplicantService {
     const applicantId = application.applicantId;
 
     // Use transaction to ensure data consistency
-    return await this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       // Update applicant basic information
       const applicant = await manager.findOne(Applicant, {
         where: { id: applicantId }
@@ -960,6 +962,10 @@ export class ApplicantService implements IApplicantService {
         application: updatedApplication
       };
     });
+
+    this.applicantResultsService.triggerScoringAsync(result.application.id);
+
+    return result;
   }
 
   /**

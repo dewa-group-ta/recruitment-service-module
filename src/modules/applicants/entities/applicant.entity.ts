@@ -25,63 +25,63 @@ import {
 @Entity("applicants")
 export class Applicant {
   @PrimaryGeneratedColumn("uuid")
-  id: string;
+  id!: string;
 
   @Column({ type: "varchar", length: 255, unique: true })
-  email: string;
+  email!: string;
 
   @Column({ type: "varchar", length: 100 })
-  fullName: string;
+  fullName!: string;
 
   @Column({ type: "varchar", length: 20 })
-  phone: string;
+  phone!: string;
 
   @Column({ type: "varchar", length: 20, nullable: true })
-  alternativePhone: string;
+  alternativePhone!: string;
 
   @Column({ type: "enum", enum: GenderEnum, nullable: true })
-  gender: GenderEnum;
+  gender!: GenderEnum;
 
   @Column({ type: "enum", enum: MaritalStatusEnum, nullable: true })
-  maritalStatus: MaritalStatusEnum;
+  maritalStatus!: MaritalStatusEnum;
 
   @Column({ type: "varchar", length: 100, nullable: true })
-  placeOfBirth: string;
+  placeOfBirth!: string;
 
   @Column({ type: "date", nullable: true })
-  dateOfBirth: Date;
+  dateOfBirth!: Date;
 
   // photo
   @Column({ type: "varchar", length: 500, nullable: true })
-  photoUrl: string;
+  photoUrl!: string;
 
   // cv
   @Column({ type: "varchar", length: 500, nullable: true })
-  cvUrl: string;
+  cvUrl!: string;
 
   // linkedin url
   @Column({ type: "varchar", length: 500, nullable: true })
-  linkedinUrl: string;
+  linkedinUrl!: string;
 
   // portfolio url
   @Column({ type: "varchar", length: 500, nullable: true })
-  portfolioUrl: string;
+  portfolioUrl!: string;
 
   // social media url
   @Column({ type: "varchar", length: 500, nullable: true })
-  socialMediaUrl: string;
+  socialMediaUrl!: string;
 
   // is internal
   @Column({ type: "boolean", default: false })
-  isInternal: boolean;
+  isInternal!: boolean;
 
   // availability
   @Column({ type: "enum", enum: AvailabilityEnum, nullable: true })
-  availability: AvailabilityEnum;
+  availability!: AvailabilityEnum;
 
   // availability date
   @Column({ type: "date", nullable: true })
-  availabilityAt: Date;
+  availabilityAt!: Date;
 
   // Applicant sources (many-to-many relationship)
   @ManyToMany(
@@ -96,45 +96,45 @@ export class Applicant {
       referencedColumnName: "id"
     }
   })
-  applicantSources: ApplicantSource[];
+  applicantSources!: ApplicantSource[];
 
   @OneToMany(() => Application, (application) => application.applicant)
-  applications: Application[];
+  applications!: Application[];
 
   @OneToMany(() => ApplicantAddress, (address) => address.applicant, {
     cascade: true
   })
-  addresses: ApplicantAddress[];
+  addresses!: ApplicantAddress[];
 
   @OneToMany(() => ApplicantEducation, (education) => education.applicant, {
     cascade: true
   })
-  educations: ApplicantEducation[];
+  educations!: ApplicantEducation[];
 
   @OneToMany(() => ApplicantJobHistory, (jobHistory) => jobHistory.applicant, {
     cascade: true
   })
-  jobHistories: ApplicantJobHistory[];
+  jobHistories!: ApplicantJobHistory[];
 
   @OneToMany(
     () => ApplicantProjectHistory,
     (projectHistory) => projectHistory.applicant,
     { cascade: true }
   )
-  projectHistories: ApplicantProjectHistory[];
+  projectHistories!: ApplicantProjectHistory[];
 
   @OneToMany(() => ApplicantIdentity, (identity) => identity.applicant, {
     cascade: true
   })
-  identities: ApplicantIdentity[];
+  identities!: ApplicantIdentity[];
 
   // Audit fields
   @CreateDateColumn({ name: "created_at" })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: "updated_at" })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @DeleteDateColumn({ name: "deleted_at" })
-  deletedAt: Date;
+  deletedAt!: Date;
 }

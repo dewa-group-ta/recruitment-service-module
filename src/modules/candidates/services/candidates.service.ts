@@ -85,9 +85,9 @@ export interface Candidate {
   jobHistories?: Array<{
     id: string;
     applicantId: string;
-    position: string;
-    employeeStatus: string;
-    company: string;
+    position: string | null;       // was: string
+    employeeStatus: string | null; // was: string
+    company: string | null;
     startDate: Date;
     endDate?: Date;
     location?: string;
@@ -779,13 +779,13 @@ export class CandidatesService {
       educations: application.applicant.educations?.map(edu => ({
         id: edu.id,
         applicantId: edu.applicantId,
-        schoolName: edu.schoolName,
-        major: edu.major,
-        degree: edu.degree,
-        gpa: edu.gpa,
-        startMonth: edu.startMonth,
-        endMonth: edu.endMonth,
-        diplomaFileName: edu.diplomaFileName,
+        schoolName: edu.schoolName ?? "",
+        major: edu.major ?? "",
+        degree: edu.degree ?? "",
+        gpa: edu.gpa ?? undefined,
+        startMonth: edu.startMonth ?? "",
+        endMonth: edu.endMonth ?? undefined,
+        diplomaFileName: edu.diplomaFileName ?? undefined,
         order: edu.order,
         createdAt: this.toISOString(edu.createdAt),
         updatedAt: this.toISOString(edu.updatedAt),
@@ -795,13 +795,13 @@ export class CandidatesService {
         id: job.id,
         applicantId: job.applicantId,
         position: job.position,
-        employeeStatus: job.employeeStatus,
+        employeeStatus: job.employeeStatus as string | null,
         company: job.company,
         startDate: job.startDate,
         endDate: job.endDate,
-        location: job.location,
-        description: job.description,
-        achievements: job.achievements,
+        location: job.location ?? undefined,
+        description: job.description ?? undefined,
+        achievements: job.achievements ?? undefined,
         order: job.order,
         createdAt: this.toISOString(job.createdAt),
         updatedAt: this.toISOString(job.updatedAt),
@@ -1410,7 +1410,7 @@ export class CandidatesService {
           id: job.id,
           applicantId: job.applicantId,
           position: job.position,
-          employeeStatus: job.employeeStatus,
+          employeeStatus: job.employeeStatus as string | null,
           company: job.company,
           startDate: job.startDate,
           endDate: job.endDate,

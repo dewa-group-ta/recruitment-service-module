@@ -14,9 +14,7 @@ export {
 
 // ── Response DTO ke Frontend ──────────────────────────────────────────────────
 export {
-  CvDocumentResponseDto,
-  CvEducationHistoryResponseDto,
-  CvWorkExperienceResponseDto
+  CvDocumentResponseDto
 } from "./cv-document-response.dto";
 
 export {
