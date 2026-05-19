@@ -6,56 +6,56 @@ export class CandidateDetailDto {
     description: 'Candidate ID',
     example: 'uuid-string'
   })
-  id: string;
+  id!: string;
 
   @ApiProperty({
     description: 'Application ID',
     example: 'uuid-string'
   })
-  applicationId: string;
+  applicationId!: string;
 
   @ApiProperty({
     description: 'Application number',
     example: 'APP-2024-001'
   })
-  applicationNumber: string;
+  applicationNumber!: string;
 
   @ApiProperty({
     description: 'Applicant ID',
     example: 'uuid-string'
   })
-  applicantId: string;
+  applicantId!: string;
 
   @ApiProperty({
     description: 'Full name',
     example: 'John Doe'
   })
-  fullName: string;
+  fullName!: string;
 
   @ApiProperty({
     description: 'Email address',
     example: 'john.doe@example.com'
   })
-  email: string;
+  email!: string;
 
   @ApiProperty({
     description: 'Phone number',
     example: '+62 812-3456-7890'
   })
-  phone: string;
+  phone!: string;
 
   @ApiProperty({
     description: 'Application status',
     example: 'applied',
     enum: ['applied', 'hired', 'rejected']
   })
-  status: string;
+  status!: string;
 
   @ApiProperty({
     description: 'Current recruitment stage',
     example: 'Interview'
   })
-  currentStage: string;
+  currentStage!: string;
 
   @ApiProperty({
     description: 'Current score',
@@ -68,7 +68,7 @@ export class CandidateDetailDto {
     description: 'Application date',
     example: '2024-01-15T10:30:00Z'
   })
-  appliedAt: string;
+  appliedAt!: string;
 
   @ApiProperty({
     description: 'Avatar URL',
@@ -128,6 +128,9 @@ export class CandidateDetailDto {
     description: 'Address information',
     required: false
   })
+  @ApiProperty({ type: () => EvaluationScoreDetailDto, nullable: true, description: 'Hasil scoring WSM — null jika scoring belum selesai' })
+  evaluationResult?: EvaluationScoreDetailDto | null;
+
   address?: Array<{
     id: string;
     applicantId: string;
@@ -144,6 +147,34 @@ export class CandidateDetailDto {
   }>;
 }
 
+
+export class EvaluationScoreDetailDto {
+  @ApiProperty({ example: 0.999, nullable: true })
+  educationScore!: number | null;
+
+  @ApiProperty({ example: 0.729, nullable: true })
+  experienceScore!: number | null;
+
+  @ApiProperty({ example: 0.852, nullable: true })
+  skillScore!: number | null;
+
+  @ApiProperty({ example: 0.820, nullable: true })
+  totalScore!: number | null;
+
+  @ApiProperty({
+    enum: ['lolos', 'tidak_lolos'],
+    nullable: true,
+    description: 'Keputusan rekruter — null jika belum ditetapkan'
+  })
+  decision!: string | null;
+
+  @ApiProperty({ nullable: true, description: 'Breakdown skor per komponen (JSON)' })
+  scoreDetail!: Record<string, any> | null;
+
+  @ApiProperty({ nullable: true })
+  evaluatedAt!: Date | null;
+}
+
 export class UpdateCandidateStatusDto {
   @ApiProperty({
     description: 'New status',
@@ -151,7 +182,7 @@ export class UpdateCandidateStatusDto {
     enum: ['applied', 'hired', 'rejected']
   })
   @IsString()
-  status: string;
+  status!: string;
 
   @ApiProperty({
     description: 'Notes about the status change',
@@ -180,7 +211,7 @@ export class MoveToNextStageDto {
   })
   @IsOptional()
   @IsNumber()
-  score: number;
+  score!: number;
 }
 
 export class AddCandidateScoreDto {
@@ -191,7 +222,7 @@ export class AddCandidateScoreDto {
     maximum: 100
   })
   @IsNumber()
-  score: number;
+  score!: number;
 
   @ApiProperty({
     description: 'Notes about the score',
@@ -209,7 +240,7 @@ export class UpdateTalentPoolDto {
     example: true
   })
   @IsBoolean()
-  isTalentPool: boolean;
+  isTalentPool!: boolean;
 
   @ApiProperty({
     description: 'Notes about the talent pool status change',

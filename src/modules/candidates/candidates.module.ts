@@ -9,11 +9,22 @@ import { PipelineStage } from "../vacancies/entities/pipeline-stage.entity";
 import { StageActivity } from "../vacancies/entities/stage-activity.entity";
 import { ApplicationNotes } from "../applicants/entities/application-notes.entity";
 import { EmailModule } from "../../shared/modules/email.module";
+import { EvaluationResult } from "../applicant-results/entities/evaluation-results.entity";
+import { ApplicantResultsModule } from "../applicant-results/applicant-results.module";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Application, Applicant, Vacancy, PipelineStage, StageActivity, ApplicationNotes]),
-    EmailModule
+    TypeOrmModule.forFeature([
+      Application, 
+      Applicant, 
+      Vacancy, 
+      PipelineStage, 
+      StageActivity, 
+      ApplicationNotes, 
+      EvaluationResult
+    ]),
+    EmailModule,
+    ApplicantResultsModule
   ],
   controllers: [CandidatesController],
   providers: [CandidatesService],

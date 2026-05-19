@@ -11,7 +11,8 @@ export enum SortBy {
   NAME = 'name',
   APPLY_DATE = 'applyDate',
   CURRENT_SCORE = 'currentScore',
-  STAGE = 'stage'
+  STAGE = 'stage',
+  TOTAL_SCORE = 'totalScore'
 }
 
 export class ApplicantTableQueryDto {

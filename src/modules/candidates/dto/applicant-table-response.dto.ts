@@ -5,20 +5,20 @@ export class JobVacancyDto {
     description: 'Job vacancy ID',
     example: 'uuid-string'
   })
-  id: string;
+  id!: string;
 
   @ApiProperty({
     description: 'Job title',
     example: 'Frontend Developer'
   })
-  title: string;
+  title!: string;
 
   @ApiProperty({
     description: 'Job status',
     example: 'published',
     enum: ['published', 'draft', 'closed', 'archived']
   })
-  status: string;
+  status!: string;
 
   @ApiProperty({
     description: 'Department name',
@@ -40,37 +40,37 @@ export class ApplicantTableItemDto {
     description: 'Application ID',
     example: 'app-001'
   })
-  id: string;
+  id!: string;
 
   @ApiProperty({
     description: 'Application ID (alias)',
     example: 'app-001'
   })
-  applicationId: string;
+  applicationId!: string;
 
   @ApiProperty({
     description: 'Applicant ID',
     example: 'user-123'
   })
-  applicantId: string;
+  applicantId!: string;
 
   @ApiProperty({
     description: 'Applicant name',
     example: 'John Doe'
   })
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: 'Email address',
     example: 'john.doe@email.com'
   })
-  email: string;
+  email!: string;
 
   @ApiProperty({
     description: 'Phone number',
     example: '+6281234567890'
   })
-  phone: string;
+  phone!: string;
 
   @ApiProperty({
     description: 'Avatar URL',
@@ -90,20 +90,20 @@ export class ApplicantTableItemDto {
     description: 'Job vacancy information',
     type: JobVacancyDto
   })
-  jobVacancy: JobVacancyDto;
+  jobVacancy!: JobVacancyDto;
 
   @ApiProperty({
     description: 'Application status',
     example: 'qualified',
     enum: ['new', 'qualified', 'disqualified']
   })
-  status: string;
+  status!: string;
 
   @ApiProperty({
     description: 'Current recruitment stage',
     example: 'Interview'
   })
-  currentStage: string;
+  currentStage!: string;
 
   @ApiProperty({
     description: 'Current stage score',
@@ -116,13 +116,13 @@ export class ApplicantTableItemDto {
     description: 'Is in talent pool',
     example: true
   })
-  isTalentPool: boolean;
+  isTalentPool!: boolean;
 
   @ApiProperty({
     description: 'Application date',
     example: '2024-01-15T10:30:00Z'
   })
-  applyDate: string;
+  applyDate!: string;
 
   @ApiProperty({
     description: 'Last activity date',
@@ -151,6 +151,13 @@ export class ApplicantTableItemDto {
     required: false
   })
   coverLetter?: string;
+
+  @ApiProperty({
+    description: 'Skor total WSM hasil screening CV otomatis (0.0–1.0). Null jika scoring belum selesai.',
+    example: 0.82,
+    required: false
+  })
+  totalScore?: number | null;
 }
 
 export class ApplicantTableResponseDto {
@@ -158,19 +165,19 @@ export class ApplicantTableResponseDto {
     description: 'Response code',
     example: 200
   })
-  responseCode: number;
+  responseCode!: number;
 
   @ApiProperty({
     description: 'Response description',
     example: 'Success'
   })
-  responseDesc: string;
+  responseDesc!: string;
 
   @ApiProperty({
     description: 'Applicant data',
     type: [ApplicantTableItemDto]
   })
-  data: ApplicantTableItemDto[];
+  data!: ApplicantTableItemDto[];
 
   @ApiProperty({
     description: 'Pagination information',
@@ -183,7 +190,7 @@ export class ApplicantTableResponseDto {
       hasPrev: false
     }
   })
-  pagination: {
+  pagination!: {
     page: number;
     limit: number;
     total: number;
@@ -198,7 +205,7 @@ export class ApplicantSummaryDataDto {
     description: 'Total number of applicants',
     example: 150
   })
-  total: number;
+  total!: number;
 
   @ApiProperty({
     description: 'Count by status',
@@ -209,7 +216,7 @@ export class ApplicantSummaryDataDto {
       talentPool: 12
     }
   })
-  byStatus: {
+  byStatus!: {
     new: number;
     qualified: number;
     disqualified: number;
@@ -227,7 +234,7 @@ export class ApplicantSummaryDataDto {
       'Hired': 2
     }
   })
-  byStage: {
+  byStage!: {
     [stageName: string]: number;
   };
 
@@ -240,7 +247,7 @@ export class ApplicantSummaryDataDto {
       archived: 2
     }
   })
-  byJobStatus: {
+  byJobStatus!: {
     published: number;
     draft: number;
     closed: number;
@@ -252,7 +259,7 @@ export class ApplicantSummaryDataDto {
     description: 'Recent applications (last 7 days)',
     example: 12
   })
-  recentApplications: number;
+  recentApplications!: number;
 
   @ApiProperty({
     description: 'Application trends by day',
@@ -290,17 +297,17 @@ export class ApplicantSummaryResponseDto {
     description: 'Response code',
     example: 200
   })
-  responseCode: number;
+  responseCode!: number;
 
   @ApiProperty({
     description: 'Response description',
     example: 'Success'
   })
-  responseDesc: string;
+  responseDesc!: string;
 
   @ApiProperty({
     description: 'Summary data',
     type: ApplicantSummaryDataDto
   })
-  data: ApplicantSummaryDataDto;
+  data!: ApplicantSummaryDataDto;
 }

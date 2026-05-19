@@ -253,6 +253,10 @@ export class ApplicantResultsService {
    * Mengirim payload ke FastAPI Scoring Service dan mengembalikan hasilnya.
    * Endpoint tunggal /process-cv menangani parsing + scoring dalam satu request.
    *
+   * FastAPI mengembalikan snake_case — method ini menormalisasi ke camelCase
+   * sebelum diteruskan ke saveResults, sehingga tidak ada kebocoran konversi
+   * di bagian lain service.
+   *
    * @throws InternalServerErrorException jika FastAPI tidak dapat dihubungi
    */
   private async callFastApiScoring(
@@ -262,7 +266,7 @@ export class ApplicantResultsService {
 
     try {
       const response = await firstValueFrom(
-        this.httpService.post<{ success: boolean; data: FastApiScoringResponseDto }>(
+        this.httpService.post<{ success: boolean; data: Record<string, any> }>(
           url,
           request,
           {
@@ -278,7 +282,7 @@ export class ApplicantResultsService {
         );
       }
 
-      return response.data.data;
+      return this.mapFastApiResponse(response.data.data);
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Unknown error";
@@ -287,6 +291,133 @@ export class ApplicantResultsService {
         `Gagal menghubungi FastAPI Scoring Service: ${message}`
       );
     }
+  }
+
+  /**
+   * Menormalisasi respons raw FastAPI (snake_case) ke struktur FastApiScoringResponseDto.
+   *
+   * Catatan khusus skill:
+   *   FastAPI mengirim { vacancy_skills, applicant_skills, similarity_score } sebagai string
+   *   → Di-split ke array, matchedSkills dihitung di sini (interseksi case-insensitive)
+   *   karena FastAPI tidak mengembalikannya secara eksplisit.
+   */
+  private mapFastApiResponse(raw: Record<string, any>): FastApiScoringResponseDto {
+    const cvParsed = raw["cv_parsed"]  ?? {};
+    const scores   = raw["scores"]     ?? {};
+    const detail   = scores["score_detail"] ?? {};
+
+    // ── cv_parsed ──────────────────────────────────────────────────────────
+
+    const educations = (cvParsed["educations"] ?? []).map((e: any) => ({
+      level:          e["level"]           ?? null,
+      major:          e["major"]           ?? null,
+      institution:    e["institution"]     ?? null,
+      graduationYear: e["graduation_year"] ?? null
+    }));
+
+    const workExperiences = (cvParsed["work_experiences"] ?? []).map((w: any) => ({
+      role:            w["role"]             ?? null,
+      company:         w["company"]          ?? null,
+      description:     w["description"]      ?? null,
+      startDate:       w["start_date"]       ?? null,
+      endDate:         w["end_date"]         ?? null,
+      durationYears:   w["duration_years"]   ?? null,
+      similarityScore: w["similarity_score"] ?? null,
+      isRelevant:      w["is_relevant"]      ?? null
+    }));
+
+    // ── score_detail.education ─────────────────────────────────────────────
+
+    const eduDetail  = detail["education"] ?? {};
+    const eduEntries = (eduDetail["entries"] ?? []).map((e: any) => ({
+      level:           e["level"]            ?? null,
+      major:           e["major"]            ?? null,
+      levelScore:      e["level_score"]      ?? 0,
+      majorSimilarity: e["major_similarity"] ?? 0
+    }));
+
+    // ── score_detail.experience ────────────────────────────────────────────
+
+    const expDetail  = detail["experience"] ?? {};
+    const expEntries = (expDetail["entries"] ?? []).map((e: any) => ({
+      role:            e["role"]             ?? null,
+      durationYears:   e["duration_years"]   ?? null,
+      similarityScore: e["similarity_score"] ?? null,
+      isRelevant:      e["is_relevant"]      ?? null
+    }));
+
+    // ── score_detail.skill ─────────────────────────────────────────────────
+    // FastAPI mengirim skill sebagai joined string — split kembali ke array.
+    // matchedSkills tidak dikembalikan FastAPI — dihitung di sini (interseksi).
+
+    const skillDetail     = detail["skill"] ?? {};
+    const vacancySkills   = this.splitSkillString(skillDetail["vacancy_skills"]   ?? "");
+    const applicantSkills = this.splitSkillString(skillDetail["applicant_skills"] ?? "");
+
+    const vacancyLower  = new Set(vacancySkills.map((s) => s.toLowerCase()));
+    const matchedSkills = applicantSkills.filter((s) =>
+      vacancyLower.has(s.toLowerCase())
+    );
+
+    const jaccardScore: number =
+      typeof skillDetail["similarity_score"] === "number"
+        ? skillDetail["similarity_score"]
+        : 0;
+
+    // ── Compose final DTO ──────────────────────────────────────────────────
+
+    const dto = new FastApiScoringResponseDto();
+
+    dto.applicationId = raw["application_id"] ?? "";
+
+    dto.cvParsed = {
+      applicantName:  cvParsed["applicant_name"] ?? null,
+      skills:         cvParsed["skills"]         ?? [],
+      educations,
+      workExperiences
+    } as any;
+
+    dto.scores = {
+      educationScore:  scores["education_score"]  ?? 0,
+      experienceScore: scores["experience_score"] ?? 0,
+      skillScore:      scores["skill_score"]      ?? 0,
+      totalScore:      scores["total_score"]      ?? 0,
+      scoreDetail: {
+        education: {
+          selectedLevel:   eduDetail["selected_level"]   ?? null,
+          selectedMajor:   eduDetail["selected_major"]   ?? null,
+          levelScore:      eduDetail["level_score"]      ?? 0,
+          majorSimilarity: eduDetail["major_similarity"] ?? 0,
+          entries:         eduEntries
+        },
+        experience: {
+          durationScore:         expDetail["duration_score"]          ?? 0,
+          avgSimilarity:         expDetail["avg_similarity"]           ?? 0,
+          relevantDurationYears: expDetail["relevant_duration_years"] ?? 0,
+          entries:               expEntries
+        },
+        skill: {
+          vacancySkills,
+          applicantSkills,
+          matchedSkills,
+          jaccardScore
+        }
+      }
+    } as any;
+
+    return dto;
+  }
+
+  /**
+   * Split joined skill string ke array, bersihkan whitespace dan entry kosong.
+   * Contoh: "NestJS PostgreSQL Docker" → ["NestJS", "PostgreSQL", "Docker"]
+   */
+  private splitSkillString(skillString: string): string[] {
+    if (!skillString || typeof skillString !== "string") return [];
+    return skillString
+      .split(/[\s,]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ import { PipelineStage } from "../../vacancies/entities/pipeline-stage.entity";
 import { StageActivity } from "../../vacancies/entities/stage-activity.entity";
 import { ApplicationNotes } from "../../applicants/entities/application-notes.entity";
 import { ApplicantStatus } from "../../../shared/enums/applicant.enum";
+import { EvaluationResult } from "../../applicant-results/entities/evaluation-results.entity";
 import { ApplicantTableQueryDto, ApplicantSummaryQueryDto } from "../dto/applicant-table-query.dto";
 import { ApplicantTableItemDto, ApplicantSummaryDataDto } from "../dto/applicant-table-response.dto";
 import { CreateApplicationNotesDto } from "../../applicants/dto/create-application-notes.dto";
@@ -98,6 +99,15 @@ export interface Candidate {
     updatedAt: string;
     deletedAt: string | null;
   }>;
+  evaluationResult?: {
+    educationScore: number | null;
+    experienceScore: number | null;
+    skillScore: number | null;
+    totalScore: number | null;
+    decision: string | null;
+    scoreDetail: string | null;
+    evaluatedAt: Date | null;
+  } | null;
 }
 
 export interface CandidatesByStage {
@@ -130,6 +140,8 @@ export class CandidatesService {
     private readonly stageActivityRepository: Repository<StageActivity>,
     @InjectRepository(ApplicationNotes)
     private readonly applicationNotesRepository: Repository<ApplicationNotes>,
+    @InjectRepository(EvaluationResult)
+    private readonly evaluationResultRepository: Repository<EvaluationResult>,
     private readonly dataSource: DataSource,
     private readonly notificationService: NotificationService
   ) {}
@@ -477,7 +489,15 @@ export class CandidatesService {
 
     // Apply sorting
     const sortField = this.getSortField(sortBy);
-    queryBuilder.orderBy(sortField, sortOrder.toUpperCase() as 'ASC' | 'DESC');
+    if (sortBy === 'totalScore') {
+      // Sort by WSM total_score dari evaluation_results (nullable → NULLS LAST)
+      queryBuilder
+        .leftJoin(EvaluationResult, 'evalSort', 'evalSort.applicationId = application.id')
+        .addSelect('evalSort.totalScore', 'evalSort_total_score')
+        .orderBy('evalSort.totalScore', sortOrder.toUpperCase() as 'ASC' | 'DESC', 'NULLS LAST');
+    } else {
+      queryBuilder.orderBy(sortField!, sortOrder.toUpperCase() as 'ASC' | 'DESC');
+    }
 
     // Apply pagination
     const offset = (page - 1) * limit;
@@ -490,8 +510,24 @@ export class CandidatesService {
     // Execute query
     const applications = await queryBuilder.getMany();
 
-    // Transform to DTO
-    const data: ApplicantTableItemDto[] = applications.map(app => this.transformToApplicantTableItem(app));
+    // Batch-fetch evaluation results untuk semua application sekaligus (1 query)
+    // Lebih efisien daripada N+1 query per application
+    const applicationIds = applications.map(a => a.id);
+    const evalResults = applicationIds.length > 0
+      ? await this.evaluationResultRepository.find({
+          where: { applicationId: In(applicationIds) },
+          select: ['applicationId', 'totalScore']
+        })
+      : [];
+    const evalMap = new Map<string, number | null>(
+      evalResults.map(e => [e.applicationId, e.totalScore ?? null])
+    );
+
+    // Transform to DTO — inject totalScore dari WSM scoring
+    const data: ApplicantTableItemDto[] = applications.map(app => ({
+      ...this.transformToApplicantTableItem(app),
+      totalScore: evalMap.get(app.id) ?? null
+    }));
 
     const totalPages = Math.ceil(total / limit);
 
@@ -695,13 +731,16 @@ export class CandidatesService {
   /**
    * Get sort field for query builder
    */
-  private getSortField(sortBy: string): string {
+  private getSortField(sortBy: string): string | null {
     const sortFields: Record<string, string> = {
       'name': 'applicant.fullName',
       'applyDate': 'application.appliedAt',
       'currentScore': 'application.currentScore',
       'stage': 'stageTemplate.name'
     };
+
+    // totalScore dihandle khusus di getApplicantsTable karena butuh join ke evaluation_results
+    if (sortBy === 'totalScore') return null;
 
     return sortFields[sortBy] || 'application.appliedAt';
   }
@@ -727,6 +766,11 @@ export class CandidatesService {
     if (!application) {
       throw new Error(`Application with ID ${applicationId} not found`);
     }
+
+    // Ambil hasil scoring WSM — null jika belum ada (scoring belum selesai)
+    const evalResult = await this.evaluationResultRepository.findOne({
+      where: { applicationId }
+    });
 
     return {
       id: application.applicant.id,
@@ -806,7 +850,24 @@ export class CandidatesService {
         createdAt: this.toISOString(job.createdAt),
         updatedAt: this.toISOString(job.updatedAt),
         deletedAt: this.toISOString(job.deletedAt) || null
-      })) || []
+      })) || [],
+      // Hasil scoring WSM — null jika scoring belum selesai
+      evaluationResult: evalResult
+        ? {
+            educationScore:  evalResult.educationScore  ?? null,
+            experienceScore: evalResult.experienceScore ?? null,
+            skillScore:      evalResult.skillScore      ?? null,
+            totalScore:      evalResult.totalScore      ?? null,
+            decision:        evalResult.decision        ?? null,
+            scoreDetail:
+              typeof evalResult.scoreDetail === "string"
+                ? evalResult.scoreDetail
+                : evalResult.scoreDetail != null
+                ? JSON.stringify(evalResult.scoreDetail)
+                : null,
+            evaluatedAt:     evalResult.evaluatedAt     ?? null
+          }
+        : null
     };
   }
 
