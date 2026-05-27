@@ -8,7 +8,7 @@ import {
   ManyToOne,
   JoinColumn,
   OneToMany,
-  Index
+  Index,
 } from "typeorm";
 import { Vacancy } from "../../vacancies/entities/vacancy.entity";
 import { Applicant } from "./applicant.entity";
