@@ -20,6 +20,23 @@ import { JobStatus } from "src/shared/enums/job-status.enum";
 import { StageActivityStatus } from "src/shared/enums/pipeline.enum";
 import { NotificationService } from "../../../shared/services/notification.service";
 
+export interface ScoringBreakdown {
+  method: string | null;
+  experiences: Array<{
+    role: string | null;
+    company: string | null;
+    description: string | null;
+    durationYears: number | null;
+    similarityScore: number | null;
+    isTopMatch: boolean;
+  }>;
+  educations: Array<{
+    level: number | null;
+    major: string | null;
+    graduationYear: number | null;
+  }>;
+}
+
 export interface Candidate {
   id: string;
   applicationId: string;
@@ -86,8 +103,8 @@ export interface Candidate {
   jobHistories?: Array<{
     id: string;
     applicantId: string;
-    position: string | null;       // was: string
-    employeeStatus: string | null; // was: string
+    position: string | null;
+    employeeStatus: string | null;
     company: string | null;
     startDate: Date;
     endDate?: Date;
@@ -99,14 +116,18 @@ export interface Candidate {
     updatedAt: string;
     deletedAt: string | null;
   }>;
+  /**
+   * Hasil evaluasi scoring per lamaran.
+   * evaluationResult = null jika scoring belum selesai.
+   *
+   * scoringBreakdown berisi snapshot data yang digunakan saat evaluasi —
+   * tidak berubah meski pelamar upload CV baru setelah melamar.
+   */
   evaluationResult?: {
-    educationScore: number | null;
-    experienceScore: number | null;
-    skillScore: number | null;
-    totalScore: number | null;
+    maxExperienceScore: number | null;
     decision: string | null;
-    scoreDetail: string | null;
     evaluatedAt: Date | null;
+    scoringBreakdown: ScoringBreakdown | null;
   } | null;
 }
 
@@ -489,12 +510,12 @@ export class CandidatesService {
 
     // Apply sorting
     const sortField = this.getSortField(sortBy);
-    if (sortBy === 'totalScore') {
-      // Sort by WSM total_score dari evaluation_results (nullable → NULLS LAST)
+    if (sortBy === 'maxExperienceScore') {
+      // Sort by WSM maxExperienceScore dari evaluation_results (nullable → NULLS LAST)
       queryBuilder
         .leftJoin(EvaluationResult, 'evalSort', 'evalSort.applicationId = application.id')
-        .addSelect('evalSort.totalScore', 'evalSort_total_score')
-        .orderBy('evalSort.totalScore', sortOrder.toUpperCase() as 'ASC' | 'DESC', 'NULLS LAST');
+        .addSelect('evalSort.maxExperienceScore', 'evalSort_max_experience_score')
+        .orderBy('evalSort.maxExperienceScore', sortOrder.toUpperCase() as 'ASC' | 'DESC', 'NULLS LAST');
     } else {
       queryBuilder.orderBy(sortField!, sortOrder.toUpperCase() as 'ASC' | 'DESC');
     }
@@ -516,17 +537,17 @@ export class CandidatesService {
     const evalResults = applicationIds.length > 0
       ? await this.evaluationResultRepository.find({
           where: { applicationId: In(applicationIds) },
-          select: ['applicationId', 'totalScore']
+          select: ['applicationId', 'maxExperienceScore']
         })
       : [];
     const evalMap = new Map<string, number | null>(
-      evalResults.map(e => [e.applicationId, e.totalScore ?? null])
+      evalResults.map(e => [e.applicationId, e.maxExperienceScore ?? null])
     );
 
-    // Transform to DTO — inject totalScore dari WSM scoring
+    // Transform to DTO — inject maxExperienceScore dari WSM scoring
     const data: ApplicantTableItemDto[] = applications.map(app => ({
       ...this.transformToApplicantTableItem(app),
-      totalScore: evalMap.get(app.id) ?? null
+      maxExperienceScore: evalMap.get(app.id) ?? null
     }));
 
     const totalPages = Math.ceil(total / limit);
@@ -728,25 +749,50 @@ export class CandidatesService {
     };
   }
 
+  // =============================================================================
+// PERUBAHAN 4: getSortField
+//
+// Ganti seluruh method getSortField yang lama dengan versi di bawah ini.
+// Hanya mengubah satu baris: 'totalScore' → 'maxExperienceScore'.
+// =============================================================================
+ 
   /**
-   * Get sort field for query builder
+   * Get sort field for query builder.
+   * maxExperienceScore ditangani secara khusus di getApplicantsTable
+   * (butuh LEFT JOIN ke evaluation_results), bukan via kolom langsung.
    */
   private getSortField(sortBy: string): string | null {
     const sortFields: Record<string, string> = {
-      'name': 'applicant.fullName',
-      'applyDate': 'application.appliedAt',
-      'currentScore': 'application.currentScore',
-      'stage': 'stageTemplate.name'
+      name:         "applicant.fullName",
+      applyDate:    "application.appliedAt",
+      currentScore: "application.currentScore",
+      stage:        "stageTemplate.name"
     };
-
-    // totalScore dihandle khusus di getApplicantsTable karena butuh join ke evaluation_results
-    if (sortBy === 'totalScore') return null;
-
-    return sortFields[sortBy] || 'application.appliedAt';
+ 
+    // maxExperienceScore dihandle khusus di getApplicantsTable
+    // karena butuh join ke evaluation_results
+    if (sortBy === "maxExperienceScore") return null;
+ 
+    return sortFields[sortBy] ?? "application.appliedAt";
   }
 
+  // =============================================================================
+// PERUBAHAN 3: getCandidateDetail
+//
+// Ganti seluruh method getCandidateDetail yang lama dengan versi di bawah ini.
+//
+// Yang berubah:
+//   - evaluateDetail tidak lagi di-return sebagai raw JSON string
+//   - Sebaliknya, di-parse dan diubah menjadi ScoringBreakdown yang terstruktur
+//   - isTopMatch dihitung: true untuk entri yang similarity_score-nya sama
+//     dengan maxExperienceScore (entry yang menjadi dasar skor akhir)
+//   - educations di scoringBreakdown diambil dari cv_parsed.educations (snapshot)
+// =============================================================================
+ 
   /**
-   * Get candidate detail by application ID
+   * Get candidate detail by application ID.
+   * Termasuk scoring breakdown lengkap yang siap ditampilkan oleh HR:
+   * tiap entri pengalaman beserta role, perusahaan, deskripsi, dan skor similarity-nya.
    */
   async getCandidateDetail(applicationId: string): Promise<Candidate> {
     const application = await this.applicationRepository.findOne({
@@ -762,16 +808,73 @@ export class CandidatesService {
         "applicant.addresses"
       ]
     });
-
+ 
     if (!application) {
       throw new Error(`Application with ID ${applicationId} not found`);
     }
-
-    // Ambil hasil scoring WSM — null jika belum ada (scoring belum selesai)
+ 
+    // Ambil EvaluationResult — null jika scoring belum selesai
     const evalResult = await this.evaluationResultRepository.findOne({
       where: { applicationId }
     });
-
+ 
+    // ── Parse evaluateDetail → ScoringBreakdown ──────────────────────────────
+    //
+    // evaluateDetail disimpan sebagai JSON object (atau string di database lama).
+    // Di-parse di sini agar frontend langsung mendapat struktur yang bersih —
+    // tidak perlu JSON.parse() lagi di sisi frontend.
+    //
+    // Struktur evaluateDetail yang diharapkan (ditulis oleh saveResults):
+    // {
+    //   cv_parsed: { educations: [...], work_experiences: [...], ... },
+    //   experience: {
+    //     method: "SBERT ...",
+    //     entries: [{ role, company, description, duration_years, similarity_score }]
+    //   }
+    // }
+    let scoringBreakdown: ScoringBreakdown | null = null;
+ 
+    if (evalResult?.evaluateDetail) {
+      // Normalisasi: handle baik object maupun string (backward-compat)
+      const detail: Record<string, any> =
+        typeof evalResult.evaluateDetail === "string"
+          ? JSON.parse(evalResult.evaluateDetail)
+          : evalResult.evaluateDetail;
+ 
+      const maxScore = evalResult.maxExperienceScore ?? null;
+ 
+      const experienceEntries: ScoringBreakdown["experiences"] = (
+        detail.experience?.entries ?? []
+      ).map((e: any) => ({
+        role:             e.role            ?? null,
+        company:          e.company         ?? null,
+        description:      e.description     ?? null,
+        durationYears:    e.duration_years  ?? null,
+        similarityScore:  e.similarity_score ?? null,
+        // isTopMatch: entri yang skornya sama dengan maxExperienceScore
+        // adalah entri yang menjadi dasar perankingan
+        isTopMatch:
+          maxScore !== null &&
+          e.similarity_score !== null &&
+          Math.abs(e.similarity_score - maxScore) < 0.0001
+      }));
+ 
+      const educationEntries: ScoringBreakdown["educations"] = (
+        detail.cv_parsed?.educations ?? []
+      ).map((e: any) => ({
+        level:          e.level           ?? null,
+        major:          e.major           ?? null,
+        graduationYear: e.graduationYear  ?? e.graduation_year ?? null
+      }));
+ 
+      scoringBreakdown = {
+        method:      detail.experience?.method ?? null,
+        experiences: experienceEntries,
+        educations:  educationEntries
+      };
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+ 
     return {
       id: application.applicant.id,
       applicationId: application.id,
@@ -787,85 +890,89 @@ export class CandidatesService {
       education: this.getEducationLevel(application.applicant.educations),
       experience: this.getExperienceLevel(application.applicant.jobHistories),
       coverLetter: application.coverLetter,
-      expectedStartDate: application.expectedStartDate ? this.toISOString(application.expectedStartDate) : undefined,
+      expectedStartDate: application.expectedStartDate
+        ? this.toISOString(application.expectedStartDate)
+        : undefined,
       source: application.source,
       // Personal details
-      gender: application.applicant.gender,
-      placeOfBirth: application.applicant.placeOfBirth,
-      dateOfBirth: application.applicant.dateOfBirth,
-      availability: application.applicant.availability,
-      linkedinUrl: application.applicant.linkedinUrl,
-      portfolioUrl: application.applicant.portfolioUrl,
+      gender:        application.applicant.gender,
+      placeOfBirth:  application.applicant.placeOfBirth,
+      dateOfBirth:   application.applicant.dateOfBirth,
+      availability:  application.applicant.availability,
+      linkedinUrl:   application.applicant.linkedinUrl,
+      portfolioUrl:  application.applicant.portfolioUrl,
       socialMediaUrl: application.applicant.socialMediaUrl,
-      cvUrl: application.applicant.cvUrl,
-      isTalentPool: application.isTalentPool,
-      vacancy: application.vacancy ? {
-        id: application.vacancy.id,
-        title: application.vacancy.title,
-        status: application.vacancy.status,
-        department: application.vacancy.department?.name,
-        workLocation: application.vacancy.officeAddresses?.[0]
-      } : undefined,
-      addresses: application.applicant.addresses?.map(addr => ({
-        id: addr.id,
-        applicantId: addr.applicantId,
-        province: addr.province,
-        regency: addr.regency,
-        district: addr.district,
-        village: addr.village,
-        fullAddress: addr.fullAddress,
-        postalCode: addr.postalCode,
-        addressType: addr.addressType,
-        createdAt: this.toISOString(addr.createdAt),
-        updatedAt: this.toISOString(addr.updatedAt),
-        deletedAt: this.toISOString(addr.deletedAt) || null
-      })) || [],
-      educations: application.applicant.educations?.map(edu => ({
-        id: edu.id,
-        applicantId: edu.applicantId,
-        schoolName: edu.schoolName ?? "",
-        major: edu.major ?? "",
-        degree: edu.degree ?? "",
-        gpa: edu.gpa ?? undefined,
-        startMonth: edu.startMonth ?? "",
-        endMonth: edu.endMonth ?? undefined,
+      cvUrl:         application.applicant.cvUrl,
+      isTalentPool:  application.isTalentPool,
+      vacancy: application.vacancy
+        ? {
+            id:           application.vacancy.id,
+            title:        application.vacancy.title,
+            status:       application.vacancy.status,
+            department:   application.vacancy.department?.name,
+            workLocation: application.vacancy.officeAddresses?.[0]
+          }
+        : undefined,
+      addresses: application.applicant.addresses?.map((addr) => ({
+        id:           addr.id,
+        applicantId:  addr.applicantId,
+        province:     addr.province,
+        regency:      addr.regency,
+        district:     addr.district,
+        village:      addr.village,
+        fullAddress:  addr.fullAddress,
+        postalCode:   addr.postalCode,
+        addressType:  addr.addressType,
+        createdAt:    this.toISOString(addr.createdAt),
+        updatedAt:    this.toISOString(addr.updatedAt),
+        deletedAt:    this.toISOString(addr.deletedAt) || null
+      })) ?? [],
+      // educations & jobHistories: data terkini pelamar (bisa berubah jika upload CV baru)
+      // data yang digunakan untuk scoring ada di scoringBreakdown (snapshot permanen)
+      educations: application.applicant.educations?.map((edu) => ({
+        id:              edu.id,
+        applicantId:     edu.applicantId,
+        schoolName:      edu.schoolName      ?? "",
+        major:           edu.major           ?? "",
+        degree:          edu.degree          ?? "",
+        gpa:             edu.gpa             ?? undefined,
+        startMonth:      edu.startMonth      ?? "",
+        endMonth:        edu.endMonth        ?? undefined,
         diplomaFileName: edu.diplomaFileName ?? undefined,
-        order: edu.order,
-        createdAt: this.toISOString(edu.createdAt),
-        updatedAt: this.toISOString(edu.updatedAt),
-        deletedAt: this.toISOString(edu.deletedAt) || null
-      })) || [],
-      jobHistories: application.applicant.jobHistories?.map(job => ({
-        id: job.id,
-        applicantId: job.applicantId,
-        position: job.position,
+        order:           edu.order,
+        createdAt:       this.toISOString(edu.createdAt),
+        updatedAt:       this.toISOString(edu.updatedAt),
+        deletedAt:       this.toISOString(edu.deletedAt) || null
+      })) ?? [],
+      jobHistories: application.applicant.jobHistories?.map((job) => ({
+        id:             job.id,
+        applicantId:    job.applicantId,
+        position:       job.position,
         employeeStatus: job.employeeStatus as string | null,
-        company: job.company,
-        startDate: job.startDate,
-        endDate: job.endDate,
-        location: job.location ?? undefined,
-        description: job.description ?? undefined,
-        achievements: job.achievements ?? undefined,
-        order: job.order,
-        createdAt: this.toISOString(job.createdAt),
-        updatedAt: this.toISOString(job.updatedAt),
-        deletedAt: this.toISOString(job.deletedAt) || null
-      })) || [],
-      // Hasil scoring WSM — null jika scoring belum selesai
+        company:        job.company,
+        startDate:      job.startDate,
+        endDate:        job.endDate,
+        location:       job.location     ?? undefined,
+        description:    job.description  ?? undefined,
+        achievements:   job.achievements ?? undefined,
+        order:          job.order,
+        createdAt:      this.toISOString(job.createdAt),
+        updatedAt:      this.toISOString(job.updatedAt),
+        deletedAt:      this.toISOString(job.deletedAt) || null
+      })) ?? [],
+ 
+      // evaluationResult: null jika scoring belum selesai
       evaluationResult: evalResult
         ? {
-            educationScore:  evalResult.educationScore  ?? null,
-            experienceScore: evalResult.experienceScore ?? null,
-            skillScore:      evalResult.skillScore      ?? null,
-            totalScore:      evalResult.totalScore      ?? null,
-            decision:        evalResult.decision        ?? null,
-            scoreDetail:
-              typeof evalResult.scoreDetail === "string"
-                ? evalResult.scoreDetail
-                : evalResult.scoreDetail != null
-                ? JSON.stringify(evalResult.scoreDetail)
+            maxExperienceScore: evalResult.maxExperienceScore ?? null,
+            decision:
+              typeof evalResult.decision === "string"
+                ? evalResult.decision
+                : evalResult.decision != null
+                ? String(evalResult.decision)
                 : null,
-            evaluatedAt:     evalResult.evaluatedAt     ?? null
+            evaluatedAt:      evalResult.evaluatedAt ?? null,
+            scoringBreakdown               // null jika evaluateDetail kosong
           }
         : null
     };

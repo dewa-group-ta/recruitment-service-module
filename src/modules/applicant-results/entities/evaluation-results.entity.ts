@@ -26,17 +26,8 @@ export class EvaluationResult {
   @Column({ name: "application_id", unique: true })
     applicationId!: string;
 
-  @Column({ name: "education_score", type: "float", nullable: true })
-  educationScore!: number;
-
-  @Column({ name: "experience_score", type: "float", nullable: true })
-  experienceScore!: number;
-
-  @Column({ name: "skill_score", type: "float", nullable: true })
-  skillScore!: number;
-
-  @Column({ name: "total_score", type: "float", nullable: true })
-  totalScore!: number;
+  @Column({ name: "max_experience_score", type: "float", nullable: true })
+  maxExperienceScore!: number;
 
   @Column({
         type: "enum",
@@ -45,8 +36,9 @@ export class EvaluationResult {
     })
     decision!: EvaluationDecision;
 
-  @Column({ name: "score_detail", type: "json", nullable: true })
-  scoreDetail!: Record<string, any>;
+  // Snapshot hasil parsing dan scoring bendasarkan application pada saat evaluasi
+  @Column({ name: "evaluate_detail", type: "json", nullable: true })
+  evaluateDetail!: Record<string, any>;
 
   @Column({ name: "evaluated_at", type: "timestamp", nullable: true })
     evaluatedAt!: Date;

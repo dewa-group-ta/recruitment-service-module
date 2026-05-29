@@ -6,7 +6,7 @@ export class StageProgressDto {
     description: 'Stage title',
     example: 'Applied'
   })
-  title: string;
+  title!: string;
 
   @ApiProperty({
     description: 'Stage completion date',
@@ -20,7 +20,7 @@ export class StageProgressDto {
     enum: ['done', 'in-progress', 'pending'],
     example: 'done'
   })
-  status: StageActivityStatus;
+  status!: StageActivityStatus;
 
   @ApiProperty({
     description: 'Stage score',
@@ -40,7 +40,7 @@ export class StageProgressDto {
     description: 'Whether this stage can accept scores',
     example: true
   })
-  canScore: boolean;
+  canScore!: boolean;
 }
 
 export class HiringProgressDto {
@@ -48,35 +48,35 @@ export class HiringProgressDto {
     description: 'Current stage name',
     example: 'Interview'
   })
-  currentStage: string;
+  currentStage!: string;
 
   @ApiProperty({
     description: 'Upcoming stage name',
     example: 'Offering'
   })
-  upcomingStage: string;
+  upcomingStage!: string;
 
   @ApiProperty({
     description: 'Overall candidate score',
     example: 87.5
   })
-  overallScore: number;
+  overallScore!: number;
 
   @ApiProperty({
     description: 'Whether current stage can accept scores',
     example: true
   })
-  currentStageCanScore: boolean;
+  currentStageCanScore!: boolean;
 
   @ApiProperty({
     description: 'Whether upcoming stage can accept scores',
     example: false
   })
-  upcomingStageCanScore: boolean;
+  upcomingStageCanScore!: boolean;
 
   @ApiProperty({
     description: 'List of stages with their progress',
     type: [StageProgressDto]
   })
-  stages: StageProgressDto[];
+  stages!: StageProgressDto[];
 }

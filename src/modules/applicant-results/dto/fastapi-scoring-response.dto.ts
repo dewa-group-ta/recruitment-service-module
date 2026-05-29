@@ -1,99 +1,55 @@
-import { EducationLevel } from "../../../shared/enums/job-status.enum";
-
-// ── CV Parsed ─────────────────────────────────────────────────────────────────
-
-export class FastApiParsedEducationDto {
-  level!: EducationLevel | null;
-  major!: string | null;
-  institution!: string | null;
-  graduationYear!: number | null;
+export class FastApiEducationParsedDto {
+  level!: number;
+  major!: string;
+  graduation_year!: number;
 }
 
-export class FastApiParsedWorkExperienceDto {
-  role!: string | null;
-  company!: string | null;
-  description!: string | null;
-  startDate!: Date | null;
-  endDate!: Date | null;
-  durationYears!: number | null;
-  similarityScore!: number | null;
-  isRelevant!: boolean | null;
+export class FastApiWorkExperienceDto {
+  role!: string;
+  company!: string;
+  start_date!: string;
+  end_date!: string | null;
+  duration_years!: number;
+  description!: string;
 }
 
 export class FastApiCvParsedDto {
-  applicantName!: string | null;
+  applicant_name!: string;
   skills!: string[];
-  educations!: FastApiParsedEducationDto[];
-  workExperiences!: FastApiParsedWorkExperienceDto[];
+  educations!: FastApiEducationParsedDto[];
+  work_experiences!: FastApiWorkExperienceDto[];
 }
 
-// ── Score Detail ──────────────────────────────────────────────────────────────
-
-export class FastApiScoreDetailEducationEntryDto {
-  level!: EducationLevel | null;
-  major!: string | null;
-  levelScore!: number;
-  majorSimilarity!: number;
+export class FastApiExperienceEntryDto {
+  role!: string;
+  similarity_score!: number;
 }
 
-export class FastApiScoreDetailEducationDto {
-  selectedLevel!: EducationLevel | null;
-  selectedMajor!: string | null;
-  levelScore!: number;
-  majorSimilarity!: number;
-  entries!: FastApiScoreDetailEducationEntryDto[];
+export class FastApiExperienceDetailDto {
+  method!: string;
+  entries!: FastApiExperienceEntryDto[];
 }
 
-export class FastApiScoreDetailExperienceEntryDto {
-  role!: string | null;
-  durationYears!: number | null;
-  similarityScore!: number | null;
-  isRelevant!: boolean | null;
+export class FastApiEvaluationDetailsDto {
+  experience!: FastApiExperienceDetailDto;
 }
 
-export class FastApiScoreDetailExperienceDto {
-  durationScore!: number;
-  avgSimilarity!: number;
-  relevantDurationYears!: number;
-  entries!: FastApiScoreDetailExperienceEntryDto[];
+export class FastApiEvaluationDto {
+  shortlist_score!: number;
+  details!: FastApiEvaluationDetailsDto;
 }
 
-// Jaccard-based — bukan lagi string joined + cosine similarity
-export class FastApiScoreDetailSkillDto {
-  vacancySkills!: string[];
-  applicantSkills!: string[];
-  matchedSkills!: string[];
-  jaccardScore!: number;
+export class FastApiScoringDataDto {
+  application_id!: string;
+  cv_parsed!: FastApiCvParsedDto;
+  evaluation!: FastApiEvaluationDto;
 }
-
-export class FastApiScoreDetailDto {
-  education!: FastApiScoreDetailEducationDto;
-  experience!: FastApiScoreDetailExperienceDto;
-  skill!: FastApiScoreDetailSkillDto;
-}
-
-// ── Scores ────────────────────────────────────────────────────────────────────
-
-export class FastApiScoresDto {
-  /** Bobot WSM: 20% */
-  educationScore!: number;
-
-  /** Bobot WSM: 50% */
-  experienceScore!: number;
-
-  /** Bobot WSM: 30% — Jaccard similarity */
-  skillScore!: number;
-
-  /** total = (0.20 × edu) + (0.50 × exp) + (0.30 × skill) */
-  totalScore!: number;
-
-  scoreDetail!: FastApiScoreDetailDto;
-}
-
-// ── Root ──────────────────────────────────────────────────────────────────────
 
 export class FastApiScoringResponseDto {
-  applicationId!: string;
-  cvParsed!: FastApiCvParsedDto;
-  scores!: FastApiScoresDto;
+  success!: boolean;
+  message!: string;
+  data!: FastApiScoringDataDto;
+  error_code!: string | null;
+  error_details!: string | null;
+  metadata!: any | null;
 }

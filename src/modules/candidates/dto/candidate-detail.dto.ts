@@ -149,17 +149,8 @@ export class CandidateDetailDto {
 
 
 export class EvaluationScoreDetailDto {
-  @ApiProperty({ example: 0.999, nullable: true })
-  educationScore!: number | null;
-
   @ApiProperty({ example: 0.729, nullable: true })
-  experienceScore!: number | null;
-
-  @ApiProperty({ example: 0.852, nullable: true })
-  skillScore!: number | null;
-
-  @ApiProperty({ example: 0.820, nullable: true })
-  totalScore!: number | null;
+  maxExperienceScore!: number | null;
 
   @ApiProperty({
     enum: ['lolos', 'tidak_lolos'],
@@ -169,7 +160,7 @@ export class EvaluationScoreDetailDto {
   decision!: string | null;
 
   @ApiProperty({ nullable: true, description: 'Breakdown skor per komponen (JSON)' })
-  scoreDetail!: Record<string, any> | null;
+  evaluateDetail!: Record<string, any> | null;
 
   @ApiProperty({ nullable: true })
   evaluatedAt!: Date | null;

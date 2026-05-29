@@ -28,6 +28,7 @@ import { IsCustomSourceRequiredConstraint } from "./validators/custom-source.val
 import { ApplicantSourceService } from "./services/applicant-source.service";
 import { ApplicantSourceController } from "./controllers/applicant-source.controller";
 import { ApplicantResultsModule } from "../applicant-results/applicant-results.module";
+import { File } from "src/shared/entities/file.entity";
 
 @Module({
   imports: [
@@ -45,9 +46,11 @@ import { ApplicantResultsModule } from "../applicant-results/applicant-results.m
       StageActivity,
       ApplicantSource,
       AuthToken,
+      File
     ]),
     EmailModule,
-    ApplicantResultsModule
+    ApplicantResultsModule,
+    
   ],
   controllers: [
     ApplicationController,

@@ -108,6 +108,33 @@ export class MinioService implements OnModuleInit {
     }
   }
 
+  /**
+   * Mengambil file dari MinIO sebagai Buffer.
+   * Digunakan oleh scoring service untuk mengirim dokumen CV ke FastAPI
+   * dalam bentuk multipart/form-data.
+   *
+   * @param filePath - Path file di dalam bucket (contoh: "cv/1234-abc.pdf")
+   * @returns Buffer isi file
+   */
+  async getFileBuffer(filePath: string): Promise<Buffer> {
+    try {
+      const stream = await this.minioClient.getObject(
+        this.bucketName,
+        filePath
+      );
+
+      return new Promise<Buffer>((resolve, reject) => {
+        const chunks: Buffer[] = [];
+        stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+        stream.on("end", () => resolve(Buffer.concat(chunks)));
+        stream.on("error", reject);
+      });
+    } catch (error) {
+      this.logger.error(`Failed to get file buffer for ${filePath}`, error);
+      throw new Error(`Failed to retrieve file from storage: ${filePath}`);
+    }
+  }
+
   private generateFileName(originalName: string): string {
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);

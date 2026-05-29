@@ -12,7 +12,7 @@ export enum SortBy {
   APPLY_DATE = 'applyDate',
   CURRENT_SCORE = 'currentScore',
   STAGE = 'stage',
-  TOTAL_SCORE = 'totalScore'
+  MAX_EXPERIENCE_SCORE = 'maxExperienceScore'
 }
 
 export class ApplicantTableQueryDto {

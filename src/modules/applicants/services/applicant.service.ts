@@ -40,6 +40,7 @@ import { ApplicationTrackingResponseDto } from "../dto/application-tracking-resp
 import { IApplicantService } from "../../../shared/interfaces/applicant.interface";
 import { StageActivityStatus } from "src/shared/enums/pipeline.enum";
 import { ApplicantResultsService } from "src/modules/applicant-results/services/applicant-results.service";
+import { File, FileType } from "../../../shared/entities/file.entity";
 
 /**
  * Service for managing applicant operations
@@ -76,7 +77,9 @@ export class ApplicantService implements IApplicantService {
     private readonly pipelineStageRepository: Repository<PipelineStage>,
     @InjectRepository(StageActivity)
     private readonly stageActivityRepository: Repository<StageActivity>,
-    private readonly applicantResultsService: ApplicantResultsService
+    private readonly applicantResultsService: ApplicantResultsService,
+    @InjectRepository(File)
+    private readonly fileRepository: Repository<File>,
   ) {}
 
   /**
@@ -795,178 +798,218 @@ export class ApplicantService implements IApplicantService {
     }
   }
 
-  /**
-   * Apply for a position by updating applicant data and changing application status
-   * @param applicationId - Application ID
-   * @param applyDto - Application data
-   */
-  async applyForPosition(
-    applicationId: string,
-    applyDto: ApplyApplicantDto
-  ): Promise<{ applicant: Applicant; application: Application }> {
-    // Find the application
-    const application = await this.applicationRepository.findOne({
-      where: { id: applicationId },
-      relations: ["applicant"]
-    });
-
-    if (!application) {
-      throw new NotFoundException("Application not found");
-    }
-
-    // Validate that application status is NEW
-    if (application.status !== ApplicantStatus.NEW) {
-      throw new BadRequestException(
-        `Cannot apply for this position. Application status is '${application.status}', but only applications with status 'new' can be applied.`
-      );
-    }
-
-    const applicantId = application.applicantId;
-
-    // Use transaction to ensure data consistency
-    const result = await this.dataSource.transaction(async (manager) => {
-      // Update applicant basic information
-      const applicant = await manager.findOne(Applicant, {
-        where: { id: applicantId }
-      });
-
-      if (!applicant) {
-        throw new NotFoundException("Applicant not found");
-      }
-
-      // Update applicant profile
-      Object.assign(applicant, {
-        fullName: applyDto.fullName,
-        phone: applyDto.phone,
-        alternativePhone: applyDto.alternativePhone,
-        gender: applyDto.gender,
-        maritalStatus: applyDto.maritalStatus,
-        placeOfBirth: applyDto.placeOfBirth,
-        dateOfBirth: new Date(applyDto.dateOfBirth),
-        linkedinUrl: applyDto.linkedinUrl,
-        socialMediaUrl: applyDto.socialMediaUrl,
-        availability: applyDto.availability,
-        availabilityAt: applyDto.availabilityAt
-          ? new Date(applyDto.availabilityAt)
-          : null
-      });
-
-      const updatedApplicant = await manager.save(Applicant, applicant);
-
-      // Delete existing related data
-      await manager.softDelete(ApplicantAddress, { applicantId });
-      await manager.softDelete(ApplicantIdentity, { applicantId });
-      await manager.softDelete(ApplicantEducation, { applicantId });
-      await manager.softDelete(ApplicantJobHistory, { applicantId });
-      await manager.softDelete(ApplicantProjectHistory, { applicantId });
-
-      // Create new addresses
-      const addresses = applyDto.addresses.map((addressData) =>
-        manager.create(ApplicantAddress, {
-          ...addressData,
-          applicantId
-        })
-      );
-      await manager.save(ApplicantAddress, addresses);
-
-      // Create new identities
-      const identities = applyDto.identities.map((identityData) =>
-        manager.create(ApplicantIdentity, {
-          ...identityData,
-          applicantId
-        })
-      );
-      await manager.save(ApplicantIdentity, identities);
-
-      // Create new educations
-      const educations = applyDto.educations.map((educationData) =>
-        manager.create(ApplicantEducation, {
-          schoolName: educationData.institutionName,
-          major: educationData.fieldOfStudy,
-          degree: educationData.degree,
-          startMonth: educationData.startDate,
-          endMonth: educationData.endDate,
-          gpa: educationData.gpa,
-          applicantId
-        })
-      );
-      await manager.save(ApplicantEducation, educations);
-
-      // Create new job histories
-      const jobHistories = applyDto.jobHistories.map((jobData) =>
-        manager.create(ApplicantJobHistory, {
-          position: jobData.position,
-          employeeStatus: jobData.employmentType,
-          company: jobData.companyName,
-          startDate: this.parseDate(jobData.startDate),
-          endDate: jobData.endDate
-            ? this.parseDate(jobData.endDate)
-            : undefined,
-          location: jobData.location,
-          description: jobData.description,
-          applicantId
-        })
-      );
-      await manager.save(ApplicantJobHistory, jobHistories);
-
-      // Create new project histories
-      const projectHistories = applyDto.projectHistories.map((projectData) =>{
-        if(!projectData.projectName || !projectData.position || !projectData.year) {
-          return undefined;
-        }
-
-        return manager.create(ApplicantProjectHistory, {
-          projectName: projectData.projectName,
-          position: projectData.position,
-          year: projectData.year?.toString(),
-          projectLink: projectData.projectUrl,
-          applicantId
-        })
-      }).filter((projectHistory) => projectHistory !== undefined);
-      
-      if(projectHistories.length > 0) {
-        await manager.save(ApplicantProjectHistory, projectHistories);
-      }
-
-      // Update application status to APPLIED
-      application.status = ApplicantStatus.APPLIED;
-      application.appliedAt = new Date();
-      const updatedApplication = await manager.save(Application, application);
-
-      // Get first stage from pipeline
-      const firstStage = await manager.findOne(PipelineStage, {
-        where: { pipelineId: application.pipelineId },
-        order: { stageOrder: "ASC" }
-      });
-
-      if (!firstStage) {
-        throw new NotFoundException("First stage not found");
-      }
-
-      // Create new stage activity
-      const stageActivity = manager.create(StageActivity, {
-        applicationId: application.id,
-        stageId: firstStage.id,
-        createdAt: new Date(),
-        status: StageActivityStatus.IN_PROGRESS
-      });
-      await manager.save(StageActivity, stageActivity);
-
-      // Update application current stage
-      application.currentStageId = firstStage.id;
-      application.lastActivityAt = new Date();
-      await manager.save(Application, application);
-
-      return {
-        applicant: updatedApplicant,
-        application: updatedApplication
-      };
-    });
-
-    this.applicantResultsService.triggerScoringAsync(result.application.id);
-
-    return result;
+  // =============================================================================
+// FILE: applicant.service.ts
+//
+// Dua perubahan di file ini:
+//
+//  1. applyForPosition  → tambah blok pembuatan CV snapshot di dalam transaksi
+//  2. isReferencedByApplication  → method baru, dipanggil dari controller
+//
+// Salin kedua method ini ke dalam class ApplicantService yang sudah ada.
+// Tidak ada perubahan di bagian lain service.
+// =============================================================================
+ 
+// -----------------------------------------------------------------------------
+// PERUBAHAN 1: applyForPosition
+// Ganti seluruh method applyForPosition yang lama dengan versi di bawah ini.
+//
+// Yang ditambahkan:
+//   - Blok "Buat snapshot File" di dalam transaksi, setelah stage activity dibuat.
+//     Snapshot ini menyalin metadata file CV pelamar ke record baru dengan
+//     relatedEntity='application', sehingga relasi Application → File (CV) menjadi
+//     ada secara eksplisit dan bisa ditelusuri tanpa bergantung pada applicant.cvUrl.
+// -----------------------------------------------------------------------------
+ 
+async applyForPosition(
+  applicationId: string,
+  applyDto: ApplyApplicantDto
+): Promise<{ applicant: Applicant; application: Application }> {
+  // 1. Cari application dan pastikan statusnya NEW
+  const application = await this.applicationRepository.findOne({
+    where: { id: applicationId },
+    relations: ["applicant"]
+  });
+ 
+  if (!application) {
+    throw new NotFoundException("Application not found");
   }
+ 
+  if (application.status !== ApplicantStatus.NEW) {
+    throw new BadRequestException(
+      `Cannot apply for this position. Application status is '${application.status}', ` +
+        `but only applications with status 'new' can be applied.`
+    );
+  }
+ 
+  const applicantId = application.applicantId;
+ 
+  // 2. Validasi CV sudah diupload SEBELUM transaksi.
+  //    CV tersimpan di tabel files dengan relatedEntity='applicant' dan fileType=CV.
+  //    Jika belum ada, lempar error lebih awal agar pelamar tahu dengan jelas.
+  const cvFile = await this.fileRepository.findOne({
+    where: {
+      relatedEntity: "applicant",
+      relatedEntityId: applicantId,
+      fileType: FileType.CV,
+      isActive: true
+    }
+  });
+ 
+  if (!cvFile) {
+    throw new BadRequestException(
+      "CV belum diupload. Silakan upload CV terlebih dahulu sebelum melanjutkan."
+    );
+  }
+ 
+  // 3. Transaksi: update profil, alamat, identitas, status lamaran, dan snapshot CV
+  const result = await this.dataSource.transaction(async (manager) => {
+    const applicant = await manager.findOne(Applicant, {
+      where: { id: applicantId }
+    });
+ 
+    if (!applicant) {
+      throw new NotFoundException("Applicant not found");
+    }
+ 
+    // Update profil dasar pelamar
+    Object.assign(applicant, {
+      fullName:         applyDto.fullName,
+      phone:            applyDto.phone,
+      alternativePhone: applyDto.alternativePhone,
+      gender:           applyDto.gender,
+      maritalStatus:    applyDto.maritalStatus,
+      placeOfBirth:     applyDto.placeOfBirth,
+      dateOfBirth:      new Date(applyDto.dateOfBirth),
+      linkedinUrl:      applyDto.linkedinUrl,
+      socialMediaUrl:   applyDto.socialMediaUrl,
+      availability:     applyDto.availability,
+      availabilityAt:   applyDto.availabilityAt
+        ? new Date(applyDto.availabilityAt)
+        : null
+    });
+ 
+    const updatedApplicant = await manager.save(Applicant, applicant);
+ 
+    // Timpa alamat lama dengan alamat baru dari form
+    await manager.softDelete(ApplicantAddress, { applicantId });
+    const addresses = applyDto.addresses.map((addressData) =>
+      manager.create(ApplicantAddress, { ...addressData, applicantId })
+    );
+    await manager.save(ApplicantAddress, addresses);
+ 
+    // Timpa identitas lama dengan identitas baru dari form
+    await manager.softDelete(ApplicantIdentity, { applicantId });
+    const identities = applyDto.identities.map((identityData) =>
+      manager.create(ApplicantIdentity, { ...identityData, applicantId })
+    );
+    await manager.save(ApplicantIdentity, identities);
+ 
+    // NOTE: ApplicantEducation & ApplicantJobHistory TIDAK disimpan di sini.
+    // Keduanya akan diisi oleh ApplicantResultsService.saveResults()
+    // dari hasil parsing CV oleh FastAPI setelah scoring selesai.
+ 
+    // Update status lamaran menjadi APPLIED
+    application.status    = ApplicantStatus.APPLIED;
+    application.appliedAt = new Date();
+    const updatedApplication = await manager.save(Application, application);
+ 
+    // Ambil stage pertama dari pipeline
+    const firstStage = await manager.findOne(PipelineStage, {
+      where: { pipelineId: application.pipelineId },
+      order: { stageOrder: "ASC" }
+    });
+ 
+    if (!firstStage) {
+      throw new NotFoundException("First stage not found");
+    }
+ 
+    // Buat stage activity pertama
+    const stageActivity = manager.create(StageActivity, {
+      applicationId: application.id,
+      stageId:       firstStage.id,
+      createdAt:     new Date(),
+      status:        StageActivityStatus.IN_PROGRESS
+    });
+    await manager.save(StageActivity, stageActivity);
+ 
+    // Update current stage pada application
+    application.currentStageId = firstStage.id;
+    application.lastActivityAt = new Date();
+    await manager.save(Application, application);
+ 
+    // ── Buat snapshot File CV terikat ke application ini ──────────────────
+    //
+    // Snapshot ini TIDAK menyalin file fisik di MinIO — hanya membuat record
+    // File baru yang menunjuk ke path yang sama. Tujuannya:
+    //   - Membuat relasi eksplisit Application → File (CV)
+    //   - Memastikan CV yang digunakan untuk scoring per lamaran bisa ditelusuri
+    //     meski pelamar mengupload CV baru di kemudian hari
+    //   - Melindungi file fisik dari penghapusan selama masih ada snapshot aktif
+    //     (lihat method isReferencedByApplication di bawah)
+    const cvSnapshot = manager.create(File, {
+      fileName:        cvFile.fileName,
+      originalName:    cvFile.originalName,
+      filePath:        cvFile.filePath,     // path MinIO yang sama — tidak perlu copy
+      fileSize:        cvFile.fileSize,
+      mimeType:        cvFile.mimeType,
+      fileType:        FileType.CV,
+      relatedEntity:   "application",
+      relatedEntityId: application.id,      // terikat ke lamaran spesifik ini
+      uploadedById:    applicantId,
+      description:     `CV snapshot - ${application.applicationNumber}`
+    });
+    await manager.save(File, cvSnapshot);
+    // ─────────────────────────────────────────────────────────────────────
+ 
+    return {
+      applicant:   updatedApplicant,
+      application: updatedApplication
+    };
+  });
+ 
+  // 4. Trigger scoring async — cvFilePath sudah diketahui dari validasi awal,
+  //    tidak perlu query ulang di dalam scoring service.
+  this.applicantResultsService.triggerScoringAsync(
+    result.application.id,
+    cvFile.filePath
+  );
+ 
+  return result;
+}
+ 
+// -----------------------------------------------------------------------------
+// PERUBAHAN 2: isReferencedByApplication  (method BARU)
+// Tambahkan method ini ke dalam class ApplicantService.
+// Letakkan di bagian bawah class, bersama method-method helper lainnya.
+//
+// Digunakan oleh controller sebelum menghapus file CV lama dari MinIO,
+// untuk memastikan tidak ada application-level snapshot yang masih mengandalkan
+// file tersebut. Jika masih ada, file fisik di MinIO dibiarkan — hanya record
+// di level applicant yang akan digantikan oleh upload baru.
+// -----------------------------------------------------------------------------
+ 
+/**
+ * Memeriksa apakah suatu path file CV masih direferensikan oleh
+ * application-level snapshot (relatedEntity = 'application').
+ *
+ * Dipanggil dari controller saat pelamar mengupload CV baru, sebelum
+ * file lama dihapus dari MinIO, untuk mencegah penghapusan file yang
+ * masih dipakai oleh lamaran sebelumnya.
+ *
+ * @param filePath - Path file di MinIO yang ingin diperiksa
+ * @returns true jika masih ada snapshot aktif yang mereferensikan path ini
+ */
+async isReferencedByApplication(filePath: string): Promise<boolean> {
+  const snapshot = await this.fileRepository.findOne({
+    where: {
+      filePath:      filePath,
+      relatedEntity: "application",
+      isActive:      true
+    }
+  });
+  return snapshot !== null;
+}
 
   /**
    * Parse date from DD-MM-YY format to Date object

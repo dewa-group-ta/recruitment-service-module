@@ -153,11 +153,11 @@ export class ApplicantTableItemDto {
   coverLetter?: string;
 
   @ApiProperty({
-    description: 'Skor total WSM hasil screening CV otomatis (0.0–1.0). Null jika scoring belum selesai.',
+    description: 'Skor max pengalaman',
     example: 0.82,
     required: false
   })
-  totalScore?: number | null;
+  maxExperienceScore?: number | null;
 }
 
 export class ApplicantTableResponseDto {

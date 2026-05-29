@@ -316,84 +316,82 @@ export class VacancyService {
    * @returns Prepared update data
    */
   private prepareUpdateData(
-  updateVacancyDto: UpdateVacancyDto,
-  updatedById: string
-): Partial<Vacancy> {
-  const updateData: Partial<Vacancy> = { updatedById };
+    updateVacancyDto: UpdateVacancyDto,
+    updatedById: string
+  ): Partial<Vacancy> {
+    const updateData: Partial<Vacancy> = { updatedById };
 
-  const stringFields = [
-    "title",
-    "description",
-    "responsibilities",
-    "requirements",
-    "status",
-    "jobType",
-    "employmentType",
-    "workModel",
-    "salaryPeriod",
-    "currency",
-    "departmentId",
-    "requiredEducation",
-    "pipelineId",
-    "generatedPosterUrl",
-    "relevantMajor",    // tambahan
-    "roleDescription"   // tambahan
-  ];
+    // Map string fields
+    const stringFields = [
+      "title",
+      "description",
+      "responsibilities",
+      "requirements",
+      "status",
+      "jobType",
+      "employmentType",
+      "workModel",
+      "salaryPeriod",
+      "currency",
+      "departmentId",
+      "requiredEducation",
+      "pipelineId",
+      "generatedPosterUrl"
+    ];
 
-  stringFields.forEach((field) => {
-    if (
-      updateVacancyDto[field] !== undefined &&
-      updateVacancyDto[field] !== null
-    ) {
-      updateData[field] = updateVacancyDto[field];
+    stringFields.forEach((field) => {
+      if (
+        updateVacancyDto[field] !== undefined &&
+        updateVacancyDto[field] !== null
+      ) {
+        updateData[field] = updateVacancyDto[field];
+      }
+    });
+
+    // Map number fields
+    const numberFields = [
+      "applicantLimit",
+      "hiredLimit",
+      "salaryMin",
+      "salaryMax",
+      "requiredExperienceYears",
+      "hoursPerWeekMin",
+      "hoursPerWeekMax"
+    ];
+
+    numberFields.forEach((field) => {
+      if (updateVacancyDto[field] !== undefined) {
+        updateData[field] = updateVacancyDto[field];
+      }
+    });
+
+    // Map array fields
+    if ((updateVacancyDto as any).officeAddresses !== undefined) {
+      updateData.officeAddresses = (updateVacancyDto as any).officeAddresses;
     }
-  });
 
-  const numberFields = [
-    "applicantLimit",
-    "hiredLimit",
-    "salaryMin",
-    "salaryMax",
-    "requiredExperienceYears",
-    "hoursPerWeekMin",
-    "hoursPerWeekMax"
-  ];
-
-  numberFields.forEach((field) => {
-    if (updateVacancyDto[field] !== undefined) {
-      updateData[field] = updateVacancyDto[field];
+    // Map poster configuration
+    if (updateVacancyDto.posterConfiguration !== undefined) {
+      updateData.posterConfiguration = updateVacancyDto.posterConfiguration;
     }
-  });
 
-  if ((updateVacancyDto as any).officeAddresses !== undefined) {
-    updateData.officeAddresses = (updateVacancyDto as any).officeAddresses;
+    // Convert date strings to Date objects
+    const dateFields = [
+      "applicationDeadline",
+      "expectedStartDate",
+      "publishedAt",
+      "archivedAt",
+      "closedAt"
+    ];
+
+    dateFields.forEach((field) => {
+      if (updateVacancyDto[field]) {
+        updateData[field] = new Date(updateVacancyDto[field]);
+      }
+    });
+
+    return updateData;
   }
-
-  // tambahan — handle requiredSkills sebagai array
-  if (updateVacancyDto.requiredSkills !== undefined) {
-    updateData.requiredSkills = updateVacancyDto.requiredSkills;
-  }
-
-  if (updateVacancyDto.posterConfiguration !== undefined) {
-    updateData.posterConfiguration = updateVacancyDto.posterConfiguration;
-  }
-
-  const dateFields = [
-    "applicationDeadline",
-    "expectedStartDate",
-    "publishedAt",
-    "archivedAt",
-    "closedAt"
-  ];
-
-  dateFields.forEach((field) => {
-    if (updateVacancyDto[field]) {
-      updateData[field] = new Date(updateVacancyDto[field]);
-    }
-  });
-
-  return updateData;
-}
 
   /**
    * Map entity to response DTO
@@ -401,53 +399,49 @@ export class VacancyService {
    * @returns Vacancy response DTO
    */
   private mapToResponseDto(vacancy: Vacancy): VacancyResponseDto {
-  return {
-    id: vacancy.id,
-    title: vacancy.title,
-    jobCode: vacancy.jobCode,
-    description: vacancy.description,
-    responsibilities: vacancy.responsibilities,
-    requirements: vacancy.requirements,
-    status: vacancy.status,
-    jobType: vacancy.jobType,
-    employmentType: vacancy.employmentType,
-    workModel: vacancy.workModel,
-    startDate: vacancy.startDate,
-    endDate: vacancy.endDate,
-    isLimitApplicantEnabled: vacancy.isLimitApplicantEnabled,
-    applicantLimit: vacancy.applicantLimit,
-    isLimitHiredEnabled: vacancy.isLimitHiredEnabled,
-    hiredLimit: vacancy.hiredLimit,
-    officeAddresses: vacancy.officeAddresses,
-    department: vacancy.department?.name || "",
-    departmentId: vacancy.departmentId,
-    salaryMin: vacancy.salaryMin,
-    salaryMax: vacancy.salaryMax,
-    salaryPeriod: vacancy.salaryPeriod,
-    currency: vacancy.currency,
-    jobCategoryId: vacancy.jobCategoryId,
-    requiredEducation: vacancy.requiredEducation,
-    requiredExperienceYears: vacancy.requiredExperienceYears,
-    hoursPerWeekMin: vacancy.hoursPerWeekMin,
-    hoursPerWeekMax: vacancy.hoursPerWeekMax,
-    pipelineId: vacancy.pipelineId,
-    createdById: vacancy.createdById,
-    updatedById: vacancy.updatedById,
-    createdAt: vacancy.createdAt,
-    updatedAt: vacancy.updatedAt,
-    generatedPosterUrl: vacancy.generatedPosterUrl,
-    posterConfiguration: vacancy.posterConfiguration,
-    applicationDeadline: vacancy.endDate,
-    expectedStartDate: vacancy.startDate,
-    publishedAt: vacancy.createdAt,
-    archivedAt: vacancy.deletedAt,
-    closedAt: vacancy.endDate,
-    // tambahan
-    relevantMajor: vacancy.relevantMajor,
-    roleDescription: vacancy.roleDescription,
-    requiredSkills: vacancy.requiredSkills
-  };
-}
+    return {
+      id: vacancy.id,
+      title: vacancy.title,
+      jobCode: vacancy.jobCode,
+      description: vacancy.description,
+      responsibilities: vacancy.responsibilities,
+      requirements: vacancy.requirements,
+      status: vacancy.status,
+      jobType: vacancy.jobType,
+      employmentType: vacancy.employmentType,
+      workModel: vacancy.workModel,
+      startDate: vacancy.startDate,
+      endDate: vacancy.endDate,
+      isLimitApplicantEnabled: vacancy.isLimitApplicantEnabled,
+      applicantLimit: vacancy.applicantLimit,
+      isLimitHiredEnabled: vacancy.isLimitHiredEnabled,
+      hiredLimit: vacancy.hiredLimit,
+      officeAddresses: vacancy.officeAddresses,
+      department: vacancy.department?.name || "",
+      departmentId: vacancy.departmentId,
+      salaryMin: vacancy.salaryMin,
+      salaryMax: vacancy.salaryMax,
+      salaryPeriod: vacancy.salaryPeriod,
+      currency: vacancy.currency,
+      jobCategoryId: vacancy.jobCategoryId,
+      requiredEducation: vacancy.requiredEducation,
+      requiredExperienceYears: vacancy.requiredExperienceYears,
+      hoursPerWeekMin: vacancy.hoursPerWeekMin,
+      hoursPerWeekMax: vacancy.hoursPerWeekMax,
+      pipelineId: vacancy.pipelineId,
+      createdById: vacancy.createdById,
+      updatedById: vacancy.updatedById,
+      createdAt: vacancy.createdAt,
+      updatedAt: vacancy.updatedAt,
+      generatedPosterUrl: vacancy.generatedPosterUrl,
+      posterConfiguration: vacancy.posterConfiguration,
+      applicationDeadline: vacancy.endDate,
+      expectedStartDate: vacancy.startDate,
+      publishedAt: vacancy.createdAt,
+      archivedAt: vacancy.deletedAt,
+      closedAt: vacancy.endDate
+    };
+  }
 
   /**
    * Get all public job vacancies with pagination (only PUBLISHED status)
@@ -657,67 +651,63 @@ export class VacancyService {
    * @returns Mapped vacancy data
    */
   private mapJobFormDataToVacancy(
-  jobFormData: any,
-  updatedById: string
-): Partial<Vacancy> {
-  return {
-    title: jobFormData.jobTitle,
-    jobCode: jobFormData.jobCode,
-    description: jobFormData.description,
-    responsibilities: jobFormData.responsibilities,
-    requirements: jobFormData.requirements,
-    jobType: jobFormData.jobType,
-    employmentType: jobFormData.employeeType,
-    startDate: jobFormData.startDate
-      ? this.parseDate(jobFormData.startDate)
-      : undefined,
-    endDate: jobFormData.endDate
-      ? this.parseDate(jobFormData.endDate)
-      : undefined,
-    isLimitApplicantEnabled: jobFormData.isLimitApplicantEnabled || false,
-    applicantLimit: jobFormData.limitApplicant,
-    isLimitHiredEnabled: jobFormData.isLimitHiredEnabled || false,
-    hiredLimit: jobFormData.limitHired,
-    officeAddresses: jobFormData.officeAddresses || [],
-    workModel: jobFormData.workModel,
-    departmentId: jobFormData.department,
-    salaryMin: jobFormData.minSalary
-      ? parseInt(jobFormData.minSalary)
-      : undefined,
-    salaryMax: jobFormData.maxSalary
-      ? parseInt(jobFormData.maxSalary)
-      : undefined,
-    salaryPeriod:
-      jobFormData.salaryPeriod && jobFormData.salaryPeriod.trim() !== ""
-        ? jobFormData.salaryPeriod
-        : null,
-    currency: jobFormData.currency,
-    requiredEducation:
-      jobFormData.levelEducation && jobFormData.levelEducation.trim() !== ""
-        ? jobFormData.levelEducation
-        : null,
-    requiredExperienceYears: jobFormData.yearOfExperience
-      ? parseInt(jobFormData.yearOfExperience)
-      : undefined,
-    hoursPerWeekMin: jobFormData.minHourPerWeek
-      ? parseInt(jobFormData.minHourPerWeek)
-      : undefined,
-    hoursPerWeekMax: jobFormData.maxHourPerWeek
-      ? parseInt(jobFormData.maxHourPerWeek)
-      : undefined,
-    posterConfiguration: this.convertPosterConfig(jobFormData.posterConfig),
-    pipelineId: jobFormData.pipelineId,
-    jobCategoryId:
-      jobFormData.jobCategory && jobFormData.jobCategory.trim() !== ""
-        ? jobFormData.jobCategory
-        : null,
-    // tambahan
-    relevantMajor: jobFormData.relevantMajor || null,
-    roleDescription: jobFormData.roleDescription || null,
-    requiredSkills: jobFormData.requiredSkills || null,
-    updatedById
-  };
-}
+    jobFormData: any,
+    updatedById: string
+  ): Partial<Vacancy> {
+    return {
+      title: jobFormData.jobTitle,
+      jobCode: jobFormData.jobCode,
+      description: jobFormData.description,
+      responsibilities: jobFormData.responsibilities,
+      requirements: jobFormData.requirements,
+      jobType: jobFormData.jobType,
+      employmentType: jobFormData.employeeType,
+      startDate: jobFormData.startDate
+        ? this.parseDate(jobFormData.startDate)
+        : undefined,
+      endDate: jobFormData.endDate
+        ? this.parseDate(jobFormData.endDate)
+        : undefined,
+      isLimitApplicantEnabled: jobFormData.isLimitApplicantEnabled || false,
+      applicantLimit: jobFormData.limitApplicant,
+      isLimitHiredEnabled: jobFormData.isLimitHiredEnabled || false,
+      hiredLimit: jobFormData.limitHired,
+      officeAddresses: jobFormData.officeAddresses || [],
+      workModel: jobFormData.workModel,
+      departmentId: jobFormData.department,
+      salaryMin: jobFormData.minSalary
+        ? parseInt(jobFormData.minSalary)
+        : undefined,
+      salaryMax: jobFormData.maxSalary
+        ? parseInt(jobFormData.maxSalary)
+        : undefined,
+      salaryPeriod:
+        jobFormData.salaryPeriod && jobFormData.salaryPeriod.trim() !== ""
+          ? jobFormData.salaryPeriod
+          : null,
+      currency: jobFormData.currency,
+      requiredEducation:
+        jobFormData.levelEducation && jobFormData.levelEducation.trim() !== ""
+          ? jobFormData.levelEducation
+          : null,
+      requiredExperienceYears: jobFormData.yearOfExperience
+        ? parseInt(jobFormData.yearOfExperience)
+        : undefined,
+      hoursPerWeekMin: jobFormData.minHourPerWeek
+        ? parseInt(jobFormData.minHourPerWeek)
+        : undefined,
+      hoursPerWeekMax: jobFormData.maxHourPerWeek
+        ? parseInt(jobFormData.maxHourPerWeek)
+        : undefined,
+      posterConfiguration: this.convertPosterConfig(jobFormData.posterConfig),
+      pipelineId: jobFormData.pipelineId,
+      jobCategoryId:
+        jobFormData.jobCategory && jobFormData.jobCategory.trim() !== ""
+          ? jobFormData.jobCategory
+          : null,
+      updatedById
+    };
+  }
 
   /**
    * Update vacancy from job form data
