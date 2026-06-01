@@ -491,122 +491,182 @@ export class ApplicationController {
     }
   }
 
-  @Post("upload-cv")
-  @UseInterceptors(FileInterceptor("file"))
-  @HttpCode(HttpStatus.OK)
-  @ResponseMessage(responseMessage.SUCCESS)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: "Upload CV file",
-    description:
-      "Upload CV file for the authenticated applicant. Maximum file size: 5MB. Supported formats: PDF, DOC, DOCX."
-  })
-  @ApiConsumes("multipart/form-data")
-  @ApiBody({
-    schema: {
-      type: "object",
-      properties: {
-        file: {
-          type: "string",
-          format: "binary",
-          description: "CV file (PDF, DOC, DOCX) - Max 5MB"
-        },
-        description: {
-          type: "string",
-          description: "Optional description for the CV"
-        }
+  // =============================================================================
+// FILE: applicant.controller.ts
+//
+// Satu perubahan di file ini:
+//
+//  1. uploadCV  → tambah pengecekan snapshot sebelum menghapus CV lama dari MinIO
+//
+// Ganti seluruh method uploadCV yang lama dengan versi di bawah ini.
+// Tidak ada perubahan di bagian lain controller.
+// =============================================================================
+ 
+// -----------------------------------------------------------------------------
+// PERUBAHAN: uploadCV
+//
+// Yang ditambahkan:
+//   - Sebelum menghapus file CV lama dari MinIO, cek dulu apakah ada
+//     application-level snapshot yang masih mereferensikan path tersebut.
+//   - Jika masih ada snapshot (artinya ada lamaran yang memakai CV itu),
+//     file fisik di MinIO TIDAK dihapus — hanya record di level applicant
+//     yang akan di-replace oleh FileUploadService saat upload baru.
+//   - Jika tidak ada snapshot, aman dihapus seperti sebelumnya.
+//
+// Mengapa penting:
+//   Saat applyForPosition dipanggil, dibuat snapshot File dengan
+//   relatedEntity='application' yang menunjuk ke path MinIO yang sama.
+//   Jika file fisik di-delete, scoring service tidak bisa download CV itu
+//   lagi — dan tampilan "CV yang dipakai saat melamar" di HR dashboard
+//   akan rusak untuk lamaran-lamaran sebelumnya.
+// -----------------------------------------------------------------------------
+ 
+@Post("upload-cv")
+@UseInterceptors(FileInterceptor("file"))
+@HttpCode(HttpStatus.OK)
+@ResponseMessage(responseMessage.SUCCESS)
+@ApiBearerAuth()
+@ApiOperation({
+  summary: "Upload CV file",
+  description:
+    "Upload CV file for the authenticated applicant. Maximum file size: 5MB. Supported formats: PDF, DOC, DOCX."
+})
+@ApiConsumes("multipart/form-data")
+@ApiBody({
+  schema: {
+    type: "object",
+    properties: {
+      file: {
+        type: "string",
+        format: "binary",
+        description: "CV file (PDF, DOC, DOCX) - Max 5MB"
       },
-      required: ["file"]
-    }
-  })
-  @ApiResponse({
-    status: 200,
-    description: "CV uploaded successfully",
-    schema: {
-      example: {
-        responseCode: 200,
-        responseDesc: "CV uploaded successfully",
-        data: {
-          id: "uuid",
-          fileName: "generated-filename.pdf",
-          originalName: "john-doe-cv.pdf",
-          filePath: "applicants/cv/generated-filename.pdf",
-          fileSize: 2048000,
-          mimeType: "application/pdf",
-          fileType: "cv",
-          description: "Updated CV",
-          url: "https://minio.example.com/presigned-url",
-          uploadedAt: "2024-01-01T00:00:00.000Z"
-        }
+      description: {
+        type: "string",
+        description: "Optional description for the CV"
       }
-    }
-  })
-  @ApiResponse({
-    status: 400,
-    description: "Bad request - Invalid file or validation error",
-    schema: {
-      example: {
-        responseCode: 400,
-        responseDesc: "File validation failed: File size exceeds 5MB limit",
-        data: null
+    },
+    required: ["file"]
+  }
+})
+@ApiResponse({
+  status: 200,
+  description: "CV uploaded successfully",
+  schema: {
+    example: {
+      responseCode: 200,
+      responseDesc: "CV uploaded successfully",
+      data: {
+        id: "uuid",
+        fileName: "generated-filename.pdf",
+        originalName: "john-doe-cv.pdf",
+        filePath: "applicants/cv/generated-filename.pdf",
+        fileSize: 2048000,
+        mimeType: "application/pdf",
+        fileType: "cv",
+        description: "Updated CV",
+        url: "https://minio.example.com/presigned-url",
+        uploadedAt: "2024-01-01T00:00:00.000Z"
       }
-    }
-  })
-  @IsRole(role.APPLICANT)
-  async uploadCV(
-    @Req() request: AuthenticatedRequest,
-    @UploadedFile(
-      new FileValidationPipe({
-        maxSize: 5 * 1024 * 1024, // 5MB
-        allowedMimeTypes: [
-          "application/pdf",
-          "application/msword",
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        ],
-        allowedExtensions: ["pdf", "doc", "docx"]
-      })
-    )
-    file: Express.Multer.File,
-    @Body() uploadDto: Partial<FileUploadDto>
-  ) {
-    try {
-      const applicantId = request.applicantId;
-
-      const fileUploadData: FileUploadDto = {
-        fileType: FileType.CV,
-        description: uploadDto.description,
-        folder: "applicants/cv",
-        relatedEntity: "applicant",
-        relatedEntityId: applicantId
-      };
-
-      // delete old CV if exists
-      const oldCV = await this.applicantService.getMe(applicantId);
-      if (oldCV.cvUrl) {
-        try {
-          await this.fileUploadService.deleteFileByPath(oldCV.cvUrl);
-        } catch (error) {
-          console.error("Error deleting old CV:", error);
-        }
-      }
-
-      const result = await this.fileUploadService.uploadFile(
-        file,
-        fileUploadData,
-        applicantId
-      );
-
-      await this.applicantService.updateProfile(applicantId, {
-        cvUrl: result.filePath
-      });
-
-      return result;
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
-      throw new BadRequestException(`CV upload failed: ${errorMessage}`);
     }
   }
+})
+@ApiResponse({
+  status: 400,
+  description: "Bad request - Invalid file or validation error",
+  schema: {
+    example: {
+      responseCode: 400,
+      responseDesc: "File validation failed: File size exceeds 5MB limit",
+      data: null
+    }
+  }
+})
+@IsRole(role.APPLICANT)
+async uploadCV(
+  @Req() request: AuthenticatedRequest,
+  @UploadedFile(
+    new FileValidationPipe({
+      maxSize: 5 * 1024 * 1024, // 5MB
+      allowedMimeTypes: [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ],
+      allowedExtensions: ["pdf", "doc", "docx"]
+    })
+  )
+  file: Express.Multer.File,
+  @Body() uploadDto: Partial<FileUploadDto>
+) {
+  try {
+    const applicantId = request.applicantId;
+ 
+    const fileUploadData: FileUploadDto = {
+      fileType:        FileType.CV,
+      description:     uploadDto.description,
+      folder:          "applicants/cv",
+      relatedEntity:   "applicant",
+      relatedEntityId: applicantId
+    };
+ 
+    // Ambil profil pelamar untuk mendapatkan path CV lama (jika ada)
+    const currentProfile = await this.applicantService.getMe(applicantId);
+    const oldCvPath = currentProfile.cvUrl ?? null;
+ 
+    if (oldCvPath) {
+      // ── Pengecekan sebelum menghapus file lama dari MinIO ──────────────
+      //
+      // CV lama boleh dihapus dari MinIO HANYA jika tidak ada
+      // application-level snapshot yang masih mereferensikan path ini.
+      //
+      // Snapshot dibuat di applyForPosition saat pelamar submit lamaran —
+      // tujuannya agar CV yang dipakai untuk scoring per lamaran bisa
+      // ditelusuri secara permanen, terlepas dari perubahan CV di masa depan.
+      //
+      // Jika ada snapshot aktif:
+      //   - File fisik di MinIO DIBIARKAN (snapshot masih valid)
+      //   - Record File di level 'applicant' akan di-replace oleh uploadFile()
+      //
+      // Jika tidak ada snapshot:
+      //   - File fisik di MinIO dihapus (tidak ada lamaran yang bergantung)
+      //   - Record File di level 'applicant' akan di-replace oleh uploadFile()
+      const isStillUsed = await this.applicantService.isReferencedByApplication(oldCvPath);
+ 
+      if (!isStillUsed) {
+        // Aman dihapus — tidak ada lamaran yang masih memakai file ini
+        try {
+          await this.fileUploadService.deleteFileByPath(oldCvPath);
+        } catch (error) {
+          // Log saja, jangan gagalkan upload karena masalah hapus file lama
+          console.error("Error deleting old CV from storage:", error);
+        }
+      }
+      // Jika isStillUsed = true, tidak ada yang dilakukan di sini.
+      // File fisik di MinIO tetap ada. Record File di applicant level
+      // akan di-replace oleh fileUploadService.uploadFile() di bawah.
+      // ──────────────────────────────────────────────────────────────────
+    }
+ 
+    // Upload file baru ke MinIO dan simpan record File baru di database
+    const result = await this.fileUploadService.uploadFile(
+      file,
+      fileUploadData,
+      applicantId
+    );
+ 
+    // Update kolom cvUrl di profil pelamar ke path CV terbaru
+    await this.applicantService.updateProfile(applicantId, {
+      cvUrl: result.filePath
+    });
+ 
+    return result;
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    throw new BadRequestException(`CV upload failed: ${errorMessage}`);
+  }
+}
 
   @Post("upload-diploma")
   @UseInterceptors(FileInterceptor("file"))

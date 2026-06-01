@@ -953,6 +953,7 @@ async applyForPosition(
       filePath:        cvFile.filePath,     // path MinIO yang sama — tidak perlu copy
       fileSize:        cvFile.fileSize,
       mimeType:        cvFile.mimeType,
+      bucket:          cvFile.bucket,
       fileType:        FileType.CV,
       relatedEntity:   "application",
       relatedEntityId: application.id,      // terikat ke lamaran spesifik ini
@@ -970,10 +971,45 @@ async applyForPosition(
  
   // 4. Trigger scoring async — cvFilePath sudah diketahui dari validasi awal,
   //    tidak perlu query ulang di dalam scoring service.
-  this.applicantResultsService.triggerScoringAsync(
-    result.application.id,
-    cvFile.filePath
-  );
+  try {
+    await this.applicantResultsService.runScoring(
+      result.application.id,
+      cvFile.filePath
+    );
+  } catch (scoringError) {
+    this.logger.error(
+      `Scoring gagal untuk applicationId=${result.application.id}, melakukan rollback...`
+    );
+
+    // Rollback: kembalikan semua perubahan yang dibuat di transaksi
+    await this.dataSource.transaction(async (manager) => {
+      // Reset status application ke 'new'
+      await manager.update(
+        Application,
+        { id: result.application.id },
+        {
+          status:         ApplicantStatus.NEW,
+          currentStageId: null as unknown as string | undefined,
+          lastActivityAt: new Date()
+        }
+      );
+
+      // Hapus stage activity yang terbuat
+      await manager.delete(StageActivity, {
+        applicationId: result.application.id
+      });
+
+      // Hapus CV snapshot yang terbuat
+      await manager.delete(File, {
+        relatedEntity:   "application",
+        relatedEntityId: result.application.id
+      });
+    });
+
+    throw new BadRequestException(
+      "Lamaran gagal diproses karena CV tidak dapat dianalisis. Pastikan CV dalam format PDF yang valid dan coba lagi."
+    );
+  }
  
   return result;
 }

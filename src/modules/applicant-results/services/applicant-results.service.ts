@@ -10,7 +10,6 @@ import { HttpService } from "@nestjs/axios";
 import { ConfigService } from "@nestjs/config";
 import { firstValueFrom } from "rxjs";
 import FormData from "form-data";
-
 import { EvaluationResult, EvaluationDecision } from "../entities/evaluation-results.entity";
 import { Application } from "../../applicants/entities/application.entity";
 import { Vacancy } from "../../vacancies/entities/vacancy.entity";
@@ -99,15 +98,6 @@ export class ApplicantResultsService {
     );
   }
 
-  async triggerScoringAsync(applicationId: string, cvFilePath: string): Promise<void> {
-    this.runScoring(applicationId, cvFilePath).catch((err: unknown) => {
-      this.logger.error(
-        `Scoring gagal untuk applicationId=${applicationId}`,
-        err instanceof Error ? err.stack : String(err)
-      );
-    });
-  }
-
   async getEvaluationResult(applicationId: string): Promise<EvaluationResult> {
     const result = await this.evaluationResultRepository.findOne({ where: { applicationId } });
     if (!result) {
@@ -131,7 +121,7 @@ export class ApplicantResultsService {
   // PRIVATE: Orkestrasi
   // ─────────────────────────────────────────────────────────────────────────────
 
-  private async runScoring(applicationId: string, cvFilePath: string): Promise<void> {
+  async runScoring(applicationId: string, cvFilePath: string): Promise<void> {
     this.logger.log(`Memulai scoring untuk applicationId=${applicationId}`);
 
     const application = await this.applicationRepository.findOne({
@@ -151,7 +141,7 @@ export class ApplicantResultsService {
       cvBuffer,
       cvFilePath,
       vacancy.responsibilities ?? "",
-      vacancy.requiredEducation ?? 0
+      this.mapEducationEnumToLevel(vacancy.requiredEducation)
     );
 
     await this.saveResults(scoringResult, applicant.id);
@@ -167,7 +157,7 @@ export class ApplicantResultsService {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /**
-   * Field multipart yang dikirim ke FastAPI /parse:
+   * Field multipart yang dikirim ke FastAPI /parse-and-evaluate:
    *   - cv_file                 : Buffer PDF
    *   - application_id          : string
    *   - role_description        : string (dari vacancy.responsibilities)
@@ -180,9 +170,9 @@ export class ApplicantResultsService {
     roleDescription: string,
     requiredEducationLevel: number
   ): Promise<NormalizedScoringResult> {
-    const url = `${this.fastApiBaseUrl}/parse`;
+    const url = `${this.fastApiBaseUrl}/parse-and-evaluate`;
 
-    const form = new FormData();
+    const form = new FormData;
     const fileName = cvFilePath.split("/").pop() ?? "cv.pdf";
 
     form.append("cv_file", cvBuffer, { filename: fileName, contentType: "application/pdf" });
@@ -192,17 +182,22 @@ export class ApplicantResultsService {
 
     try {
       const response = await firstValueFrom(
-        this.httpService.post<FastApiScoringResponseDto>(url, form, {
+        this.httpService.post<FastApiScoringDataDto>(url, form, {
           headers: { ...form.getHeaders() },
           timeout: 120_000
         })
       );
 
-      if (!response.data.success) {
-        throw new InternalServerErrorException("FastAPI Scoring Service mengembalikan success=false");
-      }
+    //   if (!response.data.success) {
+    //   this.logger.error(
+    //     `FastAPI response: ${JSON.stringify(response.data)}`  // ← tambah ini
+    //   );
+    //   throw new InternalServerErrorException(
+    //     "FastAPI Scoring Service mengembalikan success=false"
+    //   );
+    // }
 
-      return this.mapFastApiResponse(response.data.data);
+      return this.mapFastApiResponse(response.data);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unknown error";
       this.logger.error(`FastAPI scoring gagal: ${message}`);
@@ -369,4 +364,18 @@ export class ApplicantResultsService {
     ]);
     return validLevels.has(level) ? (level as EducationLevel) : null;
   }
+
+  private mapEducationEnumToLevel(education: string | number | null): number {
+  if (typeof education === "number") return education;
+  
+  const map: Record<string, number> = {
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5
+  };
+  
+  return map[education?.toLowerCase() ?? ""] ?? 0;
+}
 }

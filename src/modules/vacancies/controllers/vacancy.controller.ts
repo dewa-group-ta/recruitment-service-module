@@ -35,6 +35,7 @@ import { FileValidationPipe } from "../../../shared/pipes/file-validation.pipe";
 import { FileType } from "../../../shared/entities/file.entity";
 import { FileUploadDto } from "../../../shared/dto/file-upload.dto";
 import { AuthenticatedRequest } from "src/shared/interface";
+import { Public } from "src/shared/decorators/public.decorator";
 
 @ApiTags("Vacancies")
 @Controller("vacancies")
@@ -149,6 +150,7 @@ export class VacancyController {
   }
 
   @Get(":id")
+  @Public()
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESS)
   @ApiOperation({
@@ -180,6 +182,7 @@ export class VacancyController {
   }
 
   @Get()
+  @Public()
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESS)
   @ApiOperation({
