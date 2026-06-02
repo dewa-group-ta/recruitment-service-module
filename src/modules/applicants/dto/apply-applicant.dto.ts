@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
   IsString,
   IsOptional,
@@ -24,57 +24,40 @@ import {
 } from "../../../shared/transformers";
 
 export class ApplyAddressDto {
-  @ApiProperty({
-    description: "Province",
-    example: "JABAR"
-  })
+  @ApiPropertyOptional({ example: "JABAR" })
+  @IsOptional()       // ← tambah
   @IsString()
-  province: string;
+  province?: string;  // ← tambah ?
 
-  @ApiProperty({
-    description: "Regency/City",
-    example: "CIANJ"
-  })
+  @ApiPropertyOptional({ example: "CIANJ" })
+  @IsOptional()       // ← tambah
   @IsString()
-  regency: string;
+  regency?: string;   // ← tambah ?
 
-  @ApiProperty({
-    description: "District",
-    example: "CAMPA"
-  })
+  @ApiPropertyOptional({ example: "CAMPA" })
+  @IsOptional()       // ← tambah
   @IsString()
-  district: string;
+  district?: string;  // ← tambah ?
 
-  @ApiProperty({
-    description: "Village",
-    example: "CIJUN"
-  })
+  @ApiPropertyOptional({ example: "CIJUN" })
+  @IsOptional()       // ← tambah
   @IsString()
-  village: string;
+  village?: string;   // ← tambah ?
 
-  @ApiProperty({
-    description: "Full address",
-    example: "Jl. Kramat Pela No. 123, RT 01/RW 05"
-  })
+  @ApiPropertyOptional({ example: "Jl. Kramat Pela No. 123" })
+  @IsOptional()       // ← tambah
   @IsString()
-  fullAddress: string;
+  fullAddress?: string; // ← tambah ?
 
-  @ApiProperty({
-    description: "Postal code",
-    example: "12345",
-    required: false
-  })
+  @ApiPropertyOptional({ example: "12345" })
   @IsOptional()
   @IsString()
   postalCode?: string;
 
-  @ApiProperty({
-    description: "Address type",
-    enum: AddressTypeEnum,
-    example: AddressTypeEnum.REGISTERED
-  })
+  @ApiPropertyOptional({ enum: AddressTypeEnum, example: AddressTypeEnum.REGISTERED })
+  @IsOptional()       // ← tambah
   @IsEnum(AddressTypeEnum)
-  addressType: AddressTypeEnum;
+  addressType?: AddressTypeEnum; // ← tambah ?
 }
 
 export class ApplyEducationDto {

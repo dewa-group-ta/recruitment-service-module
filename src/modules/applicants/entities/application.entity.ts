@@ -9,6 +9,7 @@ import {
   JoinColumn,
   OneToMany,
   Index,
+  OneToOne,
 } from "typeorm";
 import { Vacancy } from "../../vacancies/entities/vacancy.entity";
 import { Applicant } from "./applicant.entity";
@@ -17,6 +18,7 @@ import { PipelineStage } from "../../vacancies/entities/pipeline-stage.entity";
 import { StageActivity } from "../../vacancies/entities/stage-activity.entity";
 import { ApplicationNotes } from "./application-notes.entity";
 import { ApplicantStatus } from "../../../shared/enums/applicant.enum";
+import { EvaluationResult } from "src/modules/applicant-results/entities/evaluation-results.entity";
 
 @Entity("applications")
 @Index(["vacancyId", "status"])
@@ -33,6 +35,9 @@ export class Application {
 
   @Column({ name: "applicant_id" })
   applicantId!: string;
+
+  @OneToOne(() => EvaluationResult, (evaluationResult) => evaluationResult.application)
+  evaluationResult?: EvaluationResult;
 
   @ManyToOne(() => Vacancy)
   @JoinColumn({ name: "vacancy_id" })

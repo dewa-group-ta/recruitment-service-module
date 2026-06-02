@@ -3,67 +3,45 @@ import { IsString, IsEnum, Length, IsOptional } from "class-validator";
 import { AddressTypeEnum } from "../../../shared/enums/applicant.enum";
 
 export class CreateAddressDto {
-  @ApiProperty({
-    description: "Province name",
-    example: "DKI Jakarta",
-    maxLength: 100
-  })
+  @ApiPropertyOptional({ example: "DKI Jakarta", maxLength: 100 })
+  @IsOptional()
   @IsString()
   @Length(1, 100)
-  province: string;
+  province?: string;
 
-  @ApiProperty({
-    description: "Regency/City name",
-    example: "Jakarta Selatan",
-    maxLength: 100
-  })
+  @ApiPropertyOptional({ example: "Jakarta Selatan", maxLength: 100 })
+  @IsOptional()
   @IsString()
   @Length(1, 100)
-  regency: string;
+  regency?: string;
 
-  @ApiProperty({
-    description: "District name",
-    example: "Kebayoran Baru",
-    maxLength: 100
-  })
+  @ApiPropertyOptional({ example: "Kebayoran Baru", maxLength: 100 })
+  @IsOptional()
   @IsString()
   @Length(1, 100)
-  district: string;
+  district?: string;
 
-  @ApiProperty({
-    description: "Village name",
-    example: "Kramat Pela",
-    maxLength: 100
-  })
+  @ApiPropertyOptional({ example: "Kramat Pela", maxLength: 100 })
+  @IsOptional()
   @IsString()
   @Length(1, 100)
-  village: string;
+  village?: string;
 
-  @ApiProperty({
-    description: "Complete address details",
-    example: "Jl. Kramat Pela No. 123, RT 01/RW 02"
-  })
+  @ApiPropertyOptional({ example: "Jl. Kramat Pela No. 123" })
+  @IsOptional()
   @IsString()
-  fullAddress: string;
+  fullAddress?: string;
 
-  @ApiPropertyOptional({
-    description: "Postal code",
-    example: "12130",
-    maxLength: 10,
-    default: "ID"
-  })
+  @ApiPropertyOptional({ example: "12130", maxLength: 10 })
   @IsOptional()
   @IsString()
   @Length(1, 10)
   postalCode?: string;
 
-  @ApiProperty({
-    description: "Type of address",
-    enum: AddressTypeEnum,
-    example: AddressTypeEnum.CURRENT
-  })
+  @ApiPropertyOptional({ enum: AddressTypeEnum, example: AddressTypeEnum.CURRENT })
+  @IsOptional()
   @IsEnum(AddressTypeEnum)
-  addressType: AddressTypeEnum;
+  addressType?: AddressTypeEnum;
 }
 
 export class UpdateAddressDto {

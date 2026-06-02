@@ -41,6 +41,8 @@ import { IApplicantService } from "../../../shared/interfaces/applicant.interfac
 import { StageActivityStatus } from "src/shared/enums/pipeline.enum";
 import { ApplicantResultsService } from "src/modules/applicant-results/services/applicant-results.service";
 import { File, FileType } from "../../../shared/entities/file.entity";
+import { ApplyApplicantResponseDto } from "../dto/apply-applicant-response.dto";
+import { EvaluationResultResponseDto } from "src/modules/applicant-results/dto/evaluation-result-response.dto";
 
 /**
  * Service for managing applicant operations
@@ -824,55 +826,48 @@ export class ApplicantService implements IApplicantService {
 async applyForPosition(
   applicationId: string,
   applyDto: ApplyApplicantDto
-): Promise<{ applicant: Applicant; application: Application }> {
-  // 1. Cari application dan pastikan statusnya NEW
+): Promise<ApplyApplicantResponseDto> {
+
+  // 1. Cari application (tetap sama)
   const application = await this.applicationRepository.findOne({
     where: { id: applicationId },
     relations: ["applicant"]
   });
- 
-  if (!application) {
-    throw new NotFoundException("Application not found");
-  }
- 
+
+  if (!application) throw new NotFoundException("Application not found");
+
   if (application.status !== ApplicantStatus.NEW) {
-    throw new BadRequestException(
-      `Cannot apply for this position. Application status is '${application.status}', ` +
-        `but only applications with status 'new' can be applied.`
-    );
+    throw new BadRequestException(`Cannot apply...`);
   }
- 
+
   const applicantId = application.applicantId;
- 
-  // 2. Validasi CV sudah diupload SEBELUM transaksi.
-  //    CV tersimpan di tabel files dengan relatedEntity='applicant' dan fileType=CV.
-  //    Jika belum ada, lempar error lebih awal agar pelamar tahu dengan jelas.
+
+  // 2. Validasi CV (tetap sama)
   const cvFile = await this.fileRepository.findOne({
     where: {
-      relatedEntity: "applicant",
+      relatedEntity:   "applicant",
       relatedEntityId: applicantId,
-      fileType: FileType.CV,
-      isActive: true
+      fileType:        FileType.CV,
+      isActive:        true
     }
   });
- 
+
   if (!cvFile) {
-    throw new BadRequestException(
-      "CV belum diupload. Silakan upload CV terlebih dahulu sebelum melanjutkan."
-    );
+    throw new BadRequestException("CV belum diupload...");
   }
- 
-  // 3. Transaksi: update profil, alamat, identitas, status lamaran, dan snapshot CV
+
+  // 3. ✅ SCORING DULU sebelum transaksi DB
+  const scoringResult = await this.applicantResultsService.runScoring(
+    applicationId,
+    cvFile.filePath
+  );
+  // Jika gagal → langsung throw error ke applicant, transaksi tidak pernah jalan
+
+  // 4. ✅ Scoring berhasil → baru jalankan transaksi DB
   const result = await this.dataSource.transaction(async (manager) => {
-    const applicant = await manager.findOne(Applicant, {
-      where: { id: applicantId }
-    });
- 
-    if (!applicant) {
-      throw new NotFoundException("Applicant not found");
-    }
- 
-    // Update profil dasar pelamar
+    const applicant = await manager.findOne(Applicant, { where: { id: applicantId } });
+    if (!applicant) throw new NotFoundException("Applicant not found");
+
     Object.assign(applicant, {
       fullName:         applyDto.fullName,
       phone:            applyDto.phone,
@@ -884,134 +879,92 @@ async applyForPosition(
       linkedinUrl:      applyDto.linkedinUrl,
       socialMediaUrl:   applyDto.socialMediaUrl,
       availability:     applyDto.availability,
-      availabilityAt:   applyDto.availabilityAt
-        ? new Date(applyDto.availabilityAt)
-        : null
+      availabilityAt:   applyDto.availabilityAt ? new Date(applyDto.availabilityAt) : null
     });
- 
+
     const updatedApplicant = await manager.save(Applicant, applicant);
- 
-    // Timpa alamat lama dengan alamat baru dari form
+
     await manager.softDelete(ApplicantAddress, { applicantId });
-    const addresses = applyDto.addresses.map((addressData) =>
-      manager.create(ApplicantAddress, { ...addressData, applicantId })
-    );
-    await manager.save(ApplicantAddress, addresses);
- 
-    // Timpa identitas lama dengan identitas baru dari form
+    await manager.save(ApplicantAddress, applyDto.addresses.map(a =>
+      manager.create(ApplicantAddress, { ...a, applicantId })
+    ));
+
     await manager.softDelete(ApplicantIdentity, { applicantId });
-    const identities = applyDto.identities.map((identityData) =>
-      manager.create(ApplicantIdentity, { ...identityData, applicantId })
-    );
-    await manager.save(ApplicantIdentity, identities);
- 
-    // NOTE: ApplicantEducation & ApplicantJobHistory TIDAK disimpan di sini.
-    // Keduanya akan diisi oleh ApplicantResultsService.saveResults()
-    // dari hasil parsing CV oleh FastAPI setelah scoring selesai.
- 
-    // Update status lamaran menjadi APPLIED
+    await manager.save(ApplicantIdentity, applyDto.identities.map(i =>
+      manager.create(ApplicantIdentity, { ...i, applicantId })
+    ));
+
     application.status    = ApplicantStatus.APPLIED;
     application.appliedAt = new Date();
     const updatedApplication = await manager.save(Application, application);
- 
-    // Ambil stage pertama dari pipeline
+
     const firstStage = await manager.findOne(PipelineStage, {
       where: { pipelineId: application.pipelineId },
       order: { stageOrder: "ASC" }
     });
- 
-    if (!firstStage) {
-      throw new NotFoundException("First stage not found");
-    }
- 
-    // Buat stage activity pertama
-    const stageActivity = manager.create(StageActivity, {
+    if (!firstStage) throw new NotFoundException("First stage not found");
+
+    await manager.save(StageActivity, manager.create(StageActivity, {
       applicationId: application.id,
       stageId:       firstStage.id,
       createdAt:     new Date(),
       status:        StageActivityStatus.IN_PROGRESS
-    });
-    await manager.save(StageActivity, stageActivity);
- 
-    // Update current stage pada application
+    }));
+
     application.currentStageId = firstStage.id;
     application.lastActivityAt = new Date();
     await manager.save(Application, application);
- 
-    // ── Buat snapshot File CV terikat ke application ini ──────────────────
-    //
-    // Snapshot ini TIDAK menyalin file fisik di MinIO — hanya membuat record
-    // File baru yang menunjuk ke path yang sama. Tujuannya:
-    //   - Membuat relasi eksplisit Application → File (CV)
-    //   - Memastikan CV yang digunakan untuk scoring per lamaran bisa ditelusuri
-    //     meski pelamar mengupload CV baru di kemudian hari
-    //   - Melindungi file fisik dari penghapusan selama masih ada snapshot aktif
-    //     (lihat method isReferencedByApplication di bawah)
-    const cvSnapshot = manager.create(File, {
+
+    await manager.save(File, manager.create(File, {
       fileName:        cvFile.fileName,
       originalName:    cvFile.originalName,
-      filePath:        cvFile.filePath,     // path MinIO yang sama — tidak perlu copy
+      filePath:        cvFile.filePath,
       fileSize:        cvFile.fileSize,
       mimeType:        cvFile.mimeType,
       bucket:          cvFile.bucket,
       fileType:        FileType.CV,
       relatedEntity:   "application",
-      relatedEntityId: application.id,      // terikat ke lamaran spesifik ini
+      relatedEntityId: application.id,
       uploadedById:    applicantId,
       description:     `CV snapshot - ${application.applicationNumber}`
-    });
-    await manager.save(File, cvSnapshot);
-    // ─────────────────────────────────────────────────────────────────────
- 
-    return {
-      applicant:   updatedApplicant,
-      application: updatedApplication
-    };
+    }));
+
+    return { applicant: updatedApplicant, application: updatedApplication };
   });
- 
-  // 4. Trigger scoring async — cvFilePath sudah diketahui dari validasi awal,
-  //    tidak perlu query ulang di dalam scoring service.
-  try {
-    await this.applicantResultsService.runScoring(
-      result.application.id,
-      cvFile.filePath
-    );
-  } catch (scoringError) {
-    this.logger.error(
-      `Scoring gagal untuk applicationId=${result.application.id}, melakukan rollback...`
-    );
 
-    // Rollback: kembalikan semua perubahan yang dibuat di transaksi
-    await this.dataSource.transaction(async (manager) => {
-      // Reset status application ke 'new'
-      await manager.update(
-        Application,
-        { id: result.application.id },
-        {
-          status:         ApplicantStatus.NEW,
-          currentStageId: null as unknown as string | undefined,
-          lastActivityAt: new Date()
-        }
-      );
+  // 5. ✅ Simpan hasil scoring ke DB (karena runScoring sekarang return hasil)
+  await this.applicantResultsService.saveResults(scoringResult, applicantId);
 
-      // Hapus stage activity yang terbuat
-      await manager.delete(StageActivity, {
-        applicationId: result.application.id
-      });
+  const maxScore = scoringResult.experience?.length
+    ? Math.max(...scoringResult.experience.map(e => e.similarity ?? 0))
+    : 0;
 
-      // Hapus CV snapshot yang terbuat
-      await manager.delete(File, {
-        relatedEntity:   "application",
-        relatedEntityId: result.application.id
-      });
-    });
+  const evaluationResult: EvaluationResultResponseDto = {
+    maxExperienceScore: maxScore,
+    evaluatedAt: new Date(),
+    scoringBreakdown: {
+      experiences: (scoringResult.experience ?? []).map(e => ({
+        role:          e.role          ?? null,
+        description:   e.description   ?? null,
+        start:         e.start         ?? null,
+        end:           e.end           ?? null,
+        durationYears: e.duration_years ?? null,
+        similarity:    e.similarity    ?? null,
+        isTopMatch:    Math.abs((e.similarity ?? 0) - maxScore) < 0.0001
+      })),
+      educations: (scoringResult.educations ?? []).map(e => ({
+        level:       e.level       ?? null,
+        major:       e.major       ?? null,
+        institution: e.institution ?? null
+      }))
+    }
+  };
 
-    throw new BadRequestException(
-      "Lamaran gagal diproses karena CV tidak dapat dianalisis. Pastikan CV dalam format PDF yang valid dan coba lagi."
-    );
-  }
- 
-  return result;
+  return {
+    applicant:       result.applicant,
+    application:     result.application,
+    evaluationResult
+  };
 }
  
 // -----------------------------------------------------------------------------

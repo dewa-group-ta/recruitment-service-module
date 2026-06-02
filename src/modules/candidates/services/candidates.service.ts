@@ -21,26 +21,20 @@ import { StageActivityStatus } from "src/shared/enums/pipeline.enum";
 import { NotificationService } from "../../../shared/services/notification.service";
 
 export interface ScoringBreakdown {
-  method: string | null;
-  experiences: Array<{
-    position: string | null;
-    company: string | null;
-    description: string | null;
-    durationYears: number | null;
-    similarityScore: number | null;
-    isTopMatch: boolean;
-  }>;
   educations: Array<{
     level: number | null;
     major: string | null;
-    graduationYear: number | null;
+    institution: string | null;
   }>;
-  educationEvaluation: {
-    method: string | null;
-    vacancyRequiredLevel: number | null;
-    applicantHighestLevel: number | null;
-    isLevelFulfilled: boolean | null;
-  } | null;
+  experiences: Array<{
+    role: string | null;
+    description: string | null;
+    start: string | null;
+    end: string | null;
+    durationYears: number | null;
+    similarity: number | null;
+    isTopMatch: boolean;
+  }>;
 }
 
 export interface Candidate {
@@ -815,52 +809,43 @@ export class CandidatesService {
  
     // ── Parse evaluateDetail → ScoringBreakdown ───────────────────────────
     let scoringBreakdown: ScoringBreakdown | null = null;
- 
+
     if (evalResult?.evaluateDetail) {
       const detail: Record<string, any> =
         typeof evalResult.evaluateDetail === "string"
           ? JSON.parse(evalResult.evaluateDetail)
           : evalResult.evaluateDetail;
- 
+
       const maxScore = evalResult.maxExperienceScore ?? null;
- 
+
+      // 1. Mapping Experience (Struktur baru: array langsung, bukan object 'entries')
       const experienceEntries: ScoringBreakdown["experiences"] = (
-        detail.experience?.entries ?? []
+        detail.experience ?? []
       ).map((e: any) => ({
-        position:        e.position          ?? null,
-        company:         e.company           ?? null,
-        description:     e.description       ?? null,
-        durationYears:   e.duration_years    ?? null,
-        similarityScore: e.similarity_score  ?? null,
+        role:          e.role           ?? null,
+        description:   e.description    ?? null,
+        start:         e.start          ?? null,
+        end:           e.end            ?? null,
+        durationYears: e.duration_years ?? null,
+        similarity:    e.similarity     ?? null,
         isTopMatch:
           maxScore !== null &&
-          e.similarity_score !== null &&
-          Math.abs(e.similarity_score - maxScore) < 0.0001
+          e.similarity !== null &&
+          Math.abs(e.similarity - maxScore) < 0.0001
       }));
- 
+
+      // 2. Mapping Educations (Struktur baru: array langsung, bukan di dalam 'cv_parsed')
       const educationEntries: ScoringBreakdown["educations"] = (
-        detail.cv_parsed?.educations ?? []
+        detail.educations ?? []
       ).map((e: any) => ({
-        level:          e.level                                ?? null,
-        major:          e.major                               ?? null,
-        graduationYear: e.graduationYear ?? e.graduation_year ?? null
+        level:       e.level       ?? null,
+        major:       e.major       ?? null,
+        institution: e.institution ?? null
       }));
- 
-      const eduEval = detail.education_evaluation ?? null;
-      const educationEvaluation: ScoringBreakdown["educationEvaluation"] = eduEval
-        ? {
-            method:                eduEval.method                  ?? null,
-            vacancyRequiredLevel:  eduEval.vacancy_required_level  ?? null,
-            applicantHighestLevel: eduEval.applicant_highest_level ?? null,
-            isLevelFulfilled:      eduEval.is_level_fulfilled       ?? null
-          }
-        : null;
- 
+
       scoringBreakdown = {
-        method:              detail.experience?.method ?? null,
-        experiences:         experienceEntries,
-        educations:          educationEntries,
-        educationEvaluation
+        experiences: experienceEntries,
+        educations:  educationEntries
       };
     }
     // ─────────────────────────────────────────────────────────────────────
@@ -912,26 +897,26 @@ export class CandidatesService {
         updatedAt: this.toISOString(addr.updatedAt),
         deletedAt: this.toISOString(addr.deletedAt) || null
       })) ?? [],
-      educations: application.applicant.educations?.map((edu) => ({
-        id: edu.id, applicantId: edu.applicantId,
-        schoolName: edu.schoolName ?? "", major: edu.major ?? "",
-        degree: edu.degree ?? "", gpa: edu.gpa ?? undefined,
-        startMonth: edu.startMonth ?? "", endMonth: edu.endMonth ?? undefined,
-        diplomaFileName: edu.diplomaFileName ?? undefined, order: edu.order,
-        createdAt: this.toISOString(edu.createdAt),
-        updatedAt: this.toISOString(edu.updatedAt),
-        deletedAt: this.toISOString(edu.deletedAt) || null
-      })) ?? [],
-      jobHistories: application.applicant.jobHistories?.map((job) => ({
-        id: job.id, applicantId: job.applicantId,
-        position: job.position, employeeStatus: job.employeeStatus as string | null,
-        company: job.company, startDate: job.startDate, endDate: job.endDate,
-        location: job.location ?? undefined, description: job.description ?? undefined,
-        achievements: job.achievements ?? undefined, order: job.order,
-        createdAt: this.toISOString(job.createdAt),
-        updatedAt: this.toISOString(job.updatedAt),
-        deletedAt: this.toISOString(job.deletedAt) || null
-      })) ?? [],
+      // educations: application.applicant.educations?.map((edu) => ({
+      //   id: edu.id, applicantId: edu.applicantId,
+      //   schoolName: edu.schoolName ?? "", major: edu.major ?? "",
+      //   degree: edu.degree ?? "", gpa: edu.gpa ?? undefined,
+      //   startMonth: edu.startMonth ?? "", endMonth: edu.endMonth ?? undefined,
+      //   diplomaFileName: edu.diplomaFileName ?? undefined, order: edu.order,
+      //   createdAt: this.toISOString(edu.createdAt),
+      //   updatedAt: this.toISOString(edu.updatedAt),
+      //   deletedAt: this.toISOString(edu.deletedAt) || null
+      // })) ?? [],
+      // jobHistories: application.applicant.jobHistories?.map((job) => ({
+      //   id: job.id, applicantId: job.applicantId,
+      //   position: job.position, employeeStatus: job.employeeStatus as string | null,
+      //   company: job.company, startDate: job.startDate, endDate: job.endDate,
+      //   location: job.location ?? undefined, description: job.description ?? undefined,
+      //   achievements: job.achievements ?? undefined, order: job.order,
+      //   createdAt: this.toISOString(job.createdAt),
+      //   updatedAt: this.toISOString(job.updatedAt),
+      //   deletedAt: this.toISOString(job.deletedAt) || null
+      // })) ?? [],
       evaluationResult: evalResult
         ? {
             maxExperienceScore: evalResult.maxExperienceScore ?? null,

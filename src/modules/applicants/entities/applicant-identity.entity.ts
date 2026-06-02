@@ -14,28 +14,28 @@ import { IdentityTypeEnum } from "../../../shared/enums/applicant.enum";
 @Entity("applicant_identities")
 export class ApplicantIdentity {
   @PrimaryGeneratedColumn("uuid")
-  id: string;
+  id!: string;
 
   @ManyToOne(() => Applicant, { onDelete: "CASCADE" })
   @JoinColumn({ name: "applicant_id" })
-  applicant: Applicant;
+  applicant!: Applicant;
 
   @Column({ name: "applicant_id" })
-  applicantId: string;
+  applicantId!: string;
 
-  @Column({ type: "enum", enum: IdentityTypeEnum })
-  identityType: IdentityTypeEnum;
+  @Column({ type: "enum", enum: IdentityTypeEnum, nullable: true })
+  identityType!: IdentityTypeEnum;
 
-  @Column({ type: "varchar", length: 50 })
-  identityNumber: string;
+  @Column({ type: "varchar", length: 50, nullable: true })
+  identityNumber!: string;
 
   // Audit fields
   @CreateDateColumn({ name: "created_at" })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ name: "updated_at" })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @DeleteDateColumn({ name: "deleted_at" })
-  deletedAt: Date;
+  deletedAt!: Date;
 }
