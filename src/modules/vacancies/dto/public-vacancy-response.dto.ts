@@ -13,57 +13,55 @@ export class PublicVacancyResponseDto {
     description: "Vacancy ID",
     example: "uuid-string"
   })
-  id: string;
+  id!: string;
 
   @ApiProperty({
     description: "Vacancy title",
     example: "Senior Software Engineer"
   })
-  title: string;
+  title!: string;
 
   @ApiProperty({
     description: "Vacancy description",
     example: "We are looking for an experienced software engineer...",
     nullable: true
   })
-  description: string;
+  description!: string;
 
   @ApiProperty({
     description: "Job responsibilities",
-    example:
-      "Develop and maintain web applications, collaborate with cross-functional teams...",
+    example: "Develop and maintain web applications, collaborate with cross-functional teams...",
     nullable: true
   })
-  responsibilities: string;
+  responsibilities!: string;
 
   @ApiProperty({
     description: "Job requirements",
-    example:
-      "Bachelor degree in Computer Science, 3+ years experience with React and Node.js...",
+    example: "Bachelor degree in Computer Science, 3+ years experience with React and Node.js...",
     nullable: true
   })
-  requirements: string;
+  requirements!: string;
 
   @ApiProperty({
     description: "Job type (recruitment or assessment)",
     enum: JobType,
     example: JobType.RECRUITMENT
   })
-  jobType: JobType;
+  jobType!: JobType;
 
   @ApiProperty({
     description: "Employment type",
     enum: EmploymentType,
     example: EmploymentType.FULL_TIME
   })
-  employmentType: EmploymentType;
+  employmentType!: EmploymentType;
 
   @ApiProperty({
     description: "Work model",
     enum: WorkModel,
     example: WorkModel.HYBRID
   })
-  workModel: WorkModel;
+  workModel!: WorkModel;
 
   @ApiProperty({
     description: "Office addresses (array of office locations)",
@@ -71,21 +69,21 @@ export class PublicVacancyResponseDto {
     nullable: true,
     type: [String]
   })
-  officeAddresses: string[];
+  officeAddresses!: string[];
 
   @ApiProperty({
     description: "Application deadline",
     example: "2024-12-31T23:59:59.000Z",
     nullable: true
   })
-  applicationDeadline: Date;
+  applicationDeadline!: Date;
 
   @ApiProperty({
     description: "Expected start date",
     example: "2024-01-15",
     nullable: true
   })
-  expectedStartDate: Date;
+  expectedStartDate!: Date;
 
   @ApiProperty({
     description: "Required education level",
@@ -93,14 +91,14 @@ export class PublicVacancyResponseDto {
     example: EducationLevel.BACHELOR,
     nullable: true
   })
-  requiredEducation: EducationLevel;
+  requiredEducation!: EducationLevel;
 
   @ApiProperty({
     description: "Required experience in years",
     example: 3,
     nullable: true
   })
-  requiredExperienceYears: number;
+  requiredExperienceYears!: number;
 
   @ApiProperty({
     description: "Job category information",
@@ -109,7 +107,7 @@ export class PublicVacancyResponseDto {
       name: "Software Engineering"
     }
   })
-  jobCategory: {
+  jobCategory!: {
     id: string;
     name: string;
   };
@@ -119,32 +117,31 @@ export class PublicVacancyResponseDto {
     example: "vacancy-poster-123.jpg",
     nullable: true
   })
-  generatedPosterUrl: string;
+  generatedPosterUrl!: string;
 
   @ApiProperty({
     description: "Vacancy status",
     enum: JobStatus,
     example: JobStatus.PUBLISHED
   })
-  status: JobStatus;
+  status!: JobStatus;
 
   @ApiProperty({
     description: "Vacancy start date",
     example: "2024-01-15",
     nullable: true
   })
-  startDate: Date;
+  startDate!: Date;
 
   @ApiProperty({
     description: "Vacancy end date",
     example: "2024-12-31",
     nullable: true
   })
-  endDate: Date;
+  endDate!: Date;
 
   @ApiProperty({
-    description:
-      "Poster configuration - defines which fields to include in job poster",
+    description: "Poster configuration - defines which fields to include in job poster",
     example: {
       jobDetails: {
         dueDate: true,
@@ -175,5 +172,5 @@ export class PublicVacancyResponseDto {
     },
     nullable: true
   })
-  posterConfiguration: PosterConfiguration;
+  posterConfiguration!: PosterConfiguration;
 }

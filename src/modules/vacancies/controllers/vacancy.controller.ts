@@ -123,30 +123,17 @@ export class VacancyController {
   })
   async update(
     @Param("id") id: string,
-    @Body() updateData: UpdateVacancyDto | Record<string, any>,
+    @Body() updateData: UpdateVacancyDto,
     @Request() req: AuthenticatedRequest
   ): Promise<VacancyResponseDto> {
     // In a real implementation, you would get the user ID from the authenticated request
     const updatedById = req.user?.id || "placeholder-user-id";
 
-    // Check if this is job form data (has jobTitle field)
-    if ((updateData as any).jobTitle) {
-      // This is job form data from InputJobDetails.vue
-      const vacancy = await this.vacancyService.updateFromJobForm(
-        id,
-        updateData,
-        updatedById
-      );
-      return vacancy;
-    } else {
-      // This is standard UpdateVacancyDto
-      const vacancy = await this.vacancyService.update(
-        id,
-        updateData,
-        updatedById
-      );
-      return vacancy;
-    }
+    return await this.vacancyService.update(
+      id,
+      updateData as UpdateVacancyDto,
+      updatedById
+    );
   }
 
   @Get(":id")

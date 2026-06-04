@@ -4,7 +4,7 @@ import {
   BadRequestException
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, MoreThan, FindOptionsWhere } from "typeorm";
+import { Repository, FindOptionsWhere } from "typeorm";
 import { Vacancy } from "../entities/vacancy.entity";
 import { CreateVacancyDto } from "../dto/create-vacancy.dto";
 import { UpdateVacancyDto } from "../dto/update-vacancy.dto";
@@ -30,18 +30,11 @@ export class VacancyService {
     private readonly recruitmentPipelineService: RecruitmentPipelineService
   ) {}
 
-  /**
-   * Create a new vacancy with only title validation and automatic pipeline creation
-   * @param createVacancyDto - Vacancy data with title
-   * @param createdById - ID of the user creating the vacancy
-   * @returns Created vacancy with pipeline
-   */
   async create(
     createVacancyDto: CreateVacancyDto,
     createdById: string
   ): Promise<VacancyResponseDto> {
     try {
-      // Get the default template pipeline
       const defaultTemplate =
         await this.recruitmentPipelineService.getDefaultTemplate();
 
@@ -51,7 +44,6 @@ export class VacancyService {
         );
       }
 
-      // Create a new pipeline instance from the default template
       const pipelineInstance =
         await this.recruitmentPipelineService.createFromTemplate(
           defaultTemplate.id,
@@ -59,21 +51,26 @@ export class VacancyService {
           `${createVacancyDto.title} - Pipeline`
         );
 
-      // Create vacancy with minimal required fields and pipeline reference
       const vacancy = this.vacancyRepository.create({
         title: createVacancyDto.title,
         status: JobStatus.DRAFT,
-        jobType: JobType.RECRUITMENT, // Default value
-        employmentType: EmploymentType.FULL_TIME, // Default value
-        workModel: WorkModel.ON_SITE, // Default value
-        currency: "IDR", // Default currency
-        pipelineId: pipelineInstance.id, // Link to the created pipeline
+        jobType: JobType.RECRUITMENT,
+        employmentType: EmploymentType.FULL_TIME,
+        workModel: WorkModel.ON_SITE,
+        currency: "IDR",
+        pipelineId: pipelineInstance.id,
         createdById
       });
 
       const savedVacancy = await this.vacancyRepository.save(vacancy);
 
-      return this.mapToResponseDto(savedVacancy);
+      // Reload with relations so department name resolves in the response
+      const vacancyWithRelations = await this.vacancyRepository.findOne({
+        where: { id: savedVacancy.id },
+        relations: ["department", "pipeline", "jobCategory"]
+      });
+
+      return this.mapToResponseDto(vacancyWithRelations!);
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -81,25 +78,16 @@ export class VacancyService {
       ) {
         throw error;
       }
-      throw new BadRequestException(
-        `Failed to create vacancy: ${error.message}`
-      );
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new BadRequestException(`Failed to create vacancy: ${msg}`);
     }
   }
 
-  /**
-   * Update vacancy with detailed information
-   * @param id - Vacancy ID
-   * @param updateVacancyDto - Updated vacancy data
-   * @param updatedById - ID of the user updating the vacancy
-   * @returns Updated vacancy
-   */
   async update(
     id: string,
     updateVacancyDto: UpdateVacancyDto,
     updatedById: string
   ): Promise<VacancyResponseDto> {
-    // Find existing vacancy
     const existingVacancy = await this.vacancyRepository.findOne({
       where: { id }
     });
@@ -108,18 +96,16 @@ export class VacancyService {
       throw new NotFoundException(`Vacancy with ID ${id} not found`);
     }
 
-    // Validate input data
     this.validateUpdateData(updateVacancyDto);
 
-    // Prepare update data
     const updateData = this.prepareUpdateData(updateVacancyDto, updatedById);
 
-    // Update vacancy
     await this.vacancyRepository.update(id, updateData);
 
-    // Fetch updated vacancy
+    // Reload with relations so mapToResponseDto can resolve department name etc.
     const updatedVacancy = await this.vacancyRepository.findOne({
-      where: { id }
+      where: { id },
+      relations: ["department", "pipeline", "jobCategory"]
     });
 
     if (!updatedVacancy) {
@@ -131,15 +117,10 @@ export class VacancyService {
     return this.mapToResponseDto(updatedVacancy);
   }
 
-  /**
-   * Get vacancy by ID with all relations needed for edit form
-   * @param id - Vacancy ID
-   * @returns Vacancy details with all necessary relations
-   */
   async findOne(id: string): Promise<VacancyResponseDto> {
     const vacancy = await this.vacancyRepository.findOne({
       where: { id },
-      relations: ["pipeline", "jobCategory"]
+      relations: ["department", "pipeline", "jobCategory"]
     });
 
     if (!vacancy) {
@@ -149,21 +130,14 @@ export class VacancyService {
     return this.mapToResponseDto(vacancy);
   }
 
-  /**
-   * Get all job vacancies with pagination and applicant counts
-   * @param page - Page number (default: 1)
-   * @param limit - Items per page (default: 10)
-   * @param jobCategory - Filter by job category ID (optional)
-   * @param status - Filter by job status (optional)
-   * @param search - Search in title, description, and department (optional)
-   * @returns Paginated job vacancies with applicant statistics
-   */
   async findAll(
     page: number = 1,
     limit: number = 10,
     jobCategory?: string,
     status?: string,
-    search?: string
+    search?: string,
+    startDate?: string,
+    endDate?: string
   ): Promise<{
     data: (VacancyResponseDto & {
       totalApplicants: number;
@@ -175,12 +149,10 @@ export class VacancyService {
     limit: number;
     totalPages: number;
   }> {
-    // Build query builder for complex filtering
     const queryBuilder = this.vacancyRepository
       .createQueryBuilder("vacancy")
       .where("vacancy.deletedAt IS NULL");
 
-    // Apply filters
     if (jobCategory) {
       queryBuilder.andWhere("vacancy.jobCategoryId = :jobCategory", {
         jobCategory
@@ -193,70 +165,51 @@ export class VacancyService {
 
     if (search) {
       queryBuilder.andWhere(
-        "(vacancy.title ILIKE :search OR vacancy.description ILIKE :search OR vacancy.department ILIKE :search)",
+        "(vacancy.title ILIKE :search OR vacancy.description ILIKE :search)",
         { search: `%${search}%` }
       );
     }
 
-    // Apply pagination and ordering
+    if (startDate) {
+      queryBuilder.andWhere("vacancy.startDate >= :startDate", { startDate });
+    }
+
+    if (endDate) {
+      queryBuilder.andWhere("vacancy.endDate <= :endDate", { endDate });
+    }
+
+    const countBuilder = queryBuilder.clone();
+
     queryBuilder
+      .leftJoinAndSelect("vacancy.department", "department")
+      .leftJoinAndSelect("vacancy.pipeline", "pipeline")
+      .leftJoinAndSelect("vacancy.jobCategory", "jobCategory")
       .orderBy("vacancy.createdAt", "DESC")
       .skip((page - 1) * limit)
       .take(limit);
 
-    // Get total count for pagination
-    const totalQueryBuilder = this.vacancyRepository
-      .createQueryBuilder("vacancy")
-      .where("vacancy.deletedAt IS NULL");
-
-    if (jobCategory) {
-      totalQueryBuilder.andWhere("vacancy.jobCategoryId = :jobCategory", {
-        jobCategory
-      });
-    }
-
-    if (status) {
-      totalQueryBuilder.andWhere("vacancy.status = :status", { status });
-    }
-
-    if (search) {
-      totalQueryBuilder.andWhere(
-        "(vacancy.title ILIKE :search OR vacancy.description ILIKE :search OR vacancy.department ILIKE :search)",
-        { search: `%${search}%` }
-      );
-    }
-
     const [vacancies, total] = await Promise.all([
       queryBuilder.getMany(),
-      totalQueryBuilder.getCount()
+      countBuilder.getCount()
     ]);
 
     const totalPages = Math.ceil(total / limit);
 
-    // Get applicant counts for each vacancy
-    const vacanciesWithCounts = await Promise.all(
-      vacancies.map(async (vacancy) => {
-        const [totalApplicants, rejectedApplicants] = await Promise.all([
-          this.applicationRepository.count({
-            where: { vacancyId: vacancy.id }
-          }),
-          this.applicationRepository.count({
-            where: {
-              vacancyId: vacancy.id,
-              status: ApplicantStatus.REJECTED
-            }
-          })
-        ]);
-        const hiredApplicants = totalApplicants - rejectedApplicants;
+    // Single query for all applicant counts — avoids N+1
+    const vacancyIds = vacancies.map((v) => v.id);
+    const countMap = await this.getApplicantCountsForVacancies(vacancyIds);
 
-        return {
-          ...this.mapToResponseDto(vacancy),
-          totalApplicants,
-          hiredApplicants,
-          rejectedApplicants
-        };
-      })
-    );
+    const vacanciesWithCounts = vacancies.map((vacancy) => {
+      const counts = countMap[vacancy.id] ?? {
+        totalApplicants: 0,
+        hiredApplicants: 0,
+        rejectedApplicants: 0
+      };
+      return {
+        ...this.mapToResponseDto(vacancy),
+        ...counts
+      };
+    });
 
     return {
       data: vacanciesWithCounts,
@@ -267,11 +220,6 @@ export class VacancyService {
     };
   }
 
-  /**
-   * Soft delete vacancy
-   * @param id - Vacancy ID
-   * @param deletedById - ID of the user deleting the vacancy
-   */
   async remove(id: string, deletedById: string): Promise<void> {
     const vacancy = await this.vacancyRepository.findOne({
       where: { id }
@@ -285,171 +233,38 @@ export class VacancyService {
     await this.vacancyRepository.update(id, { deletedById });
   }
 
-  /**
-   * Validate update data
-   * @param updateVacancyDto - Update data to validate
-   */
-  private validateUpdateData(updateVacancyDto: UpdateVacancyDto): void {
-    // Validate pipeline exists if provided
-    if (updateVacancyDto.pipelineId) {
-      const uuidRegex =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(updateVacancyDto.pipelineId)) {
-        throw new BadRequestException("Invalid pipeline ID format");
-      }
+  async closeVacancy(id: string, updatedById: string): Promise<VacancyResponseDto> {
+    const vacancy = await this.vacancyRepository.findOne({ where: { id } });
+    if (!vacancy) {
+      throw new NotFoundException(`Vacancy with ID ${id} not found`);
     }
-
-    // Validate salary range
-    if (updateVacancyDto.salaryMin && updateVacancyDto.salaryMax) {
-      if (updateVacancyDto.salaryMin > updateVacancyDto.salaryMax) {
-        throw new BadRequestException(
-          "Minimum salary cannot be greater than maximum salary"
-        );
-      }
-    }
+    await this.vacancyRepository.update(id, {
+      status: JobStatus.CLOSED,
+      updatedById
+    });
+    const updated = await this.vacancyRepository.findOne({
+      where: { id },
+      relations: ["department", "pipeline", "jobCategory"]
+    });
+    return this.mapToResponseDto(updated!);
   }
 
-  /**
-   * Prepare update data from DTO
-   * @param updateVacancyDto - Update DTO
-   * @param updatedById - User ID
-   * @returns Prepared update data
-   */
-  private prepareUpdateData(
-    updateVacancyDto: UpdateVacancyDto,
-    updatedById: string
-  ): Partial<Vacancy> {
-    const updateData: Partial<Vacancy> = { updatedById };
-
-    // Map string fields
-    const stringFields = [
-      "title",
-      "description",
-      "responsibilities",
-      "requirements",
-      "status",
-      "jobType",
-      "employmentType",
-      "workModel",
-      "salaryPeriod",
-      "currency",
-      "departmentId",
-      "requiredEducation",
-      "pipelineId",
-      "generatedPosterUrl"
-    ];
-
-    stringFields.forEach((field) => {
-      if (
-        updateVacancyDto[field] !== undefined &&
-        updateVacancyDto[field] !== null
-      ) {
-        updateData[field] = updateVacancyDto[field];
-      }
-    });
-
-    // Map number fields
-    const numberFields = [
-      "applicantLimit",
-      "hiredLimit",
-      "salaryMin",
-      "salaryMax",
-      "requiredExperienceYears",
-      "hoursPerWeekMin",
-      "hoursPerWeekMax"
-    ];
-
-    numberFields.forEach((field) => {
-      if (updateVacancyDto[field] !== undefined) {
-        updateData[field] = updateVacancyDto[field];
-      }
-    });
-
-    // Map array fields
-    if ((updateVacancyDto as any).officeAddresses !== undefined) {
-      updateData.officeAddresses = (updateVacancyDto as any).officeAddresses;
+  async archiveVacancy(id: string, updatedById: string): Promise<VacancyResponseDto> {
+    const vacancy = await this.vacancyRepository.findOne({ where: { id } });
+    if (!vacancy) {
+      throw new NotFoundException(`Vacancy with ID ${id} not found`);
     }
-
-    // Map poster configuration
-    if (updateVacancyDto.posterConfiguration !== undefined) {
-      updateData.posterConfiguration = updateVacancyDto.posterConfiguration;
-    }
-
-    // Convert date strings to Date objects
-    const dateFields = [
-      "applicationDeadline",
-      "expectedStartDate",
-      "publishedAt",
-      "archivedAt",
-      "closedAt"
-    ];
-
-    dateFields.forEach((field) => {
-      if (updateVacancyDto[field]) {
-        updateData[field] = new Date(updateVacancyDto[field]);
-      }
+    await this.vacancyRepository.update(id, {
+      status: JobStatus.ARCHIVED,
+      updatedById
     });
-
-    return updateData;
+    const updated = await this.vacancyRepository.findOne({
+      where: { id },
+      relations: ["department", "pipeline", "jobCategory"]
+    });
+    return this.mapToResponseDto(updated!);
   }
 
-  /**
-   * Map entity to response DTO
-   * @param vacancy - Vacancy entity
-   * @returns Vacancy response DTO
-   */
-  private mapToResponseDto(vacancy: Vacancy): VacancyResponseDto {
-    return {
-      id: vacancy.id,
-      title: vacancy.title,
-      jobCode: vacancy.jobCode,
-      description: vacancy.description,
-      responsibilities: vacancy.responsibilities,
-      requirements: vacancy.requirements,
-      status: vacancy.status,
-      jobType: vacancy.jobType,
-      employmentType: vacancy.employmentType,
-      workModel: vacancy.workModel,
-      startDate: vacancy.startDate,
-      endDate: vacancy.endDate,
-      isLimitApplicantEnabled: vacancy.isLimitApplicantEnabled,
-      applicantLimit: vacancy.applicantLimit,
-      isLimitHiredEnabled: vacancy.isLimitHiredEnabled,
-      hiredLimit: vacancy.hiredLimit,
-      officeAddresses: vacancy.officeAddresses,
-      department: vacancy.department?.name || "",
-      departmentId: vacancy.departmentId,
-      salaryMin: vacancy.salaryMin,
-      salaryMax: vacancy.salaryMax,
-      salaryPeriod: vacancy.salaryPeriod,
-      currency: vacancy.currency,
-      jobCategoryId: vacancy.jobCategoryId,
-      requiredEducation: vacancy.requiredEducation,
-      requiredExperienceYears: vacancy.requiredExperienceYears,
-      hoursPerWeekMin: vacancy.hoursPerWeekMin,
-      hoursPerWeekMax: vacancy.hoursPerWeekMax,
-      pipelineId: vacancy.pipelineId,
-      createdById: vacancy.createdById,
-      updatedById: vacancy.updatedById,
-      createdAt: vacancy.createdAt,
-      updatedAt: vacancy.updatedAt,
-      generatedPosterUrl: vacancy.generatedPosterUrl,
-      posterConfiguration: vacancy.posterConfiguration,
-      applicationDeadline: vacancy.endDate,
-      expectedStartDate: vacancy.startDate,
-      publishedAt: vacancy.createdAt,
-      archivedAt: vacancy.deletedAt,
-      closedAt: vacancy.endDate
-    };
-  }
-
-  /**
-   * Get all public job vacancies with pagination (only PUBLISHED status)
-   * @param page - Page number (default: 1)
-   * @param limit - Items per page (default: 10)
-   * @param jobCategory - Filter by job category ID (optional)
-   * @returns Paginated public job vacancies
-   */
   async findAllPublic(
     page: number = 1,
     limit: number = 10,
@@ -461,10 +276,8 @@ export class VacancyService {
     limit: number;
     totalPages: number;
   }> {
-    // Build where condition for public (only PUBLISHED and not expired)
     const whereCondition: FindOptionsWhere<Vacancy> = {
-      status: JobStatus.PUBLISHED,
-      endDate: MoreThan(new Date())
+      status: JobStatus.PUBLISHED
     };
 
     if (jobCategory) {
@@ -489,6 +302,7 @@ export class VacancyService {
         posterConfiguration: true,
         requiredEducation: true,
         requiredExperienceYears: true,
+        generatedPosterUrl: true,
         jobCategory: {
           id: true,
           name: true
@@ -516,17 +330,11 @@ export class VacancyService {
     };
   }
 
-  /**
-   * Get public vacancy by ID (only PUBLISHED status)
-   * @param id - Vacancy ID
-   * @returns Public vacancy details
-   */
   async findOnePublic(id: string): Promise<PublicVacancyResponseDto> {
     const vacancy = await this.vacancyRepository.findOne({
       where: {
         id,
-        status: JobStatus.PUBLISHED,
-        endDate: MoreThan(new Date())
+        status: JobStatus.PUBLISHED
       },
       relations: ["jobCategory"]
     });
@@ -538,11 +346,242 @@ export class VacancyService {
     return this.mapToPublicResponseDto(vacancy);
   }
 
+  // ─── Private helpers ───────────────────────────────────────────────────────
+
+  private validateUpdateData(updateVacancyDto: UpdateVacancyDto): void {
+    if (updateVacancyDto.pipelineId) {
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(updateVacancyDto.pipelineId)) {
+        throw new BadRequestException("Invalid pipeline ID format");
+      }
+    }
+
+    if (updateVacancyDto.salaryMin && updateVacancyDto.salaryMax) {
+      if (updateVacancyDto.salaryMin > updateVacancyDto.salaryMax) {
+        throw new BadRequestException(
+          "Minimum salary cannot be greater than maximum salary"
+        );
+      }
+    }
+
+    if (
+      updateVacancyDto.startDate &&
+      updateVacancyDto.endDate &&
+      new Date(updateVacancyDto.startDate) > new Date(updateVacancyDto.endDate)
+    ) {
+      throw new BadRequestException(
+        "Start date cannot be after end date"
+      );
+    }
+  }
+
+  private prepareUpdateData(
+    updateVacancyDto: UpdateVacancyDto,
+    updatedById: string
+  ): Partial<Vacancy> {
+    const updateData: Partial<Vacancy> = { updatedById };
+
+    const stringFields = [
+      "title",
+      "jobCode",
+      "description",
+      "responsibilities",
+      "requirements",
+      "status",
+      "jobType",
+      "employmentType",
+      "workModel",
+      "currency",
+      "departmentId",
+      "pipelineId",
+      "jobCategoryId",
+      "generatedPosterUrl"
+    ];
+
+    stringFields.forEach((field) => {
+      if (
+        updateVacancyDto[field] !== undefined &&
+        updateVacancyDto[field] !== null
+      ) {
+        updateData[field] = updateVacancyDto[field];
+      }
+    });
+
+    // salaryPeriod and requiredEducation can be explicitly set to null to clear them.
+    // Cast through any because Partial<Vacancy> uses undefined but TypeORM accepts null for nullable columns.
+    if (updateVacancyDto.salaryPeriod !== undefined) {
+      (updateData as any).salaryPeriod = updateVacancyDto.salaryPeriod ?? null;
+    }
+    if (updateVacancyDto.requiredEducation !== undefined) {
+      (updateData as any).requiredEducation = updateVacancyDto.requiredEducation ?? null;
+    }
+
+    const numberFields = [
+      "applicantLimit",
+      "hiredLimit",
+      "salaryMin",
+      "salaryMax",
+      "requiredExperienceYears",
+      "hoursPerWeekMin",
+      "hoursPerWeekMax"
+    ];
+
+    numberFields.forEach((field) => {
+      if (updateVacancyDto[field] !== undefined) {
+        updateData[field] = updateVacancyDto[field];
+      }
+    });
+
+    // Boolean toggle fields
+    const booleanFields = ["isLimitApplicantEnabled", "isLimitHiredEnabled"];
+    booleanFields.forEach((field) => {
+      if (updateVacancyDto[field] !== undefined) {
+        updateData[field] = updateVacancyDto[field];
+      }
+    });
+
+    if (updateVacancyDto.officeAddresses !== undefined) {
+      updateData.officeAddresses = updateVacancyDto.officeAddresses;
+    }
+
+    if (updateVacancyDto.posterConfiguration !== undefined) {
+      updateData.posterConfiguration = updateVacancyDto.posterConfiguration;
+    }
+
+    // Real date columns — stored directly on the entity
+    if (updateVacancyDto.startDate) {
+      const d = this.parseDate(updateVacancyDto.startDate);
+      if (d) updateData.startDate = d;
+    }
+    if (updateVacancyDto.endDate) {
+      const d = this.parseDate(updateVacancyDto.endDate);
+      if (d) updateData.endDate = d;
+    }
+
+    return updateData;
+  }
+
+  private mapToResponseDto(vacancy: Vacancy): VacancyResponseDto {
+    return {
+      id: vacancy.id,
+      title: vacancy.title,
+      jobCode: vacancy.jobCode,
+      description: vacancy.description,
+      responsibilities: vacancy.responsibilities,
+      requirements: vacancy.requirements,
+      status: vacancy.status,
+      jobType: vacancy.jobType,
+      employmentType: vacancy.employmentType,
+      workModel: vacancy.workModel,
+      startDate: vacancy.startDate,
+      endDate: vacancy.endDate,
+      isLimitApplicantEnabled: vacancy.isLimitApplicantEnabled,
+      applicantLimit: vacancy.applicantLimit,
+      isLimitHiredEnabled: vacancy.isLimitHiredEnabled,
+      hiredLimit: vacancy.hiredLimit,
+      officeAddresses: vacancy.officeAddresses,
+      department: vacancy.department?.name ?? null,
+      departmentId: vacancy.departmentId,
+      salaryMin: vacancy.salaryMin,
+      salaryMax: vacancy.salaryMax,
+      salaryPeriod: vacancy.salaryPeriod,
+      currency: vacancy.currency,
+      jobCategoryId: vacancy.jobCategoryId,
+      requiredEducation: vacancy.requiredEducation,
+      requiredExperienceYears: vacancy.requiredExperienceYears,
+      hoursPerWeekMin: vacancy.hoursPerWeekMin,
+      hoursPerWeekMax: vacancy.hoursPerWeekMax,
+      pipelineId: vacancy.pipelineId,
+      createdById: vacancy.createdById,
+      updatedById: vacancy.updatedById,
+      createdAt: vacancy.createdAt,
+      updatedAt: vacancy.updatedAt,
+      generatedPosterUrl: vacancy.generatedPosterUrl,
+      posterConfiguration: vacancy.posterConfiguration
+    };
+  }
+
+  private mapToPublicResponseDto(vacancy: Vacancy): PublicVacancyResponseDto {
+    return {
+      id: vacancy.id,
+      title: vacancy.title,
+      description: vacancy.description,
+      responsibilities: vacancy.responsibilities,
+      requirements: vacancy.requirements,
+      jobType: vacancy.jobType,
+      employmentType: vacancy.employmentType,
+      workModel: vacancy.workModel,
+      officeAddresses: vacancy.officeAddresses || [],
+      applicationDeadline: vacancy.endDate,
+      expectedStartDate: vacancy.startDate,
+      requiredEducation: vacancy.requiredEducation,
+      requiredExperienceYears: vacancy.requiredExperienceYears,
+      jobCategory: vacancy.jobCategory
+        ? { id: vacancy.jobCategory.id, name: vacancy.jobCategory.name }
+        : { id: "", name: "" },
+      generatedPosterUrl: vacancy.generatedPosterUrl,
+      status: vacancy.status,
+      startDate: vacancy.startDate,
+      endDate: vacancy.endDate,
+      posterConfiguration: vacancy.posterConfiguration
+    };
+  }
+
   /**
-   * Parse date string safely
-   * @param dateString - Date string to parse
-   * @returns Date object or undefined if invalid
+   * Retrieve totalApplicants, hiredApplicants, and rejectedApplicants for a
+   * set of vacancy IDs in a single aggregated query — avoids N+1.
    */
+  private async getApplicantCountsForVacancies(
+    vacancyIds: string[]
+  ): Promise<
+    Record<
+      string,
+      {
+        totalApplicants: number;
+        hiredApplicants: number;
+        rejectedApplicants: number;
+      }
+    >
+  > {
+    if (vacancyIds.length === 0) return {};
+
+    const rows = await this.applicationRepository
+      .createQueryBuilder("app")
+      .select("app.vacancyId", "vacancyId")
+      .addSelect("COUNT(*)", "total")
+      .addSelect(
+        `SUM(CASE WHEN app.status = '${ApplicantStatus.HIRED}' THEN 1 ELSE 0 END)`,
+        "hired"
+      )
+      .addSelect(
+        `SUM(CASE WHEN app.status = '${ApplicantStatus.REJECTED}' THEN 1 ELSE 0 END)`,
+        "rejected"
+      )
+      .where("app.vacancyId IN (:...vacancyIds)", { vacancyIds })
+      .groupBy("app.vacancyId")
+      .getRawMany();
+
+    const result: Record<
+      string,
+      {
+        totalApplicants: number;
+        hiredApplicants: number;
+        rejectedApplicants: number;
+      }
+    > = {};
+
+    for (const row of rows) {
+      result[row.vacancyId] = {
+        totalApplicants: Number(row.total),
+        hiredApplicants: Number(row.hired),
+        rejectedApplicants: Number(row.rejected)
+      };
+    }
+
+    return result;
+  }
+
   private parseDate(dateString: string): Date | undefined {
     if (
       !dateString ||
@@ -556,220 +595,4 @@ export class VacancyService {
     return isNaN(date.getTime()) ? undefined : date;
   }
 
-  /**
-   * Convert frontend poster config arrays to backend boolean object structure
-   * @param posterConfig - Frontend poster config with arrays
-   * @returns Backend poster config with boolean objects
-   */
-  private convertPosterConfig(posterConfig: any): any {
-    if (!posterConfig) return undefined;
-
-    // Helper function to check if a value is in an array or is a boolean
-    const isEnabled = (section: any, key: string, arrayKey?: string) => {
-      if (Array.isArray(section)) {
-        return section.includes(arrayKey || key);
-      }
-      if (typeof section === "object" && section !== null) {
-        return section[key] === true;
-      }
-      return false;
-    };
-
-    return {
-      jobDetails: {
-        dueDate: isEnabled(posterConfig.jobDetails, "dueDate", "due-date"),
-        jobTitle: isEnabled(posterConfig.jobDetails, "jobTitle", "job-title"),
-        jobType: isEnabled(posterConfig.jobDetails, "jobType", "job-type"),
-        applicantLimit: isEnabled(
-          posterConfig.jobDetails,
-          "applicantLimit",
-          "limit-applicants"
-        )
-      },
-      employmentDetails: {
-        employmentType: isEnabled(
-          posterConfig.employmentDetails,
-          "employmentType",
-          "employment-type"
-        ),
-        category: isEnabled(
-          posterConfig.employmentDetails,
-          "category",
-          "category"
-        ),
-        education: isEnabled(
-          posterConfig.employmentDetails,
-          "education",
-          "education"
-        ),
-        experience: isEnabled(
-          posterConfig.employmentDetails,
-          "experience",
-          "experience"
-        )
-      },
-      jobOverview: {
-        description: isEnabled(
-          posterConfig.jobOverview,
-          "description",
-          "description"
-        ),
-        responsibilities: isEnabled(
-          posterConfig.jobOverview,
-          "responsibilities",
-          "responsibilities"
-        ),
-        requirements: isEnabled(
-          posterConfig.jobOverview,
-          "requirements",
-          "requirements"
-        )
-      },
-      locations: {
-        locations:
-          typeof posterConfig.locations === "boolean"
-            ? posterConfig.locations
-            : false
-      },
-      workModel: {
-        workModel:
-          typeof posterConfig.workModel === "boolean"
-            ? posterConfig.workModel
-            : false
-      },
-      salary: {
-        salary:
-          typeof posterConfig.salary === "boolean" ? posterConfig.salary : false
-      }
-    };
-  }
-
-  /**
-   * Map frontend JobFormData to Vacancy entity
-   * @param jobFormData - Data from frontend form
-   * @param updatedById - ID of the user updating the vacancy
-   * @returns Mapped vacancy data
-   */
-  private mapJobFormDataToVacancy(
-    jobFormData: any,
-    updatedById: string
-  ): Partial<Vacancy> {
-    return {
-      title: jobFormData.jobTitle,
-      jobCode: jobFormData.jobCode,
-      description: jobFormData.description,
-      responsibilities: jobFormData.responsibilities,
-      requirements: jobFormData.requirements,
-      jobType: jobFormData.jobType,
-      employmentType: jobFormData.employeeType,
-      startDate: jobFormData.startDate
-        ? this.parseDate(jobFormData.startDate)
-        : undefined,
-      endDate: jobFormData.endDate
-        ? this.parseDate(jobFormData.endDate)
-        : undefined,
-      isLimitApplicantEnabled: jobFormData.isLimitApplicantEnabled || false,
-      applicantLimit: jobFormData.limitApplicant,
-      isLimitHiredEnabled: jobFormData.isLimitHiredEnabled || false,
-      hiredLimit: jobFormData.limitHired,
-      officeAddresses: jobFormData.officeAddresses || [],
-      workModel: jobFormData.workModel,
-      departmentId: jobFormData.department,
-      salaryMin: jobFormData.minSalary
-        ? parseInt(jobFormData.minSalary)
-        : undefined,
-      salaryMax: jobFormData.maxSalary
-        ? parseInt(jobFormData.maxSalary)
-        : undefined,
-      salaryPeriod:
-        jobFormData.salaryPeriod && jobFormData.salaryPeriod.trim() !== ""
-          ? jobFormData.salaryPeriod
-          : null,
-      currency: jobFormData.currency,
-      requiredEducation:
-        jobFormData.levelEducation && jobFormData.levelEducation.trim() !== ""
-          ? jobFormData.levelEducation
-          : null,
-      requiredExperienceYears: jobFormData.yearOfExperience
-        ? parseInt(jobFormData.yearOfExperience)
-        : undefined,
-      hoursPerWeekMin: jobFormData.minHourPerWeek
-        ? parseInt(jobFormData.minHourPerWeek)
-        : undefined,
-      hoursPerWeekMax: jobFormData.maxHourPerWeek
-        ? parseInt(jobFormData.maxHourPerWeek)
-        : undefined,
-      posterConfiguration: this.convertPosterConfig(jobFormData.posterConfig),
-      pipelineId: jobFormData.pipelineId,
-      jobCategoryId:
-        jobFormData.jobCategory && jobFormData.jobCategory.trim() !== ""
-          ? jobFormData.jobCategory
-          : null,
-      updatedById
-    };
-  }
-
-  /**
-   * Update vacancy from job form data
-   * @param id - Vacancy ID
-   * @param jobFormData - Data from frontend form
-   * @param updatedById - ID of the user updating the vacancy
-   * @returns Updated vacancy
-   */
-  async updateFromJobForm(
-    id: string,
-    jobFormData: any,
-    updatedById: string
-  ): Promise<VacancyResponseDto> {
-    const vacancy = await this.findOne(id);
-    if (!vacancy) {
-      throw new NotFoundException(`Vacancy with ID ${id} not found`);
-    }
-
-    const updateData = this.mapJobFormDataToVacancy(jobFormData, updatedById);
-
-    await this.vacancyRepository.update(id, updateData);
-    const updatedVacancy = await this.vacancyRepository.findOne({
-      where: { id },
-      relations: ["pipeline", "jobCategory", "applications"]
-    });
-
-    if (!updatedVacancy) {
-      throw new NotFoundException(`Vacancy with ID ${id} not found`);
-    }
-
-    return this.mapToResponseDto(updatedVacancy);
-  }
-
-  /**
-   * Map vacancy entity to public response DTO
-   * @param vacancy - Vacancy entity
-   * @returns Public vacancy response DTO
-   */
-  private mapToPublicResponseDto(vacancy: Vacancy): PublicVacancyResponseDto {
-    return {
-      id: vacancy.id,
-      title: vacancy.title,
-      description: vacancy.description,
-      responsibilities: vacancy.responsibilities,
-      requirements: vacancy.requirements,
-      jobType: vacancy.jobType,
-      employmentType: vacancy.employmentType,
-      workModel: vacancy.workModel,
-      officeAddresses: vacancy.officeAddresses || [],
-      applicationDeadline: vacancy.endDate, // Updated to use endDate
-      expectedStartDate: vacancy.startDate, // Updated to use startDate
-      requiredEducation: vacancy.requiredEducation,
-      requiredExperienceYears: vacancy.requiredExperienceYears,
-      jobCategory: {
-        id: vacancy.jobCategory.id,
-        name: vacancy.jobCategory.name
-      },
-      generatedPosterUrl: vacancy.generatedPosterUrl,
-      status: vacancy.status,
-      startDate: vacancy.startDate,
-      endDate: vacancy.endDate,
-      posterConfiguration: vacancy.posterConfiguration
-    };
-  }
 }

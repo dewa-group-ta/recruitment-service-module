@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsInt,
   IsDateString,
+  IsBoolean,
   MaxLength,
   Min,
   IsUUID,
@@ -33,6 +34,17 @@ export class UpdateVacancyDto {
   @IsOptional()
   @MaxLength(255)
   title?: string;
+
+  @ApiProperty({
+    description: "Job code (unique identifier for the job)",
+    example: "SWE-001",
+    maxLength: 50,
+    required: false
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(50)
+  jobCode?: string;
 
   @ApiProperty({
     description: "Vacancy description",
@@ -104,6 +116,15 @@ export class UpdateVacancyDto {
   workModel?: WorkModel;
 
   @ApiProperty({
+    description: "Enable applicant limit",
+    example: true,
+    required: false
+  })
+  @IsBoolean()
+  @IsOptional()
+  isLimitApplicantEnabled?: boolean;
+
+  @ApiProperty({
     description: "Maximum number of applicants",
     example: 100,
     required: false
@@ -112,6 +133,15 @@ export class UpdateVacancyDto {
   @IsOptional()
   @Min(1)
   applicantLimit?: number;
+
+  @ApiProperty({
+    description: "Enable hired limit",
+    example: true,
+    required: false
+  })
+  @IsBoolean()
+  @IsOptional()
+  isLimitHiredEnabled?: boolean;
 
   @ApiProperty({
     description: "Maximum number of hires",
@@ -177,49 +207,22 @@ export class UpdateVacancyDto {
   currency?: string;
 
   @ApiProperty({
-    description: "Application deadline",
-    example: "2024-12-31T23:59:59.000Z",
-    required: false
-  })
-  @IsDateString()
-  @IsOptional()
-  applicationDeadline?: string;
-
-  @ApiProperty({
-    description: "Expected start date",
+    description: "Job start date",
     example: "2024-01-15",
     required: false
   })
   @IsDateString()
   @IsOptional()
-  expectedStartDate?: string;
+  startDate?: string;
 
   @ApiProperty({
-    description: "Published date",
-    example: "2024-01-01T00:00:00.000Z",
+    description: "Job end date",
+    example: "2024-12-31",
     required: false
   })
   @IsDateString()
   @IsOptional()
-  publishedAt?: string;
-
-  @ApiProperty({
-    description: "Archived date",
-    example: "2024-12-31T23:59:59.000Z",
-    required: false
-  })
-  @IsDateString()
-  @IsOptional()
-  archivedAt?: string;
-
-  @ApiProperty({
-    description: "Closed date",
-    example: "2024-12-31T23:59:59.000Z",
-    required: false
-  })
-  @IsDateString()
-  @IsOptional()
-  closedAt?: string;
+  endDate?: string;
 
   @ApiProperty({
     description: "Recruitment pipeline ID",
@@ -238,6 +241,15 @@ export class UpdateVacancyDto {
   @IsUUID()
   @IsOptional()
   departmentId?: string;
+
+  @ApiProperty({
+    description: "Job category ID",
+    example: "uuid-string",
+    required: false
+  })
+  @IsUUID()
+  @IsOptional()
+  jobCategoryId?: string;
 
   @ApiProperty({
     description: "Required education level",
@@ -259,38 +271,6 @@ export class UpdateVacancyDto {
   @IsOptional()
   @Min(0)
   requiredExperienceYears?: number;
-
-//-----------------------------------------------------------------
-  @ApiProperty({
-  description: "Bidang studi yang diharapkan, digunakan sebagai input SBERT untuk penilaian komponen pendidikan",
-  example: "Teknik Informatika",
-  required: false
-  })
-  @IsString()
-  @IsOptional()
-  @MaxLength(255)
-  relevantMajor?: string;
-
-  @ApiProperty({
-    description: "Deskripsi peran yang diharapkan, digunakan sebagai input SBERT untuk penilaian relevansi pengalaman kerja",
-    example: "Membangun dan memelihara REST API, mengelola basis data PostgreSQL...",
-    required: false
-  })
-  @IsString()
-  @IsOptional()
-  roleDescription?: string;
-
-  @ApiProperty({
-    description: "Daftar skill yang disyaratkan, akan dibandingkan secara semantik terhadap skill pelamar",
-    example: ["Node.js", "PostgreSQL", "Docker"],
-    required: false,
-    type: [String]
-  })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  requiredSkills?: string[];
-//-----------------------------------------------------------------
 
   @ApiProperty({
     description: "Minimum hours per week",

@@ -12,7 +12,6 @@ import {
   RecruitmentPipelineResponseDto
 } from "../dto";
 import { BaseFindAllDto } from "../../../shared/paginate/base-find-all.dto";
-import { PaginationResultInterface } from "../../../shared/paginate/pagination.results.interface";
 
 @Injectable()
 export class RecruitmentPipelineService {
@@ -65,13 +64,14 @@ export class RecruitmentPipelineService {
       isDefault?: boolean;
       search?: string;
     }
-  ): Promise<PaginationResultInterface<RecruitmentPipelineResponseDto>> {
+  ): Promise<{ data: RecruitmentPipelineResponseDto[]; pagination: { page: number; limit: number; total_items: number; total_pages: number } }> {
     const { page, limit } = paginationDto;
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.recruitmentPipelineRepository
       .createQueryBuilder("pipeline")
       .leftJoinAndSelect("pipeline.stages", "stages")
+      .leftJoinAndSelect("stages.stageTemplate", "stageTemplate")
       .where("pipeline.deletedAt IS NULL");
 
     // Apply filters
@@ -123,10 +123,12 @@ export class RecruitmentPipelineService {
       data: recruitmentPipelines.map((pipeline) =>
         this.mapToResponseDto(pipeline)
       ),
-      page,
-      limit,
-      total_items: totalItems,
-      total_pages: totalPages
+      pagination: {
+        page,
+        limit,
+        total_items: totalItems,
+        total_pages: totalPages
+      }
     };
   }
 

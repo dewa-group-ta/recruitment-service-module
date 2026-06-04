@@ -9,10 +9,12 @@ import {
   Delete,
   Param,
   Patch,
+  Query,
   UseInterceptors,
   UploadedFile,
   ParseUUIDPipe,
-  BadRequestException
+  BadRequestException,
+  UnauthorizedException
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -280,9 +282,50 @@ export class ApplicationController {
       }
     }
   })
-  @IsRole(role.APPLICANT)
-  async getMe(@Req() request: AuthenticatedRequest) {
-    const applicantId = request.applicantId;
+  // ─── LAMA (membutuhkan JWT auth via @IsRole) ──────────────────────────────
+  // @Get("me")
+  // @HttpCode(HttpStatus.OK)
+  // @ResponseMessage(responseMessage.SUCCESS)
+  // @ApiBearerAuth()
+  // @IsRole(role.APPLICANT)
+  // async getMe(@Req() request: AuthenticatedRequest) {
+  //   const applicantId = request.applicantId;
+  //   const applicant = await this.applicantService.getMe(applicantId);
+  //   console.log(applicant);
+  //   return applicant;
+  // }
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // BARU: tidak memerlukan autentikasi — applicantId dikirim oleh frontend
+  //       sebagai query param (diperoleh dari hasil validate-token).
+  @Public()
+  @Get("me")
+  @HttpCode(HttpStatus.OK)
+  @ResponseMessage(responseMessage.SUCCESS)
+  @ApiOperation({
+    summary: "Get current applicant profile",
+    description:
+      "Retrieve the applicant's profile. Pass applicantId (obtained from validate-token) as query param — no JWT required."
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Applicant profile retrieved successfully",
+    type: MeResponseDto
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Missing applicantId query param"
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Applicant not found"
+  })
+  async getMe(
+    @Query("applicantId") applicantId: string
+  ) {
+    if (!applicantId) {
+      throw new BadRequestException("applicantId query param is required");
+    }
     const applicant = await this.applicantService.getMe(applicantId);
     console.log(applicant);
     return applicant;
@@ -521,15 +564,31 @@ export class ApplicationController {
 //   akan rusak untuk lamaran-lamaran sebelumnya.
 // -----------------------------------------------------------------------------
  
+// ─── LAMA (membutuhkan JWT auth via @IsRole) ──────────────────────────────
+// @Post("upload-cv")
+// ...
+// @IsRole(role.APPLICANT)
+// async uploadCV(
+//   @Req() request: AuthenticatedRequest,
+//   @UploadedFile(...) file: Express.Multer.File,
+//   @Body() uploadDto: Partial<FileUploadDto>
+// ) {
+//   const applicantId = request.applicantId;
+//   ...
+// }
+// ─────────────────────────────────────────────────────────────────────────
+
+// BARU: tidak memerlukan autentikasi — applicantId dikirim bersama
+//       multipart form-data (diperoleh frontend dari hasil validate-token).
+@Public()
 @Post("upload-cv")
 @UseInterceptors(FileInterceptor("file"))
 @HttpCode(HttpStatus.OK)
 @ResponseMessage(responseMessage.SUCCESS)
-@ApiBearerAuth()
 @ApiOperation({
   summary: "Upload CV file",
   description:
-    "Upload CV file for the authenticated applicant. Maximum file size: 5MB. Supported formats: PDF, DOC, DOCX."
+    "Upload CV file for the applicant. Pass applicantId (obtained from validate-token) in the form body — no JWT required. Maximum file size: 5MB. Supported formats: PDF, DOC, DOCX."
 })
 @ApiConsumes("multipart/form-data")
 @ApiBody({
@@ -541,50 +600,28 @@ export class ApplicationController {
         format: "binary",
         description: "CV file (PDF, DOC, DOCX) - Max 5MB"
       },
+      applicantId: {
+        type: "string",
+        format: "uuid",
+        description: "Applicant ID obtained from validate-token"
+      },
       description: {
         type: "string",
         description: "Optional description for the CV"
       }
     },
-    required: ["file"]
+    required: ["file", "applicantId"]
   }
 })
 @ApiResponse({
   status: 200,
-  description: "CV uploaded successfully",
-  schema: {
-    example: {
-      responseCode: 200,
-      responseDesc: "CV uploaded successfully",
-      data: {
-        id: "uuid",
-        fileName: "generated-filename.pdf",
-        originalName: "john-doe-cv.pdf",
-        filePath: "applicants/cv/generated-filename.pdf",
-        fileSize: 2048000,
-        mimeType: "application/pdf",
-        fileType: "cv",
-        description: "Updated CV",
-        url: "https://minio.example.com/presigned-url",
-        uploadedAt: "2024-01-01T00:00:00.000Z"
-      }
-    }
-  }
+  description: "CV uploaded successfully"
 })
 @ApiResponse({
   status: 400,
-  description: "Bad request - Invalid file or validation error",
-  schema: {
-    example: {
-      responseCode: 400,
-      responseDesc: "File validation failed: File size exceeds 5MB limit",
-      data: null
-    }
-  }
+  description: "Bad request - Invalid file, missing applicantId, or validation error"
 })
-@IsRole(role.APPLICANT)
 async uploadCV(
-  @Req() request: AuthenticatedRequest,
   @UploadedFile(
     new FileValidationPipe({
       maxSize: 5 * 1024 * 1024, // 5MB
@@ -597,11 +634,14 @@ async uploadCV(
     })
   )
   file: Express.Multer.File,
-  @Body() uploadDto: Partial<FileUploadDto>
+  @Body() uploadDto: Partial<FileUploadDto> & { applicantId?: string }
 ) {
   try {
-    const applicantId = request.applicantId;
- 
+    const applicantId = uploadDto.applicantId;
+    if (!applicantId) {
+      throw new BadRequestException("applicantId is required in the form body");
+    }
+
     const fileUploadData: FileUploadDto = {
       fileType:        FileType.CV,
       description:     uploadDto.description,
@@ -609,11 +649,11 @@ async uploadCV(
       relatedEntity:   "applicant",
       relatedEntityId: applicantId
     };
- 
+
     // Ambil profil pelamar untuk mendapatkan path CV lama (jika ada)
     const currentProfile = await this.applicantService.getMe(applicantId);
     const oldCvPath = currentProfile.cvUrl ?? null;
- 
+
     if (oldCvPath) {
       // ── Pengecekan sebelum menghapus file lama dari MinIO ──────────────
       //
@@ -632,7 +672,7 @@ async uploadCV(
       //   - File fisik di MinIO dihapus (tidak ada lamaran yang bergantung)
       //   - Record File di level 'applicant' akan di-replace oleh uploadFile()
       const isStillUsed = await this.applicantService.isReferencedByApplication(oldCvPath);
- 
+
       if (!isStillUsed) {
         // Aman dihapus — tidak ada lamaran yang masih memakai file ini
         try {
@@ -647,19 +687,19 @@ async uploadCV(
       // akan di-replace oleh fileUploadService.uploadFile() di bawah.
       // ──────────────────────────────────────────────────────────────────
     }
- 
+
     // Upload file baru ke MinIO dan simpan record File baru di database
     const result = await this.fileUploadService.uploadFile(
       file,
       fileUploadData,
       applicantId
     );
- 
+
     // Update kolom cvUrl di profil pelamar ke path CV terbaru
     await this.applicantService.updateProfile(applicantId, {
       cvUrl: result.filePath
     });
- 
+
     return result;
   } catch (error) {
     const errorMessage =

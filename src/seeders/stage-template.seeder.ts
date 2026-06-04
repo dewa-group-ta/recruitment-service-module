@@ -114,6 +114,71 @@ export class StageTemplateSeeder extends BaseSeeder {
         isActive: true,
         category: "general",
         createdById: "system"
+      },
+      // Administration Selection
+      {
+        id: this.generateId(),
+        name: "Administration Selection",
+        description: "Initial administrative screening and document verification",
+        maxDurationDays: 5,
+        canScore: true,
+        canNotify: true,
+        instructions: "Review submitted documents and verify administrative requirements",
+        isActive: true,
+        category: "general",
+        createdById: "system"
+      },
+      // Psikotes
+      {
+        id: this.generateId(),
+        name: "Psikotes",
+        description: "Psychological assessment test",
+        maxDurationDays: 7,
+        canScore: true,
+        canNotify: true,
+        instructions: "Administer psychological assessment to evaluate candidate suitability",
+        isActive: true,
+        category: "general",
+        createdById: "system"
+      },
+      // Skill Test
+      {
+        id: this.generateId(),
+        name: "Skill Test",
+        description: "Role-specific skill and competency assessment",
+        maxDurationDays: 7,
+        canScore: true,
+        canNotify: true,
+        instructions: "Evaluate role-specific technical and functional skills",
+        isActive: true,
+        category: "general",
+        createdById: "system"
+      },
+      // Interview User
+      {
+        id: this.generateId(),
+        name: "Interview User",
+        description: "Interview with the hiring department or direct user",
+        maxDurationDays: 10,
+        canScore: true,
+        canNotify: true,
+        instructions: "Conduct interview with the hiring team or direct manager",
+        isActive: true,
+        category: "general",
+        createdById: "system"
+      },
+      // Interview HCM
+      {
+        id: this.generateId(),
+        name: "Interview HCM",
+        description: "Final interview with Human Capital Management",
+        maxDurationDays: 10,
+        canScore: true,
+        canNotify: true,
+        instructions: "Conduct final interview with HCM team for culture fit and offer discussion",
+        isActive: true,
+        category: "general",
+        createdById: "system"
       }
     ];
 

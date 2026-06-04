@@ -33,10 +33,22 @@ export class RecruitmentPipelineSeeder extends BaseSeeder {
     const pipelineData = [
       {
         id: this.generateId(),
+        name: "HCM Neuron",
+        description: "Standard recruitment pipeline for PT Neuronworks Indonesia",
+        version: "1.0",
+        isDefault: true,
+        isAutomatic: false,
+        isTemplate: false,
+        category: "general",
+        usageCount: 0,
+        createdById: "system"
+      },
+      {
+        id: this.generateId(),
         name: "Default Engineering Pipeline",
         description: "Standard recruitment pipeline for engineering positions",
         version: "1.0",
-        isDefault: true,
+        isDefault: false,
         isAutomatic: false,
         isTemplate: false,
         category: "engineering",
@@ -90,6 +102,13 @@ export class RecruitmentPipelineSeeder extends BaseSeeder {
 
     // Define stage order based on pipeline category
     const stageOrderMap = {
+      "HCM Neuron": [
+        "Administration Selection",
+        "Psikotes",
+        "Skill Test",
+        "Interview User",
+        "Interview HCM"
+      ],
       engineering: [
         "Application Review",
         "Phone Screening",
@@ -110,7 +129,9 @@ export class RecruitmentPipelineSeeder extends BaseSeeder {
     };
 
     const stagesToInclude =
-      stageOrderMap[pipeline.category] || stageOrderMap["default"];
+      stageOrderMap[pipeline.name] ||
+      stageOrderMap[pipeline.category] ||
+      stageOrderMap["default"];
 
     for (const stageName of stagesToInclude) {
       const template = stageTemplates.find((t) => t.name === stageName);
@@ -132,6 +153,11 @@ export class RecruitmentPipelineSeeder extends BaseSeeder {
 
   private getEstimatedDurationForStage(stageName: string): number {
     const durationMap = {
+      "Administration Selection": 3,
+      "Psikotes": 5,
+      "Skill Test": 7,
+      "Interview User": 7,
+      "Interview HCM": 7,
       "Application Review": 3,
       "Phone Screening": 5,
       "Technical Assessment": 7,

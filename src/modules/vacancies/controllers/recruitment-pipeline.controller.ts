@@ -26,8 +26,8 @@ import {
   UpdateRecruitmentPipelineDto,
   RecruitmentPipelineResponseDto
 } from "../dto";
-import { BaseFindAllDto } from "../../../shared/paginate/base-find-all.dto";
-import { PaginationResultInterface } from "../../../shared/paginate/pagination.results.interface";
+import { FindAllPipelinesDto } from "../dto/find-all-pipelines.dto";
+
 import { ResponseMessage } from "../../../shared/decorators/response.decorator";
 import { responseMessage } from "../../../shared/utils/constant";
 import { AuthenticatedRequest } from "../../../shared/interface";
@@ -111,13 +111,9 @@ export class RecruitmentPipelineController {
     type: Object
   })
   async findAll(
-    @Query() paginationDto: BaseFindAllDto,
-    @Query("category") category?: string,
-    @Query("isActive") isActive?: boolean,
-    @Query("isTemplate") isTemplate?: boolean,
-    @Query("isDefault") isDefault?: boolean,
-    @Query("search") search?: string
-  ): Promise<PaginationResultInterface<RecruitmentPipelineResponseDto>> {
+    @Query() query: FindAllPipelinesDto
+  ): Promise<{ data: RecruitmentPipelineResponseDto[]; pagination: object }> {
+    const { isActive, isTemplate, isDefault, category, search, ...paginationDto } = query;
     return await this.recruitmentPipelineService.findAll(paginationDto, {
       category,
       isActive,

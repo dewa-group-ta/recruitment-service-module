@@ -14,64 +14,62 @@ export class VacancyResponseDto {
     description: "Vacancy ID",
     example: "uuid-string"
   })
-  id: string;
+  id!: string;
 
   @ApiProperty({
     description: "Vacancy title",
     example: "Senior Software Engineer"
   })
-  title: string;
+  title!: string;
 
   @ApiProperty({
     description: "Job code (unique identifier for the job)",
     example: "SWE-001",
     nullable: true
   })
-  jobCode: string;
+  jobCode!: string;
 
   @ApiProperty({
     description: "Vacancy description",
     example: "We are looking for an experienced software engineer...",
     nullable: true
   })
-  description: string;
+  description!: string;
 
   @ApiProperty({
     description: "Job responsibilities",
-    example:
-      "Develop and maintain web applications, collaborate with cross-functional teams...",
+    example: "Develop and maintain web applications, collaborate with cross-functional teams...",
     nullable: true
   })
-  responsibilities: string;
+  responsibilities!: string;
 
   @ApiProperty({
     description: "Job requirements",
-    example:
-      "Bachelor degree in Computer Science, 3+ years experience with React and Node.js...",
+    example: "Bachelor degree in Computer Science, 3+ years experience with React and Node.js...",
     nullable: true
   })
-  requirements: string;
+  requirements!: string;
 
   @ApiProperty({
     description: "Vacancy status",
     enum: JobStatus,
     example: JobStatus.DRAFT
   })
-  status: JobStatus;
+  status!: JobStatus;
 
   @ApiProperty({
     description: "Job type (recruitment or assessment)",
     enum: JobType,
     example: JobType.RECRUITMENT
   })
-  jobType: JobType;
+  jobType!: JobType;
 
   @ApiProperty({
     description: "Employment type",
     enum: EmploymentType,
     example: EmploymentType.FULL_TIME
   })
-  employmentType: EmploymentType;
+  employmentType!: EmploymentType;
 
   @ApiProperty({
     description: "Work model",
@@ -79,47 +77,47 @@ export class VacancyResponseDto {
     example: WorkModel.HYBRID,
     nullable: true
   })
-  workModel: WorkModel;
+  workModel!: WorkModel;
 
   @ApiProperty({
     description: "Job start date",
     example: "2024-01-15",
     nullable: true
   })
-  startDate: Date;
+  startDate!: Date;
 
   @ApiProperty({
     description: "Job end date",
     example: "2024-12-31",
     nullable: true
   })
-  endDate: Date;
+  endDate!: Date;
 
   @ApiProperty({
     description: "Enable applicant limit",
     example: true
   })
-  isLimitApplicantEnabled: boolean;
+  isLimitApplicantEnabled!: boolean;
 
   @ApiProperty({
     description: "Maximum number of applicants",
     example: 100,
     nullable: true
   })
-  applicantLimit: number;
+  applicantLimit!: number;
 
   @ApiProperty({
     description: "Enable hired limit",
     example: true
   })
-  isLimitHiredEnabled: boolean;
+  isLimitHiredEnabled!: boolean;
 
   @ApiProperty({
     description: "Maximum number of hires",
     example: 5,
     nullable: true
   })
-  hiredLimit: number;
+  hiredLimit!: number;
 
   @ApiProperty({
     description: "Office addresses (array of office locations)",
@@ -127,28 +125,28 @@ export class VacancyResponseDto {
     nullable: true,
     type: [String]
   })
-  officeAddresses: string[];
+  officeAddresses!: string[];
 
   @ApiProperty({
     description: "Department",
     example: "it",
     nullable: true
   })
-  department: string;
+  department!: string;
 
   @ApiProperty({
     description: "Minimum salary",
     example: 10000000,
     nullable: true
   })
-  salaryMin: number;
+  salaryMin!: number;
 
   @ApiProperty({
     description: "Maximum salary",
     example: 20000000,
     nullable: true
   })
-  salaryMax: number;
+  salaryMax!: number;
 
   @ApiProperty({
     description: "Salary period",
@@ -156,67 +154,32 @@ export class VacancyResponseDto {
     example: SalaryPeriod.MONTHLY,
     nullable: true
   })
-  salaryPeriod: SalaryPeriod;
+  salaryPeriod!: SalaryPeriod;
 
   @ApiProperty({
     description: "Currency code",
     example: "IDR"
   })
-  currency: string;
-
-  @ApiProperty({
-    description: "Application deadline",
-    example: "2024-12-31T23:59:59.000Z",
-    nullable: true
-  })
-  applicationDeadline: Date;
-
-  @ApiProperty({
-    description: "Expected start date",
-    example: "2024-01-15",
-    nullable: true
-  })
-  expectedStartDate: Date;
-
-  @ApiProperty({
-    description: "Published date",
-    example: "2024-01-01T00:00:00.000Z",
-    nullable: true
-  })
-  publishedAt: Date;
-
-  @ApiProperty({
-    description: "Archived date",
-    example: "2024-12-31T23:59:59.000Z",
-    nullable: true
-  })
-  archivedAt: Date;
-
-  @ApiProperty({
-    description: "Closed date",
-    example: "2024-12-31T23:59:59.000Z",
-    nullable: true
-  })
-  closedAt: Date;
+  currency!: string;
 
   @ApiProperty({
     description: "Recruitment pipeline ID",
     example: "uuid-string"
   })
-  pipelineId: string;
+  pipelineId!: string;
 
   @ApiProperty({
     description: "Job category ID",
     example: "uuid-string"
   })
-  jobCategoryId: string;
+  jobCategoryId!: string;
 
   @ApiProperty({
     description: "Department ID",
     example: "uuid-string",
     nullable: true
   })
-  departmentId: string;
+  departmentId!: string;
 
   @ApiProperty({
     description: "Required education level",
@@ -224,64 +187,63 @@ export class VacancyResponseDto {
     example: EducationLevel.BACHELOR,
     nullable: true
   })
-  requiredEducation: EducationLevel;
+  requiredEducation!: EducationLevel;
 
   @ApiProperty({
     description: "Required experience in years",
     example: 3,
     nullable: true
   })
-  requiredExperienceYears: number;
+  requiredExperienceYears!: number;
 
   @ApiProperty({
     description: "Minimum hours per week",
     example: 40,
     nullable: true
   })
-  hoursPerWeekMin: number;
+  hoursPerWeekMin!: number;
 
   @ApiProperty({
     description: "Maximum hours per week",
     example: 40,
     nullable: true
   })
-  hoursPerWeekMax: number;
+  hoursPerWeekMax!: number;
 
   @ApiProperty({
     description: "Created by user ID",
     example: "uuid-string"
   })
-  createdById: string;
+  createdById!: string;
 
   @ApiProperty({
     description: "Updated by user ID",
     example: "uuid-string",
     nullable: true
   })
-  updatedById: string;
+  updatedById!: string;
 
   @ApiProperty({
     description: "Created at timestamp",
     example: "2024-01-01T00:00:00.000Z"
   })
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiProperty({
     description: "Updated at timestamp",
     example: "2024-01-01T00:00:00.000Z"
   })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @ApiProperty({
     description: "Generated poster URL",
     example: "vacancy-poster-123.jpg",
     nullable: true
   })
-  generatedPosterUrl: string;
+  generatedPosterUrl!: string;
 
   @ApiProperty({
-    description:
-      "Poster configuration - defines which fields to include in job poster",
+    description: "Poster configuration - defines which fields to include in job poster",
     example: {
       jobDetails: {
         dueDate: true,
@@ -312,5 +274,5 @@ export class VacancyResponseDto {
     },
     nullable: true
   })
-  posterConfiguration: PosterConfiguration;
+  posterConfiguration!: PosterConfiguration;
 }
