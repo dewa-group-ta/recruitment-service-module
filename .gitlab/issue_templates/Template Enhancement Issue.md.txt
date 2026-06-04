@@ -1,0 +1,90 @@
+## 1. OVERVIEW
+
+[ 
+-Menjelaskan overview modul/fitur yang ada di dalam issue
+-Menjelaskan background dari problem yang akan disolusikan oleh issue
+-Menjelaskan kondisi sekarang dengan problem
+-Menjelaskan kondisi yang ingin dicapai untuk penyelesaian problem
+]
+
+## 2. REQUIREMENT ANALYSIS
+
+[ Menggambarkan kebutuhan fungsional dan bisnis dari Aplikasi yang di harapkan. Dalam bagian ini harus ada komponen sebagai berikut : 
+
+### Constraint dari kebutuhan
+
+[ 
+
+Menjelaskan hal-hal khusus yang berkaitan dengan kebutuhan yang diminta. Hal-hal ini bisa berupa kondisi-kondisi tertentu yang mempengaruhi proses dan hasil yang diharapkan dalam aplikasi. 
+
+Misal constraint yang di tulis adalah :
+- Input data harus dilakukan pada rentang waktu tertentu
+- Pemilihan harga disesuaikan dengan lokasi transaksi 
+- Tidak boleh melakukan order yang sama dalam rentang waktu dibawah 2 menit.
+- Perubahan task status ke COMPLETED hanya bisa dilakukan oleh leader nya
+- Setiap Task harus memiliki bobot dan jumlah bobot dari semua task yang dikerjakan USER tidak boleh lebih dari 100.
+- Task hanya bisa di delegasikan kepada team 
+- 1 task bisa di delegasikan ke pada lebih dari 1 orang dengan pembobotan bervariasi.
+- Dll, 
+
+]
+
+### Actor & UAM/UAR
+ 
+[
+
+Menjelaskan aktor yang terlibat dalam kebutuhan ini, termasuk jika ada kebutuhan integrasi dengan sistem lain maka sistem tersebut juga digambarkan sebagai aktor.
+
+
+| 3  | Aktor 2 | Aktor 2 |
+
+[ Menjelaskan mapping antara fungsi dan aktor, aktor A bisa melakukan fungsi apa dan dalam kondisi apa. ]
+
+| Role/Fungsi | Administrator | Aktor 1 | Aktor 2 |
+| ----------- | ------------- | ------- | ------- |
+| Fungsi 1  | ✅ | ✅ | ✅ |
+| Fungsi 2  | ✅ | ❌ | ✅ |
+| Fungsi 3  | ✅ | ✅ | ❌ |
+
+### Document
+
+[ Link dokumen drive tempat req ini di tulis dan langsung menuju section yang sesuai. ]
+
+]
+
+
+## 3. ANALYSIS AND DESIGN
+
+[
+
+Menjelaskan tahapan design dari kebutuhan fungsi dengan menggambarkan Class diagram/ ER , UI/ UX bisa berupa sketch dan sequence diagram atau flow yang bisa menggambarkan kebutuhan dengan jelas.
+
+]
+
+### Class Diagram / Sequence Diagram / 
+
+[ 
+Class diagram Bisa menggambarkan object - object apa yang harus di buat. Jika diperlukan bisa menambahkan ER untuk memudahakan.
+
+Sequence Diagram Bisa digambarkan sequence yang mengambarkan alur proses antar object 
+]
+
+### Sketch UI/UX
+
+[ Sketch UI/UX berupa gambaran user interface bisa berupa screenshot figma atau coretan tangan ]
+
+### Document
+
+[ Link dokumen hasil dari proses analysis design ]
+
+
+### Test Case
+
+[ Membuat test case yang berupa unit test dengan phpUnit dan bisnis use case dari segala kombinasi yang mungkin ]
+
+| No | Test Scenario | Test Case | Test Type | Expected Result | Actual Result | Status | Remark |
+| ------ | ------ | ------ | ------ | ------ | ------ | ------ | ------ |
+| 1 | Diisi dengan Modul / Menu / Fitur | Diisi dengan Item Test | **Positif / Negatif** | Diisi dengan hasil yang diharapkan | Diisi dengan hasil real dari test | **Passed / Failed** | Diisi dengan catatan jika ada |
+| 2 |  |  |  |  |  |  |  |
+| 3 |  |  |  |  |  |  |  |
+

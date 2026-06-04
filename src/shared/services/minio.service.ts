@@ -1,0 +1,117 @@
+import { Injectable, Logger, OnModuleInit, Global } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import * as Minio from "minio";
+
+@Global()
+@Injectable()
+export class MinioService implements OnModuleInit {
+  private readonly logger = new Logger(MinioService.name);
+  private minioClient!: Minio.Client;
+  private readonly bucketName: string;
+
+  constructor(private readonly configService: ConfigService) {
+    this.bucketName =
+      this.configService.get<string>("minio.bucketName") || "recruitment-files";
+  }
+
+  async onModuleInit() {
+    try {
+      this.minioClient = new Minio.Client({
+        endPoint:
+          this.configService.get<string>("minio.endPoint") || "localhost",
+        port: this.configService.get<number>("minio.port") || 9000,
+        useSSL: this.configService.get<boolean>("minio.useSSL") || false,
+        accessKey:
+          this.configService.get<string>("minio.accessKey") || "minioadmin",
+        secretKey:
+          this.configService.get<string>("minio.secretKey") || "minioadmin"
+      });
+
+      // Check if bucket exists, create if not
+      const bucketExists = await this.minioClient.bucketExists(this.bucketName);
+      if (!bucketExists) {
+        await this.minioClient.makeBucket(this.bucketName, "us-east-1");
+        this.logger.log(`Bucket ${this.bucketName} created successfully`);
+      }
+
+      this.logger.log("MinIO client initialized successfully");
+    } catch (error) {
+      this.logger.error("Failed to initialize MinIO client", error);
+      throw error;
+    }
+  }
+
+  async uploadFile(
+    file: Express.Multer.File,
+    folder: string = "uploads"
+  ): Promise<{
+    fileName: string;
+    originalName: string;
+    filePath: string;
+    fileSize: number;
+    mimeType: string;
+    url: string;
+  }> {
+    try {
+      const fileName = this.generateFileName(file.originalname);
+      const filePath = `${folder}/${fileName}`;
+
+      await this.minioClient.putObject(
+        this.bucketName,
+        filePath,
+        file.buffer,
+        file.size,
+        {
+          "Content-Type": file.mimetype,
+          "Original-Name": file.originalname,
+          "x-amz-acl": "public-read"
+        }
+      );
+
+      const url = await this.getFileUrl(filePath);
+
+      return {
+        fileName,
+        originalName: file.originalname,
+        filePath,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        url
+      };
+    } catch (error) {
+      this.logger.error("Failed to upload file to MinIO", error);
+      throw new Error("Failed to upload file");
+    }
+  }
+
+  async deleteFile(filePath: string): Promise<void> {
+    try {
+      await this.minioClient.removeObject(this.bucketName, filePath);
+      this.logger.log(`File ${filePath} deleted successfully`);
+    } catch (error) {
+      this.logger.error(`Failed to delete file ${filePath}`, error);
+      throw new Error("Failed to delete file");
+    }
+  }
+
+  async getFileUrl(filePath: string): Promise<string> {
+    try {
+      const url = await this.minioClient.presignedGetObject(
+        this.bucketName,
+        filePath,
+        24 * 60 * 60
+      ); // 24 hours
+      return url;
+    } catch (error) {
+      this.logger.error(`Failed to get file URL for ${filePath}`, error);
+      throw new Error("Failed to get file URL");
+    }
+  }
+
+  private generateFileName(originalName: string): string {
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const extension = originalName.split(".").pop();
+    return `${timestamp}-${randomString}.${extension}`;
+  }
+}
