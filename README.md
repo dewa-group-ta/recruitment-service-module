@@ -18,6 +18,11 @@
 - [Autentikasi](#autentikasi)
 - [Alur Sistem](#alur-sistem)
 - [API Endpoints](#api-endpoints)
+  - [Recruitment Pipelines](#recruitment-pipelines)
+  - [Vacancies HR](#vacancies-hr)
+  - [Vacancies Public](#vacancies-public)
+  - [Applicants](#applicants)
+  - [Candidates & Pemeringkatan](#candidates--pemeringkatan-hr-view)
 - [Integrasi FastAPI Screening Service](#integrasi-fastapi-screening-service)
 - [Pengujian dengan Postman](#pengujian-dengan-postman)
 
@@ -546,14 +551,267 @@ Satu pelamar **tidak dapat** melamar ke vacancy yang sama dua kali. Namun pelama
 
 ---
 
-### Candidates (HR View)
+### Candidates & Pemeringkatan (HR View)
+
+Modul `candidates` adalah inti dari fitur **pemeringkatan dan seleksi kandidat** oleh HR. Data scoring dari FastAPI (SBERT semantic similarity) ditampilkan di sini sebagai dasar pengambilan keputusan rekrutmen.
+
+#### Daftar Endpoint
 
 | Method | Endpoint | Auth | Deskripsi |
 |---|---|---|---|
-| `GET` | `/candidates` | `[HR]` | List kandidat (semua application) |
-| `GET` | `/candidates/:id` | `[HR]` | Detail kandidat + breakdown scoring |
-| `PATCH` | `/candidates/:id/stage` | `[HR]` | Pindah stage rekrutmen |
-| `PATCH` | `/candidates/:id/decision` | `[HR]` | Set keputusan (lolos/tidak lolos) |
+| `GET` | `/candidates` | `[HR]` | List semua kandidat (semua vacancy, pagination) |
+| `GET` | `/candidates/table` | `[HR]` | Tabel kandidat dengan sort by skor & filter lengkap |
+| `GET` | `/candidates/summary` | `[HR]` | Statistik ringkasan pelamar |
+| `GET` | `/candidates/stats` | `[HR]` | Statistik jumlah per status & stage |
+| `GET` | `/candidates/compare?candidates=id1,id2,...` | `[HR]` | Komparasi beberapa kandidat sekaligus (maks 10) |
+| `GET` | `/candidates/vacancy/:vacancyId` | `[HR]` | List kandidat per vacancy |
+| `GET` | `/candidates/vacancy/:vacancyId/stages` | `[HR]` | Kandidat dikelompokkan per stage pipeline |
+| `GET` | `/candidates/:applicationId` | `[HR]` | Detail kandidat + breakdown scoring lengkap |
+| `GET` | `/candidates/:applicationId/hiring-progress` | `[HR]` | Progress perjalanan rekrutmen kandidat |
+| `PATCH` | `/candidates/:applicationId/status` | `[HR]` | Update status kandidat |
+| `PATCH` | `/candidates/:applicationId/move-stage` | `[HR]` | Pindahkan ke stage berikutnya |
+| `PATCH` | `/candidates/:applicationId/score` | `[HR]` | Tambah/update skor manual HR |
+| `PATCH` | `/candidates/:applicationId/talent-pool` | `[HR]` | Tandai/lepas dari talent pool |
+| `POST` | `/candidates/:applicationId/notes` | `[HR]` | Tambah catatan HR untuk kandidat |
+| `GET` | `/candidates/:applicationId/notes` | `[HR]` | List catatan HR untuk kandidat |
+| `GET` | `/candidates/notes/:noteId` | `[HR]` | Detail catatan by ID |
+| `PATCH` | `/candidates/notes/:noteId` | `[HR]` | Update catatan |
+| `DELETE` | `/candidates/notes/:noteId` | `[HR]` | Hapus catatan |
+
+---
+
+#### `GET /candidates/table` — Tabel Pemeringkatan Utama
+
+Endpoint ini adalah **tampilan utama pemeringkatan kandidat**. Mendukung sorting berdasarkan skor semantic similarity dari FastAPI.
+
+**Query Parameters:**
+
+| Param | Tipe | Default | Deskripsi |
+|---|---|---|---|
+| `page` | number | `1` | Halaman |
+| `limit` | number | `10` | Item per halaman |
+| `search` | string | - | Cari by nama, email, judul vacancy |
+| `vacancyId` | string (UUID) | - | Filter by vacancy tertentu |
+| `status` | string[] | - | Filter: `new`, `qualified`, `disqualified`, `talent-pool` |
+| `jobStatus` | string[] | - | Filter by status vacancy: `published`, `closed` |
+| `stage` | string[] (UUID) | - | Filter by stage template ID |
+| `sortBy` | string | `applyDate` | Kolom sort: `applyDate`, `name`, `maxExperienceScore` |
+| `sortOrder` | `asc` \| `desc` | `desc` | Urutan sort |
+
+**Sorting by Skor (Pemeringkatan):**
+
+Untuk menampilkan kandidat dari skor tertinggi ke terendah (peringkat terbaik di atas):
+
+```
+GET /candidates/table?vacancyId=<id>&sortBy=maxExperienceScore&sortOrder=desc
+```
+
+Kandidat tanpa skor (belum di-scoring) otomatis diletakkan paling bawah (`NULLS LAST`).
+
+**Contoh Response:**
+
+```json
+{
+  "responseCode": "200--00",
+  "responseDesc": "Success",
+  "data": [
+    {
+      "applicationId": "0b074fcf-...",
+      "applicationNumber": "TECH-BE-00120266-001",
+      "applicantId": "902fc889-...",
+      "fullName": "Prima Nurdiansyah",
+      "email": "prima@gmail.com",
+      "phone": "+6285864767275",
+      "vacancyTitle": "Backend Developer",
+      "status": "applied",
+      "currentStage": "Screening",
+      "appliedAt": "2026-06-05T11:45:50.646Z",
+      "maxExperienceScore": 0.382,
+      "currentScore": null
+    },
+    {
+      "applicationId": "...",
+      "fullName": "Ridho Firdaus",
+      "maxExperienceScore": 0.271,
+      "currentScore": null
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 2,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  }
+}
+```
+
+---
+
+#### `GET /candidates/:applicationId` — Detail Kandidat + Breakdown Scoring
+
+Menampilkan detail lengkap kandidat termasuk **breakdown similarity score per pengalaman kerja** yang diekstrak dari CV oleh FastAPI.
+
+**Contoh Response:**
+
+```json
+{
+  "responseCode": "200--00",
+  "responseDesc": "Success",
+  "data": {
+    "applicationId": "0b074fcf-...",
+    "applicationNumber": "TECH-BE-00120266-001",
+    "status": "applied",
+    "appliedAt": "2026-06-05T...",
+    "vacancy": {
+      "id": "6f395266-...",
+      "title": "Backend Developer",
+      "jobCode": "TECH-BE-002",
+      "responsibilities": "Membangun dan memelihara REST API..."
+    },
+    "applicant": {
+      "id": "902fc889-...",
+      "fullName": "Prima Nurdiansyah",
+      "email": "prima@gmail.com",
+      "gender": "male",
+      "dateOfBirth": "1995-05-15",
+      "cvUrl": "applicants/cv/xxx.pdf"
+    },
+    "evaluationResult": {
+      "maxExperienceScore": 0.382,
+      "evaluatedAt": "2026-06-05T...",
+      "breakdown": {
+        "experience": [
+          {
+            "role": "Full Stack Developer",
+            "description": "Mengembangkan REST API dan sistem backend...",
+            "start": "01-2024",
+            "end": "06-2026",
+            "durationYears": 2,
+            "similarityScore": 0.382,
+            "isTopMatch": true
+          },
+          {
+            "role": "Sistem Kafe (POS)",
+            "description": "Aplikasi Point of Sale berbasis Go dan Next.js...",
+            "similarityScore": 0.364,
+            "isTopMatch": false
+          }
+        ],
+        "education": [
+          {
+            "level": 2,
+            "major": "Teknik Informatika",
+            "institution": "Politeknik TEDC Bandung"
+          }
+        ]
+      }
+    },
+    "hiringProgress": {
+      "currentStage": "Screening",
+      "totalStages": 4,
+      "completedStages": 1
+    }
+  }
+}
+```
+
+---
+
+#### `GET /candidates/compare` — Komparasi Kandidat
+
+Bandingkan beberapa kandidat sekaligus untuk memudahkan keputusan seleksi. Maksimal 10 kandidat.
+
+```
+GET /candidates/compare?candidates=uuid1,uuid2,uuid3
+Authorization: Bearer <hr-token>
+```
+
+**Contoh Response:**
+
+```json
+{
+  "data": [
+    {
+      "applicationId": "uuid1",
+      "fullName": "Prima Nurdiansyah",
+      "score": 0.382,
+      "currentStage": "Screening",
+      "progress": { "overallScore": 0.382, "stages": [] },
+      "info": {
+        "education": { "level": 2, "major": "Teknik Informatika" },
+        "jobHistory": [{ "position": "Full Stack Developer", "durationYears": 2 }]
+      }
+    },
+    {
+      "applicationId": "uuid2",
+      "fullName": "Ridho Firdaus",
+      "score": 0.271,
+      "currentStage": "Screening"
+    }
+  ]
+}
+```
+
+---
+
+#### `PATCH /candidates/:applicationId/move-stage` — Pindah Stage
+
+Setelah HR meninjau, kandidat dapat dipindahkan ke stage berikutnya. Skor manual per stage dapat ditambahkan.
+
+```json
+{
+  "notes": "Kandidat lolos screening, jadwalkan interview",
+  "score": 80
+}
+```
+
+Sistem akan menghitung `currentScore` secara otomatis sebagai **rata-rata semua skor stage** yang telah dilalui.
+
+---
+
+#### `PATCH /candidates/:applicationId/status` — Update Status
+
+```json
+{
+  "status": "hired",
+  "notes": "Kandidat terbaik, offer letter sudah dikirim"
+}
+```
+
+**Nilai status yang valid:** `applied`, `in_review`, `shortlisted`, `hired`, `rejected`
+
+---
+
+#### Alur Pemeringkatan di Sistem
+
+```
+Pelamar submit CV
+       │
+FastAPI parsing → Hitung similarity score per pengalaman kerja (SBERT)
+       │
+Simpan maxExperienceScore ke evaluation_results
+       │
+HR buka GET /candidates/table
+  ?vacancyId=xxx&sortBy=maxExperienceScore&sortOrder=desc
+       │
+┌──────┴────────────────────────────────────────┐
+│  Peringkat  │  Nama            │  Skor        │
+│─────────────┼──────────────────┼──────────────│
+│  #1         │  Prima N.        │  0.382  ⭐   │
+│  #2         │  Ridho F.        │  0.271       │
+│  #3         │  Naufal H.       │  0.203       │
+└──────────────────────────────────────────────┘
+       │
+HR review detail → GET /candidates/:applicationId
+  (lihat breakdown per pengalaman kerja)
+       │
+HR pindah stage → PATCH /candidates/:applicationId/move-stage
+       │
+HR set keputusan → PATCH /candidates/:applicationId/status
+  { "status": "hired" / "rejected" }
+```
 
 ---
 
@@ -718,4 +976,4 @@ Semua endpoint menggunakan format response yang konsisten:
 
 ---
 
-*Dokumentasi ini dibuat sebagai bagian dari Tugas Akhir — Sistem Rekrutmen dengan Screening CV Otomatis Berbasis Semantic Similarity.*
+*Sistem Rekrutmen dengan Pemeringkatan Pelamar Bendasarkan Kesesuaian Pengalaman Kerja Berbasis Semantic Similarity.*
