@@ -174,6 +174,23 @@ export class RecruitmentPipelineController {
     return await this.recruitmentPipelineService.findByCategory(category);
   }
 
+  // ─── PINDAHAN: harus di atas @Get(":id") agar tidak tertangkap sebagai :id ───
+  @Get("default-template")
+  @ResponseMessage(responseMessage.SUCCESS)
+  @ApiOperation({ summary: "Get the default template pipeline" })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: "Default template pipeline retrieved successfully",
+    type: Object
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: "No default template pipeline found"
+  })
+  async getDefaultTemplate(): Promise<RecruitmentPipelineResponseDto | null> {
+    return await this.recruitmentPipelineService.getDefaultTemplate();
+  }
+
   @Get(":id")
   @ResponseMessage(responseMessage.SUCCESS)
   @ApiOperation({ summary: "Get a recruitment pipeline by ID" })
@@ -326,22 +343,6 @@ export class RecruitmentPipelineController {
       req.user.id,
       body.customName
     );
-  }
-
-  @Get("default-template")
-  @ResponseMessage(responseMessage.SUCCESS)
-  @ApiOperation({ summary: "Get the default template pipeline" })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: "Default template pipeline retrieved successfully",
-    type: Object
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: "No default template pipeline found"
-  })
-  async getDefaultTemplate(): Promise<RecruitmentPipelineResponseDto | null> {
-    return await this.recruitmentPipelineService.getDefaultTemplate();
   }
 
   @Patch(":id/replace-stages-from-template/:templateId")
