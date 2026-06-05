@@ -13,11 +13,11 @@ export interface IApplicantService {
   /**
    * Register a new applicant
    * @param registerDto - Registration data
-   * @returns Promise<boolean> - Registration success status
+   * @returns Promise<{ applicantId: string }> - Registration result with applicant ID
    * @throws BadRequestException - When validation fails
    * @throws ConflictException - When applicant already exists
    */
-  registerApplicant(registerDto: RegisterApplicantDto): Promise<boolean>;
+  registerApplicant(registerDto: RegisterApplicantDto): Promise<{ applicantId: string }>;
 
   /**
    * Login applicant and generate token

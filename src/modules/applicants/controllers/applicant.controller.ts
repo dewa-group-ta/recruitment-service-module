@@ -91,7 +91,7 @@ export class ApplicationController {
   })
   async registerApplicant(
     @Body() registerDto: RegisterApplicantDto
-  ): Promise<boolean> {
+  ): Promise<{ applicantId: string }> {
     const result = await this.applicantService.registerApplicant(registerDto);
     return result;
   }

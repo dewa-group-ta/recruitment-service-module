@@ -106,7 +106,7 @@ export class ApplicantService implements IApplicantService {
    * const success = await applicantService.registerApplicant(registerDto);
    * ```
    */
-  async registerApplicant(registerDto: RegisterApplicantDto): Promise<boolean> {
+  async registerApplicant(registerDto: RegisterApplicantDto): Promise<{ applicantId: string }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -137,8 +137,9 @@ export class ApplicantService implements IApplicantService {
 
       await queryRunner.commitTransaction();
 
-      // Generate and send login token after successful application
-      return await this.sendLoginToken(applicant.id, vacancy.title);
+      await this.sendLoginToken(applicant.id, vacancy.title);  // tetap kirim token
+
+      return { applicantId: applicant.id };  // ← return applicantId
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
