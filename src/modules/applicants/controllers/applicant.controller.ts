@@ -827,14 +827,19 @@ async uploadCV(
 
   // ========== APPLICATION MANAGEMENT ==========
 
+  // ─── LAMA (membutuhkan JWT auth) ─────────────────────────────────────────
+  // @ApiBearerAuth()
+  // @IsRole(role.APPLICANT)
+  // ─────────────────────────────────────────────────────────────────────────
+  // BARU: tidak memerlukan autentikasi — applicationId di URL sudah cukup.
+  @Public()
   @Post("apply/:applicationId")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESS)
-  @ApiBearerAuth()
   @ApiOperation({
     summary: "Apply for position",
     description:
-      "Update applicant data and change application status to applied. Only works for applications with status 'new'."
+      "Update applicant data and change application status to applied. Only works for applications with status 'new'. No JWT required."
   })
   @ApiParam({
     name: "applicationId",
@@ -909,7 +914,6 @@ async uploadCV(
       }
     }
   })
-  @IsRole(role.APPLICANT)
   async applyForPosition(
     @Param("applicationId", ParseUUIDPipe) applicationId: string,
     @Body() applyDto: ApplyApplicantDto
