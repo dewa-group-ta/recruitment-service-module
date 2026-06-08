@@ -12,6 +12,7 @@ import {
   Query,
   UseInterceptors,
   UploadedFile,
+  UploadedFiles,
   ParseUUIDPipe,
   BadRequestException,
   UnauthorizedException
@@ -28,6 +29,7 @@ import {
 import { ApplicantService } from "../services/applicant.service";
 import { TokenService } from "../services/token.service";
 import { RegisterApplicantDto } from "../dto/register-applicant.dto";
+import { QuickApplyDto } from "../dto/quick-apply.dto";
 import { LoginDto } from "../dto/login.dto";
 import { ResponseMessage } from "../../../shared/decorators/response.decorator";
 import { Public } from "../../../shared/decorators/public.decorator";
@@ -35,7 +37,7 @@ import { responseMessage, role } from "src/shared/utils/constant";
 import { IsRole } from "src/shared/decorators/roles.decorator";
 import { MeResponseDto } from "../dto/me-response.dto";
 import { UpdateApplicantProfileDto } from "../dto/update-applicant-profile.dto";
-import { FileInterceptor } from "@nestjs/platform-express";
+import { FileInterceptor, FileFieldsInterceptor } from "@nestjs/platform-express";
 import { FileUploadService } from "../../../shared/services/file-upload.service";
 import { FileValidationPipe } from "../../../shared/pipes/file-validation.pipe";
 import { FileType } from "../../../shared/entities/file.entity";
@@ -74,7 +76,7 @@ export class ApplicationController {
       example: {
         responseCode: responseMessage.SUCCESSFULLY_CREATED.caseCode,
         responseDesc: "Applicant registered successfully",
-        data: null
+        data: { applicantId: "uuid-string", applicationId: "uuid-string" }
       }
     }
   })
@@ -91,9 +93,72 @@ export class ApplicationController {
   })
   async registerApplicant(
     @Body() registerDto: RegisterApplicantDto
-  ): Promise<{ applicantId: string }> {
+  ): Promise<{ applicantId: string; applicationId: string }> {
     const result = await this.applicantService.registerApplicant(registerDto);
     return result;
+  }
+
+  @Public()
+  @Post("quick-apply")
+  @UseInterceptors(FileFieldsInterceptor([
+    { name: "cv",    maxCount: 1 },
+    { name: "photo", maxCount: 1 },
+  ]))
+  @HttpCode(HttpStatus.CREATED)
+  @ResponseMessage(responseMessage.SUCCESSFULLY_CREATED)
+  @ApiOperation({
+    summary: "Quick Apply — single endpoint",
+    description: "Submit a job application in one request: profile data + CV (required) + photo (optional). No authentication required."
+  })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      required: ["cv", "vacancyId", "fullName", "email", "phone", "gender", "maritalStatus", "placeOfBirth", "dateOfBirth"],
+      properties: {
+        cv:            { type: "string", format: "binary", description: "CV file (PDF, DOC, DOCX) — max 5 MB" },
+        photo:         { type: "string", format: "binary", description: "Profile photo (JPG, PNG) — max 2 MB, optional" },
+        vacancyId:     { type: "string", format: "uuid" },
+        fullName:      { type: "string" },
+        email:         { type: "string", format: "email" },
+        phone:         { type: "string" },
+        gender:        { type: "string", enum: ["male", "female", "other"] },
+        maritalStatus: { type: "string", enum: ["single", "married", "divorced", "widowed"] },
+        placeOfBirth:  { type: "string" },
+        dateOfBirth:   { type: "string", example: "1998-01-15" },
+        address:       { type: "string" },
+      }
+    }
+  })
+  @ApiResponse({ status: 201, description: "Application submitted and scored successfully" })
+  @ApiResponse({ status: 400, description: "Validation error, duplicate application, or scoring failure" })
+  async quickApply(
+    @UploadedFiles() files: { cv?: Express.Multer.File[]; photo?: Express.Multer.File[] },
+    @Body() dto: QuickApplyDto
+  ) {
+    const cv    = files?.cv?.[0];
+    const photo = files?.photo?.[0];
+
+    if (!cv) throw new BadRequestException("CV file is required");
+
+    // Validate CV
+    new FileValidationPipe({
+      maxSize: 5 * 1024 * 1024,
+      allowedMimeTypes: ["application/pdf", "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      allowedExtensions: ["pdf", "doc", "docx"]
+    }).transform(cv);
+
+    // Validate photo if provided
+    if (photo) {
+      new FileValidationPipe({
+        maxSize: 2 * 1024 * 1024,
+        allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+        allowedExtensions: ["jpg", "jpeg", "png", "webp"]
+      }).transform(photo);
+    }
+
+    return this.applicantService.quickApply(dto, cv, photo);
   }
 
   @Public()

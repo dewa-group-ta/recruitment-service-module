@@ -224,13 +224,14 @@ export class ApplicantResultsService {
 
   private mapEducationLevel(level: number | null): EducationLevel | null {
     if (level === null || level === undefined) return null;
-    const validLevels = new Set<number>([
-      EducationLevel.HIGH_SCHOOL,
-      EducationLevel.DIPLOMA,
-      EducationLevel.BACHELOR,
-      EducationLevel.MASTER,
-      EducationLevel.DOCTORATE
-    ]);
-    return validLevels.has(level) ? (level as EducationLevel) : null;
+    const numericToEnum: Record<number, EducationLevel> = {
+      0: EducationLevel.NO_REQUIREMENT,
+      1: EducationLevel.HIGH_SCHOOL,
+      2: EducationLevel.DIPLOMA,
+      3: EducationLevel.BACHELOR,
+      4: EducationLevel.MASTER,
+      5: EducationLevel.DOCTORATE,
+    };
+    return numericToEnum[level] ?? null;
   }
 }

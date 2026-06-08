@@ -292,10 +292,12 @@ export class ApplyApplicantDto {
   @ApiProperty({
     description: "Availability",
     enum: AvailabilityEnum,
-    example: AvailabilityEnum.IMMEDIATELY
+    example: AvailabilityEnum.IMMEDIATELY,
+    required: false
   })
+  @IsOptional()
   @IsEnum(AvailabilityEnum)
-  availability: AvailabilityEnum;
+  availability?: AvailabilityEnum;
 
   @ApiProperty({
     description: "Availability date",

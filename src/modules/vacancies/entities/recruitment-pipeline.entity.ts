@@ -8,7 +8,7 @@ import {
   OneToMany
 } from "typeorm";
 import { PipelineStage } from "./pipeline-stage.entity";
-import { Vacancy } from "../../vacancies/entities/vacancy.entity";
+import { Vacancy } from "./vacancy.entity";
 
 @Entity("recruitment_pipelines")
 export class RecruitmentPipeline {

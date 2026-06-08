@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, SelectQueryBuilder, In, DataSource } from "typeorm";
 import { Application } from "../../applicants/entities/application.entity";
@@ -9,6 +9,7 @@ import { StageActivity } from "../../vacancies/entities/stage-activity.entity";
 import { ApplicationNotes } from "../../applicants/entities/application-notes.entity";
 import { ApplicantStatus } from "../../../shared/enums/applicant.enum";
 import { EvaluationResult } from "../../applicant-results/entities/evaluation-results.entity";
+import { File, FileType } from "../../../shared/entities/file.entity";
 import { ApplicantTableQueryDto, ApplicantSummaryQueryDto } from "../dto/applicant-table-query.dto";
 import { ApplicantTableItemDto, ApplicantSummaryDataDto } from "../dto/applicant-table-response.dto";
 import { CreateApplicationNotesDto } from "../../applicants/dto/create-application-notes.dto";
@@ -19,6 +20,7 @@ import { HiringProgressDto } from "../dto/hiring-progress.dto";
 import { JobStatus } from "src/shared/enums/job-status.enum";
 import { StageActivityStatus } from "src/shared/enums/pipeline.enum";
 import { NotificationService } from "../../../shared/services/notification.service";
+import { MinioService } from "../../../shared/services/minio.service";
 
 export interface ScoringBreakdown {
   educations: Array<{
@@ -70,6 +72,9 @@ export interface Candidate {
     status: string;
     department?: string;
     workLocation?: string;
+    requiredEducation?: string | null;
+    requiredExperienceYears?: number | null;
+    responsibilities?: string | null;
   };
   addresses?: Array<{
     id: string;
@@ -157,8 +162,11 @@ export class CandidatesService {
     private readonly applicationNotesRepository: Repository<ApplicationNotes>,
     @InjectRepository(EvaluationResult)
     private readonly evaluationResultRepository: Repository<EvaluationResult>,
+    @InjectRepository(File)
+    private readonly fileRepository: Repository<File>,
     private readonly dataSource: DataSource,
-    private readonly notificationService: NotificationService
+    private readonly notificationService: NotificationService,
+    private readonly minioService: MinioService,
   ) {}
 
   /**
@@ -800,9 +808,9 @@ export class CandidatesService {
     });
  
     if (!application) {
-      throw new Error(`Application with ID ${applicationId} not found`);
+      throw new NotFoundException(`Application with ID ${applicationId} not found`);
     }
- 
+
     const evalResult = await this.evaluationResultRepository.findOne({
       where: { applicationId }
     });
@@ -876,15 +884,25 @@ export class CandidatesService {
       linkedinUrl:    application.applicant.linkedinUrl,
       portfolioUrl:   application.applicant.portfolioUrl,
       socialMediaUrl: application.applicant.socialMediaUrl,
-      cvUrl:          application.applicant.cvUrl,
+      cvUrl: await (async () => {
+        const cvFile = await this.fileRepository.findOne({
+          where: { relatedEntityId: application.id, fileType: FileType.CV },
+          order: { createdAt: 'DESC' },
+        });
+        if (!cvFile) return undefined;
+        return this.minioService.getFileUrl(cvFile.filePath).catch(() => undefined);
+      })(),
       isTalentPool:   application.isTalentPool,
       vacancy: application.vacancy
         ? {
-            id:           application.vacancy.id,
-            title:        application.vacancy.title,
-            status:       application.vacancy.status,
-            department:   application.vacancy.department?.name,
-            workLocation: application.vacancy.officeAddresses?.[0]
+            id:                    application.vacancy.id,
+            title:                 application.vacancy.title,
+            status:                application.vacancy.status,
+            department:            application.vacancy.department?.name,
+            workLocation:          application.vacancy.officeAddresses?.[0],
+            requiredEducation:       application.vacancy.requiredEducation ?? null,
+            requiredExperienceYears: application.vacancy.requiredExperienceYears ?? null,
+            responsibilities:        application.vacancy.responsibilities ?? null,
           }
         : undefined,
       addresses: application.applicant.addresses?.map((addr) => ({
@@ -897,26 +915,6 @@ export class CandidatesService {
         updatedAt: this.toISOString(addr.updatedAt),
         deletedAt: this.toISOString(addr.deletedAt) || null
       })) ?? [],
-      // educations: application.applicant.educations?.map((edu) => ({
-      //   id: edu.id, applicantId: edu.applicantId,
-      //   schoolName: edu.schoolName ?? "", major: edu.major ?? "",
-      //   degree: edu.degree ?? "", gpa: edu.gpa ?? undefined,
-      //   startMonth: edu.startMonth ?? "", endMonth: edu.endMonth ?? undefined,
-      //   diplomaFileName: edu.diplomaFileName ?? undefined, order: edu.order,
-      //   createdAt: this.toISOString(edu.createdAt),
-      //   updatedAt: this.toISOString(edu.updatedAt),
-      //   deletedAt: this.toISOString(edu.deletedAt) || null
-      // })) ?? [],
-      // jobHistories: application.applicant.jobHistories?.map((job) => ({
-      //   id: job.id, applicantId: job.applicantId,
-      //   position: job.position, employeeStatus: job.employeeStatus as string | null,
-      //   company: job.company, startDate: job.startDate, endDate: job.endDate,
-      //   location: job.location ?? undefined, description: job.description ?? undefined,
-      //   achievements: job.achievements ?? undefined, order: job.order,
-      //   createdAt: this.toISOString(job.createdAt),
-      //   updatedAt: this.toISOString(job.updatedAt),
-      //   deletedAt: this.toISOString(job.deletedAt) || null
-      // })) ?? [],
       evaluationResult: evalResult
         ? {
             maxExperienceScore: evalResult.maxExperienceScore ?? null,
@@ -958,7 +956,7 @@ export class CandidatesService {
     });
 
     if (!application) {
-      throw new Error(`Application with ID ${applicationId} not found`);
+      throw new NotFoundException(`Application with ID ${applicationId} not found`);
     }
 
     // Get pipeline stages
@@ -983,30 +981,48 @@ export class CandidatesService {
       return stage.stageTemplate?.name || stage.name || 'Unknown Stage';
     };
     
+    // Fetch evaluation result once for full-precision score on isScoreAutomatic stages
+    const evalResult = await this.evaluationResultRepository.findOne({
+      where: { applicationId },
+      select: ['maxExperienceScore'],
+    });
+
     // Create stage progress
     const stageProgress = availableStages.map(stage => {
       const activity = activities.find(act => act.stage?.id === stage.id);
-      
+      const isScoreAutomatic = stage.stageTemplate?.isScoreAutomatic || false;
+
+      // Use full-precision score from evaluation_results for automatic stages
+      // (stage_activities.score is numeric(10,2) and loses precision)
+      const score = isScoreAutomatic && activity?.score != null
+        ? (evalResult?.maxExperienceScore ?? activity.score)
+        : activity?.score;
+
       return {
         title: getStageName(stage),
         date: activity?.createdAt ? this.toISOString(activity.createdAt) : undefined,
-        status: activity?.status as StageActivityStatus,
-        score: activity?.score,
+        status: (activity?.status ?? StageActivityStatus.PENDING) as StageActivityStatus,
+        score,
         notes: activity?.notes,
         canScore: stage.stageTemplate?.canScore || false,
+        isScoreAutomatic,
       };
     });
 
     // Find current and upcoming stages
     const currentStageIndex = availableStages.findIndex(stage => stage.id === application.currentStage?.id);
     const currentStage = application.currentStage?.stageTemplate?.name || 'Applied';
-    const upcomingStage = currentStageIndex < availableStages.length - 1 
-      ? getStageName(availableStages[currentStageIndex + 1])
-      : 'Completed';
+    const isDisqualified = application.status === ApplicantStatus.REJECTED;
+    const upcomingStage = isDisqualified
+      ? 'Disqualified'
+      : currentStageIndex !== -1 && currentStageIndex < availableStages.length - 1
+        ? getStageName(availableStages[currentStageIndex + 1])
+        : 'Completed';
 
     // Get canScore for current and upcoming stages
     const currentStageCanScore = application.currentStage?.stageTemplate?.canScore || false;
-    const upcomingStageCanScore = currentStageIndex < availableStages.length - 1 
+    const currentStageIsScoreAutomatic = application.currentStage?.stageTemplate?.isScoreAutomatic || false;
+    const upcomingStageCanScore = currentStageIndex < availableStages.length - 1
       ? (availableStages[currentStageIndex + 1] as any)?.stageTemplate?.canScore || false
       : false;
 
@@ -1015,6 +1031,7 @@ export class CandidatesService {
       upcomingStage,
       overallScore: application.currentScore,
       currentStageCanScore,
+      currentStageIsScoreAutomatic,
       upcomingStageCanScore,
       stages: stageProgress
     };
@@ -1026,15 +1043,31 @@ export class CandidatesService {
   async updateCandidateStatus(
     applicationId: string,
     status: string,
-    notes?: string
+    notes?: string,
+    score?: number
   ): Promise<Candidate> {
     const application = await this.applicationRepository.findOne({
       where: { id: applicationId },
-      relations: ["applicant", "vacancy", "currentStage", "currentStage.stageTemplate"]
+      relations: ["applicant", "vacancy", "currentStage", "currentStage.stageTemplate", "activities"]
     });
 
     if (!application) {
-      throw new Error(`Application with ID ${applicationId} not found`);
+      throw new NotFoundException(`Application with ID ${applicationId} not found`);
+    }
+
+    // When rejecting, mark the current in-progress stage activity as failed
+    if (status === ApplicantStatus.REJECTED && application.currentStageId) {
+      const currentActivity = application.activities?.find(
+        act => act.stageId === application.currentStageId &&
+               act.status === StageActivityStatus.IN_PROGRESS
+      );
+      if (currentActivity) {
+        await this.stageActivityRepository.update(currentActivity.id, {
+          status: StageActivityStatus.FAILED,
+          notes: notes,
+          score: score,
+        });
+      }
     }
 
     // Update application status
@@ -1087,39 +1120,45 @@ export class CandidatesService {
       });
 
       if (!application) {
-        throw new Error(`Application with ID ${applicationId} not found`);
+        throw new NotFoundException(`Application with ID ${applicationId} not found`);
       }
 
       const currentStage = application.currentStage;
 
       // Find next stage
       const stages = application.pipeline?.stages || [];
-      const nextStage = stages.find(stage => stage.stageOrder > currentStage?.stageOrder);  
+      const nextStage = stages.find(stage => stage.stageOrder > currentStage?.stageOrder);
       if (!nextStage) {
-        throw new Error(`Next stage not found`);
+        throw new NotFoundException(`Next stage not found`);
+      }
+
+      // If current stage score is provided by system, fetch it from evaluation_results
+      let effectiveScore = score;
+      if (currentStage?.stageTemplate?.isScoreAutomatic) {
+        const evalResult = await this.evaluationResultRepository.findOne({
+          where: { applicationId },
+          select: ['maxExperienceScore'],
+        });
+        effectiveScore = evalResult?.maxExperienceScore ?? undefined;
       }
 
       // calculate overall score
       const activityWithScore = application.activities.filter(activity => activity.score !== undefined && activity.score !== null);
-      const currentScore = score !== undefined ? score : 0;
-      
+      const currentScore = effectiveScore !== undefined ? effectiveScore : 0;
+
       // Include current score in calculation
       const allScores = [...activityWithScore.map(activity => parseFloat(activity.score?.toString() || '0')), currentScore];
-      const totalScore = allScores.reduce((acc, score) => acc + score, 0);
+      const totalScore = allScores.reduce((acc, s) => acc + s, 0);
       const overallScore = allScores.length > 0 ? totalScore / allScores.length : 0;
 
       // update current stage activity
       const currentStageActivity = application.activities.find(activity => activity.stageId === currentStage?.id);
       if (currentStageActivity) {
         currentStageActivity.status = StageActivityStatus.DONE;
-        currentStageActivity.score = score;
+        currentStageActivity.score = effectiveScore;
         currentStageActivity.notes = notes;
         await manager.save(StageActivity, currentStageActivity);
       }
-
-      console.log('currentStage', currentStage);
-      console.log('nextStage', nextStage);
-      console.log('overallScore', overallScore);
 
       // create stage activity
       const stageActivity = manager.create(StageActivity, {

@@ -29,6 +29,10 @@ export class StageTemplate {
   @Column({ type: "boolean", default: false })
   canScore: boolean;
 
+  // true = score diberikan otomatis oleh sistem (misal WSM), bukan input manual HR
+  @Column({ type: "boolean", default: false })
+  isScoreAutomatic: boolean;
+
   @Column({ type: "text", nullable: true })
   instructions: string; // instruksi untuk HR di stage ini
 

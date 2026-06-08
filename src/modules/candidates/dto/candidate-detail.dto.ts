@@ -183,6 +183,15 @@ export class UpdateCandidateStatusDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiProperty({
+    description: 'Score for the current stage (used when rejecting)',
+    example: 45,
+    required: false
+  })
+  @IsOptional()
+  @IsNumber()
+  score?: number;
 }
 
 export class MoveToNextStageDto {

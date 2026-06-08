@@ -466,7 +466,8 @@ export class CandidatesController {
     const result = await this.candidatesService.updateCandidateStatus(
       applicationId,
       updateStatusDto.status,
-      updateStatusDto.notes
+      updateStatusDto.notes,
+      updateStatusDto.score
     );
 
     return result

@@ -11,20 +11,24 @@ import { ApplicationNotes } from "../applicants/entities/application-notes.entit
 import { EmailModule } from "../../shared/modules/email.module";
 import { EvaluationResult } from "../applicant-results/entities/evaluation-results.entity";
 import { ApplicantResultsModule } from "../applicant-results/applicant-results.module";
+import { FileUploadModule } from "../../shared/modules/file-upload.module";
+import { File } from "../../shared/entities/file.entity";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      Application, 
-      Applicant, 
-      Vacancy, 
-      PipelineStage, 
-      StageActivity, 
-      ApplicationNotes, 
-      EvaluationResult
+      Application,
+      Applicant,
+      Vacancy,
+      PipelineStage,
+      StageActivity,
+      ApplicationNotes,
+      EvaluationResult,
+      File,
     ]),
     EmailModule,
-    ApplicantResultsModule
+    ApplicantResultsModule,
+    FileUploadModule,
   ],
   controllers: [CandidatesController],
   providers: [CandidatesService],

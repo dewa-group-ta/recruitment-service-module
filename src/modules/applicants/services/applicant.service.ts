@@ -34,12 +34,15 @@ import { ApplicantJobHistory } from "../entities/applicant-job-history.entity";
 import { ApplicantProjectHistory } from "../entities/applicant-project-history.entity";
 import { ApplicantSource } from "../entities/applicant-source.entity";
 import { ApplyApplicantDto } from "../dto/apply-applicant.dto";
+import { QuickApplyDto, QuickApplyResponseDto } from "../dto/quick-apply.dto";
 import { PipelineStage } from "../../vacancies/entities/pipeline-stage.entity";
 import { StageActivity } from "../../vacancies/entities/stage-activity.entity";
 import { ApplicationTrackingResponseDto } from "../dto/application-tracking-response.dto";
 import { IApplicantService } from "../../../shared/interfaces/applicant.interface";
 import { StageActivityStatus } from "src/shared/enums/pipeline.enum";
 import { ApplicantResultsService } from "src/modules/applicant-results/services/applicant-results.service";
+import { FileUploadService } from "../../../shared/services/file-upload.service";
+import { FileUploadDto } from "../../../shared/dto/file-upload.dto";
 import { File, FileType } from "../../../shared/entities/file.entity";
 import { ApplyApplicantResponseDto } from "../dto/apply-applicant-response.dto";
 import { EvaluationResultResponseDto } from "src/modules/applicant-results/dto/evaluation-result-response.dto";
@@ -82,6 +85,7 @@ export class ApplicantService implements IApplicantService {
     private readonly applicantResultsService: ApplicantResultsService,
     @InjectRepository(File)
     private readonly fileRepository: Repository<File>,
+    private readonly fileUploadService: FileUploadService,
   ) {}
 
   /**
@@ -106,7 +110,7 @@ export class ApplicantService implements IApplicantService {
    * const success = await applicantService.registerApplicant(registerDto);
    * ```
    */
-  async registerApplicant(registerDto: RegisterApplicantDto): Promise<{ applicantId: string }> {
+  async registerApplicant(registerDto: RegisterApplicantDto): Promise<{ applicantId: string; applicationId: string }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -127,8 +131,8 @@ export class ApplicantService implements IApplicantService {
       // Check for existing application
       await this.checkExistingApplication(applicant.id, registerDto.vacancyId);
 
-      // Create application
-      await this.createApplication(
+      // Create application — capture returned entity to get applicationId
+      const application = await this.createApplication(
         applicant,
         vacancy,
         registerDto.customSource,
@@ -139,7 +143,7 @@ export class ApplicantService implements IApplicantService {
 
       await this.sendLoginToken(applicant.id, vacancy.title);  // tetap kirim token
 
-      return { applicantId: applicant.id };  // ← return applicantId
+      return { applicantId: applicant.id, applicationId: application.id };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -306,7 +310,7 @@ export class ApplicantService implements IApplicantService {
     vacancy: Vacancy,
     customSource: string | undefined,
     queryRunner: any
-  ): Promise<void> {
+  ): Promise<Application> {
     const applicationNumber = await this.generateApplicationNumber(vacancy.jobCode);
 
     const application = this.applicationRepository.create({
@@ -320,7 +324,7 @@ export class ApplicantService implements IApplicantService {
       customSource: customSource || undefined
     });
 
-    await queryRunner.manager.save(application);
+    return queryRunner.manager.save(application);
   }
 
   /**
@@ -967,7 +971,209 @@ async applyForPosition(
     evaluationResult
   };
 }
- 
+
+  /**
+   * Quick Apply — single atomic endpoint.
+   * Combines register + upload-cv + apply into one request.
+   * No auth required (@Public on controller).
+   */
+  async quickApply(
+    dto: QuickApplyDto,
+    cvFile: Express.Multer.File,
+    photoFile?: Express.Multer.File
+  ): Promise<QuickApplyResponseDto> {
+
+    // ── 1. Validate vacancy ─────────────────────────────────────────────────
+    const vacancy = await this.vacancyRepository.findOne({
+      where: { id: dto.vacancyId },
+      relations: ["pipeline"]
+    });
+    if (!vacancy) throw new NotFoundException("Vacancy not found");
+    if (vacancy.status !== JobStatus.PUBLISHED) {
+      throw new BadRequestException("Vacancy is not currently accepting applications");
+    }
+    if (vacancy.endDate && new Date(vacancy.endDate) < new Date()) {
+      throw new BadRequestException("Application deadline has passed");
+    }
+
+    // ── 2. Find or create applicant by email ────────────────────────────────
+    let applicant = await this.applicantRepository.findOne({
+      where: { email: dto.email }
+    });
+    if (!applicant) {
+      applicant = this.applicantRepository.create({
+        email: dto.email,
+        fullName: dto.fullName,
+        phone: dto.phone,
+      });
+      applicant = await this.applicantRepository.save(applicant);
+    }
+
+    // ── 3. Guard: no duplicate application ──────────────────────────────────
+    const existing = await this.applicationRepository.findOne({
+      where: { applicantId: applicant.id, vacancyId: dto.vacancyId }
+    });
+    if (existing) {
+      throw new BadRequestException("You have already applied to this vacancy");
+    }
+
+    // ── 4a. Upload CV (before transaction — filePath needed for scoring) ────
+    const cvUploadDto: FileUploadDto = {
+      fileType: FileType.CV,
+      folder: "applicants/cv",
+      relatedEntity: "applicant",
+      relatedEntityId: applicant.id,
+    };
+    const uploadedFile = await this.fileUploadService.uploadFile(cvFile, cvUploadDto, applicant.id);
+
+    // ── 4b. Upload photo (optional) ─────────────────────────────────────────
+    let photoUrl: string | null = null;
+    if (photoFile) {
+      const photoUploadDto: FileUploadDto = {
+        fileType: FileType.PHOTO,
+        folder: "applicants/photos",
+        relatedEntity: "applicant",
+        relatedEntityId: applicant.id,
+      };
+      const uploadedPhoto = await this.fileUploadService.uploadFile(photoFile, photoUploadDto, applicant.id);
+      photoUrl = uploadedPhoto.url ?? null;
+    }
+
+    // ── 5. Create Application with status NEW ───────────────────────────────
+    const applicationNumber = await this.generateApplicationNumber(vacancy.jobCode);
+    const application = await this.applicationRepository.save(
+      this.applicationRepository.create({
+        applicationNumber,
+        applicantId: applicant.id,
+        vacancyId: vacancy.id,
+        pipelineId: vacancy.pipelineId,
+        status: ApplicantStatus.NEW,
+        appliedAt: new Date(),
+        lastActivityAt: new Date(),
+      })
+    );
+
+    // ── 6. Run scoring via FastAPI (before DB transaction) ──────────────────
+    const scoringResult = await this.applicantResultsService.runScoring(
+      application.id,
+      uploadedFile.filePath
+    );
+
+    // ── 7. Transaction: update profile + finalize application ───────────────
+    const txResult = await this.dataSource.transaction(async (manager) => {
+      // Update applicant profile
+      Object.assign(applicant!, {
+        fullName:      dto.fullName,
+        phone:         dto.phone,
+        gender:        dto.gender,
+        maritalStatus: dto.maritalStatus,
+        placeOfBirth:  dto.placeOfBirth,
+        dateOfBirth:   new Date(dto.dateOfBirth),
+        ...(photoUrl ? { photoUrl } : {}),
+      });
+      const updatedApplicant = await manager.save(Applicant, applicant!);
+
+      // Save address if provided
+      if (dto.address) {
+        await manager.save(
+          ApplicantAddress,
+          manager.create(ApplicantAddress, {
+            fullAddress: dto.address,
+            applicantId: applicant!.id,
+          })
+        );
+      }
+
+      // Mark application as APPLIED
+      application.status    = ApplicantStatus.APPLIED;
+      application.appliedAt = new Date();
+      const updatedApplication = await manager.save(Application, application);
+
+      // Create first StageActivity
+      const firstStage = await manager.findOne(PipelineStage, {
+        where: { pipelineId: application.pipelineId },
+        order: { stageOrder: "ASC" }
+      });
+      if (!firstStage) throw new NotFoundException("Pipeline has no stages configured");
+
+      await manager.save(
+        StageActivity,
+        manager.create(StageActivity, {
+          applicationId: application.id,
+          stageId:       firstStage.id,
+          createdAt:     new Date(),
+          status:        StageActivityStatus.IN_PROGRESS,
+        })
+      );
+
+      application.currentStageId = firstStage.id;
+      application.lastActivityAt = new Date();
+      await manager.save(Application, application);
+
+      // CV snapshot for audit trail
+      await manager.save(
+        File,
+        manager.create(File, {
+          fileName:        uploadedFile.fileName,
+          originalName:    uploadedFile.originalName ?? uploadedFile.fileName,
+          filePath:        uploadedFile.filePath,
+          fileSize:        uploadedFile.fileSize,
+          mimeType:        uploadedFile.mimeType,
+          bucket:          "recruitment-files",
+          fileType:        FileType.CV,
+          relatedEntity:   "application",
+          relatedEntityId: application.id,
+          uploadedById:    applicant!.id,
+          description:     `CV snapshot - ${application.applicationNumber}`,
+        })
+      );
+
+      return { applicant: updatedApplicant, application: updatedApplication };
+    });
+
+    // ── 8. Persist scoring results ──────────────────────────────────────────
+    await this.applicantResultsService.saveResults(scoringResult, applicant.id);
+
+    const maxScore = scoringResult.experience?.length
+      ? Math.max(...scoringResult.experience.map(e => e.similarity ?? 0))
+      : 0;
+
+    return {
+      applicant: {
+        id:       txResult.applicant.id,
+        fullName: txResult.applicant.fullName,
+        email:    txResult.applicant.email,
+      },
+      application: {
+        id:                txResult.application.id,
+        applicationNumber: txResult.application.applicationNumber,
+        status:            txResult.application.status,
+        appliedAt:         txResult.application.appliedAt,
+      },
+      evaluationResult: {
+        maxExperienceScore: maxScore,
+        evaluatedAt:        new Date(),
+        scoringBreakdown: {
+          experiences: (scoringResult.experience ?? []).map(e => ({
+            role:          e.role ?? null,
+            description:   e.description ?? null,
+            start:         e.start ?? null,
+            end:           e.end ?? null,
+            durationYears: e.duration_years ?? null,
+            similarity:    e.similarity ?? null,
+            isTopMatch:    Math.abs((e.similarity ?? 0) - maxScore) < 0.0001,
+          })),
+          educations: (scoringResult.educations ?? []).map(e => ({
+            level:       e.level ?? null,
+            major:       e.major ?? null,
+            institution: e.institution ?? null,
+          })),
+        },
+      },
+    };
+  }
+
+
 // -----------------------------------------------------------------------------
 // PERUBAHAN 2: isReferencedByApplication  (method BARU)
 // Tambahkan method ini ke dalam class ApplicantService.
