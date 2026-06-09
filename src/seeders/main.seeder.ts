@@ -6,7 +6,7 @@ import { RecruitmentPipelineSeeder } from "./recruitment-pipeline.seeder";
 import { VacancySeeder } from "./vacancy.seeder";
 import { ApplicantSourceSeeder } from "./applicant-source.seeder";
 import { ApplicationSeeder } from "./application.seeder";
-import { ApplicantsSeeder } from "./applicant.seeder";
+// import { ApplicantsSeeder } from "./applicant.seeder"; // run manually: npm run seed -- --seeder applicant
 import { SystemConfigurationSeeder } from "./system-configuration.seeder";
 import { JobCategorySeeder } from "./job-category.seeder";
 import { DepartmentSeeder } from "./department.seeder";
@@ -40,7 +40,9 @@ export class MainSeeder extends BaseSeeder {
       new ApplicantSourceSeeder(this.dataSource),
       new RecruitmentPipelineSeeder(this.dataSource),
       new VacancySeeder(this.dataSource),
-      new ApplicantsSeeder(this.dataSource),
+      // ApplicantsSeeder intentionally excluded from default seed run.
+      // Applicants enter the system via self-registration (applicant portal).
+      // Run manually: npm run seed -- --seeder applicant
       new ApplicationSeeder(this.dataSource),
     ];
   }
@@ -127,7 +129,7 @@ export class MainSeeder extends BaseSeeder {
           console.log(`   Clearing ${name}...`);
           await this.clearTable(entity as any);
         } catch (error) {
-          console.warn(`   Warning: Could not clear ${name}:`, error.message);
+          console.warn(`   Warning: Could not clear ${name}:`, error instanceof Error ? error.message : String(error));
         }
       }
 

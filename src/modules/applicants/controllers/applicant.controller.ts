@@ -122,7 +122,7 @@ export class ApplicationController {
         fullName:      { type: "string" },
         email:         { type: "string", format: "email" },
         phone:         { type: "string" },
-        gender:        { type: "string", enum: ["male", "female", "other"] },
+        gender:        { type: "string", enum: ["male", "female"] },
         maritalStatus: { type: "string", enum: ["single", "married", "divorced", "widowed"] },
         placeOfBirth:  { type: "string" },
         dateOfBirth:   { type: "string", example: "1998-01-15" },
@@ -158,7 +158,21 @@ export class ApplicationController {
       }).transform(photo);
     }
 
-    return this.applicantService.quickApply(dto, cv, photo);
+    try {
+      return await this.applicantService.quickApply(dto, cv, photo);
+    } catch (err: any) {
+      if (err?.code === '23505') {
+        if (err?.detail?.includes('applicant_id') || err?.constraint === 'UQ_applications_applicant_vacancy') {
+          throw new BadRequestException('You have already applied to this vacancy.');
+        }
+        if (err?.constraint?.includes('email') || err?.detail?.includes('email')) {
+          throw new BadRequestException('A submission with this email is already in progress. Please try again.');
+        }
+        // applicationNumber race or any other unique constraint
+        throw new BadRequestException('A submission conflict occurred. Please try again.');
+      }
+      throw err;
+    }
   }
 
   @Public()

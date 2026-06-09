@@ -1,5 +1,4 @@
 export enum ApplicantStatus {
-  NEW = "new",
   APPLIED = "applied",
   HIRED = "hired",
   REJECTED = "rejected"

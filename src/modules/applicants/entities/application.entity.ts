@@ -10,6 +10,7 @@ import {
   OneToMany,
   Index,
   OneToOne,
+  Unique,
 } from "typeorm";
 import { Vacancy } from "../../vacancies/entities/vacancy.entity";
 import { Applicant } from "./applicant.entity";
@@ -18,10 +19,11 @@ import { PipelineStage } from "../../vacancies/entities/pipeline-stage.entity";
 import { StageActivity } from "../../vacancies/entities/stage-activity.entity";
 import { ApplicationNotes } from "./application-notes.entity";
 import { ApplicantStatus } from "../../../shared/enums/applicant.enum";
-import { EvaluationResult } from "src/modules/applicant-results/entities/evaluation-results.entity";
+import { EvaluationResult } from "../../applicant-results/entities/evaluation-results.entity";
 
 @Entity("applications")
 @Index(["vacancyId", "status"])
+@Unique("UQ_applications_applicant_vacancy", ["applicantId", "vacancyId"])
 export class Application {
   @PrimaryGeneratedColumn("uuid")
   id!: string;

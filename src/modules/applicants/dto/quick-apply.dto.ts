@@ -68,12 +68,4 @@ export class QuickApplyResponseDto {
     status: string;
     appliedAt: Date;
   };
-  evaluationResult: {
-    maxExperienceScore: number;
-    evaluatedAt: Date;
-    scoringBreakdown: {
-      experiences: unknown[];
-      educations: unknown[];
-    };
-  };
 }

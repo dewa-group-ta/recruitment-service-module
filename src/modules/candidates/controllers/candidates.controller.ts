@@ -26,7 +26,7 @@ import { IsRole } from "src/shared/decorators/roles.decorator";
 import { BaseFindAllDto } from "../../../shared/paginate/base-find-all.dto";
 import { ApplicantTableQueryDto, ApplicantSummaryQueryDto } from "../dto/applicant-table-query.dto";
 import { ApplicantTableResponseDto, ApplicantSummaryResponseDto } from "../dto/applicant-table-response.dto";
-import { CandidateDetailDto, UpdateCandidateStatusDto, MoveToNextStageDto, AddCandidateScoreDto, UpdateTalentPoolDto } from "../dto/candidate-detail.dto";
+import { CandidateDetailDto, UpdateCandidateStatusDto, MoveToNextStageDto, UpdateTalentPoolDto } from "../dto/candidate-detail.dto";
 import { CreateApplicationNotesDto } from "../../applicants/dto/create-application-notes.dto";
 import { UpdateApplicationNotesDto } from "../../applicants/dto/update-application-notes.dto";
 import { ApplicationNotesResponseDto } from "../../applicants/dto/application-notes-response.dto";
@@ -527,38 +527,6 @@ export class CandidatesController {
   async getHiringProgress(@Param("applicationId", ParseUUIDPipe) applicationId: string) {
     const result = await this.candidatesService.getHiringProgress(applicationId);
     return result;
-  }
-
-  @Patch(":applicationId/score")
-  @HttpCode(HttpStatus.OK)
-  @ResponseMessage(responseMessage.SUCCESS)
-  @IsRole(role.HR_MANAGER)
-  @ApiOperation({
-    summary: "Add candidate score",
-    description: "Add or update the score for a specific candidate."
-  })
-  @ApiParam({
-    name: "applicationId",
-    description: "Application ID",
-    example: "uuid-string",
-    type: String
-  })
-  @ApiResponse({
-    status: 200,
-    description: "Candidate score added successfully",
-    type: CandidateDetailDto
-  })
-  async addCandidateScore(
-    @Param("applicationId", ParseUUIDPipe) applicationId: string,
-    @Body() addScoreDto: AddCandidateScoreDto
-  ) {
-    const result = await this.candidatesService.addCandidateScore(
-      applicationId,
-      addScoreDto.score,
-      addScoreDto.notes
-    );
-
-    return result
   }
 
   @Patch(":applicationId/talent-pool")

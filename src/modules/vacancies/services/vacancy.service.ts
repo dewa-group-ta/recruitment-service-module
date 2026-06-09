@@ -4,7 +4,7 @@ import {
   BadRequestException
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, FindOptionsWhere } from "typeorm";
+import { Repository, FindOptionsWhere, Not } from "typeorm";
 import { Vacancy } from "../entities/vacancy.entity";
 import { CreateVacancyDto } from "../dto/create-vacancy.dto";
 import { UpdateVacancyDto } from "../dto/update-vacancy.dto";
@@ -94,6 +94,10 @@ export class VacancyService {
 
     if (!existingVacancy) {
       throw new NotFoundException(`Vacancy with ID ${id} not found`);
+    }
+
+    if (existingVacancy.status !== JobStatus.DRAFT) {
+      throw new BadRequestException('Only draft vacancies can be edited');
     }
 
     this.validateUpdateData(updateVacancyDto);
@@ -229,40 +233,111 @@ export class VacancyService {
       throw new NotFoundException(`Vacancy with ID ${id} not found`);
     }
 
+    if (vacancy.status !== JobStatus.DRAFT) {
+      throw new BadRequestException('Only draft vacancies can be deleted');
+    }
+
     await this.vacancyRepository.softDelete(id);
     await this.vacancyRepository.update(id, { deletedById });
   }
 
-  async closeVacancy(id: string, updatedById: string): Promise<VacancyResponseDto> {
-    const vacancy = await this.vacancyRepository.findOne({ where: { id } });
-    if (!vacancy) {
-      throw new NotFoundException(`Vacancy with ID ${id} not found`);
+  async publishVacancy(id: string, updatedById: string): Promise<VacancyResponseDto> {
+    const preCheck = await this.vacancyRepository.findOne({ where: { id } });
+    if (!preCheck) throw new NotFoundException(`Vacancy with ID ${id} not found`);
+    if (!preCheck.jobCode) {
+      throw new BadRequestException('Job code is required before publishing a vacancy');
     }
-    await this.vacancyRepository.update(id, {
-      status: JobStatus.CLOSED,
-      updatedById
-    });
-    const updated = await this.vacancyRepository.findOne({
-      where: { id },
-      relations: ["department", "pipeline", "jobCategory"]
-    });
-    return this.mapToResponseDto(updated!);
+
+    const result = await this.vacancyRepository.update(
+      { id, status: JobStatus.DRAFT },
+      { status: JobStatus.PUBLISHED, updatedById }
+    );
+
+    if (result.affected === 0) {
+      throw new BadRequestException('Only draft vacancies can be published');
+    }
+
+    return this.mapToResponseDto(
+      (await this.vacancyRepository.findOne({
+        where: { id }, relations: ['department', 'pipeline', 'jobCategory']
+      }))!
+    );
+  }
+
+  async unpublishVacancy(id: string, updatedById: string): Promise<VacancyResponseDto> {
+    const result = await this.vacancyRepository.update(
+      { id, status: JobStatus.PUBLISHED },
+      { status: JobStatus.DRAFT, updatedById }
+    );
+
+    if (result.affected === 0) {
+      const vacancy = await this.vacancyRepository.findOne({ where: { id } });
+      if (!vacancy) throw new NotFoundException(`Vacancy with ID ${id} not found`);
+      throw new BadRequestException('Only published vacancies can be unpublished');
+    }
+
+    return this.mapToResponseDto(
+      (await this.vacancyRepository.findOne({
+        where: { id }, relations: ['department', 'pipeline', 'jobCategory']
+      }))!
+    );
+  }
+
+  async closeVacancy(id: string, updatedById: string): Promise<VacancyResponseDto> {
+    const result = await this.vacancyRepository.update(
+      { id, status: JobStatus.PUBLISHED },
+      { status: JobStatus.CLOSED, updatedById }
+    );
+
+    if (result.affected === 0) {
+      const vacancy = await this.vacancyRepository.findOne({ where: { id } });
+      if (!vacancy) throw new NotFoundException(`Vacancy with ID ${id} not found`);
+      throw new BadRequestException('Only published vacancies can be closed');
+    }
+
+    return this.mapToResponseDto(
+      (await this.vacancyRepository.findOne({
+        where: { id }, relations: ['department', 'pipeline', 'jobCategory']
+      }))!
+    );
+  }
+
+  async reopenVacancy(id: string, updatedById: string): Promise<VacancyResponseDto> {
+    const result = await this.vacancyRepository.update(
+      { id, status: JobStatus.CLOSED },
+      { status: JobStatus.PUBLISHED, updatedById }
+    );
+
+    if (result.affected === 0) {
+      const vacancy = await this.vacancyRepository.findOne({ where: { id } });
+      if (!vacancy) throw new NotFoundException(`Vacancy with ID ${id} not found`);
+      throw new BadRequestException('Only closed vacancies can be reopened');
+    }
+
+    return this.mapToResponseDto(
+      (await this.vacancyRepository.findOne({
+        where: { id }, relations: ['department', 'pipeline', 'jobCategory']
+      }))!
+    );
   }
 
   async archiveVacancy(id: string, updatedById: string): Promise<VacancyResponseDto> {
-    const vacancy = await this.vacancyRepository.findOne({ where: { id } });
-    if (!vacancy) {
-      throw new NotFoundException(`Vacancy with ID ${id} not found`);
+    const result = await this.vacancyRepository.update(
+      { id, status: Not(JobStatus.ARCHIVED) },
+      { status: JobStatus.ARCHIVED, updatedById }
+    );
+
+    if (result.affected === 0) {
+      const vacancy = await this.vacancyRepository.findOne({ where: { id } });
+      if (!vacancy) throw new NotFoundException(`Vacancy with ID ${id} not found`);
+      throw new BadRequestException('Vacancy is already archived');
     }
-    await this.vacancyRepository.update(id, {
-      status: JobStatus.ARCHIVED,
-      updatedById
-    });
-    const updated = await this.vacancyRepository.findOne({
-      where: { id },
-      relations: ["department", "pipeline", "jobCategory"]
-    });
-    return this.mapToResponseDto(updated!);
+
+    return this.mapToResponseDto(
+      (await this.vacancyRepository.findOne({
+        where: { id }, relations: ['department', 'pipeline', 'jobCategory']
+      }))!
+    );
   }
 
   async findAllPublic(
@@ -388,7 +463,6 @@ export class VacancyService {
       "description",
       "responsibilities",
       "requirements",
-      "status",
       "jobType",
       "employmentType",
       "workModel",

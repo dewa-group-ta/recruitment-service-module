@@ -128,8 +128,13 @@ export class ApplicantService implements IApplicantService {
         queryRunner
       );
 
-      // Check for existing application
-      await this.checkExistingApplication(applicant.id, registerDto.vacancyId);
+      // Check for existing application inside the transaction to prevent race conditions
+      const existingApplication = await queryRunner.manager.findOne(Application, {
+        where: { applicantId: applicant.id, vacancyId: registerDto.vacancyId }
+      });
+      if (existingApplication) {
+        throw new BadRequestException('You have already applied for this vacancy');
+      }
 
       // Create application — capture returned entity to get applicationId
       const application = await this.createApplication(
@@ -178,7 +183,7 @@ export class ApplicantService implements IApplicantService {
       throw new BadRequestException("Application deadline has passed");
     }
 
-    if (vacancy.applicantLimit) {
+    if (vacancy.isLimitApplicantEnabled && vacancy.applicantLimit) {
       const currentApplicationsCount = await this.applicationRepository.count({
         where: { vacancyId: registerDto.vacancyId }
       });
@@ -311,14 +316,17 @@ export class ApplicantService implements IApplicantService {
     customSource: string | undefined,
     queryRunner: any
   ): Promise<Application> {
-    const applicationNumber = await this.generateApplicationNumber(vacancy.jobCode);
+    const applicationNumber = await this.generateApplicationNumberWithManager(
+      queryRunner.manager,
+      vacancy.jobCode
+    );
 
-    const application = this.applicationRepository.create({
+    const application = queryRunner.manager.create(Application, {
       applicationNumber,
       applicantId: applicant.id,
       vacancyId: vacancy.id,
       pipelineId: vacancy.pipelineId,
-      status: ApplicantStatus.NEW,
+      status: ApplicantStatus.APPLIED,
       appliedAt: new Date(),
       lastActivityAt: new Date(),
       customSource: customSource || undefined
@@ -341,7 +349,7 @@ export class ApplicantService implements IApplicantService {
       );
       return true;
     } catch (error) {
-      console.error("Failed to send login token:", error);
+      this.logger.error("Failed to send login token:", error);
       return false;
     }
   }
@@ -805,29 +813,6 @@ export class ApplicantService implements IApplicantService {
     }
   }
 
-  // =============================================================================
-// FILE: applicant.service.ts
-//
-// Dua perubahan di file ini:
-//
-//  1. applyForPosition  → tambah blok pembuatan CV snapshot di dalam transaksi
-//  2. isReferencedByApplication  → method baru, dipanggil dari controller
-//
-// Salin kedua method ini ke dalam class ApplicantService yang sudah ada.
-// Tidak ada perubahan di bagian lain service.
-// =============================================================================
- 
-// -----------------------------------------------------------------------------
-// PERUBAHAN 1: applyForPosition
-// Ganti seluruh method applyForPosition yang lama dengan versi di bawah ini.
-//
-// Yang ditambahkan:
-//   - Blok "Buat snapshot File" di dalam transaksi, setelah stage activity dibuat.
-//     Snapshot ini menyalin metadata file CV pelamar ke record baru dengan
-//     relatedEntity='application', sehingga relasi Application → File (CV) menjadi
-//     ada secara eksplisit dan bisa ditelusuri tanpa bergantung pada applicant.cvUrl.
-// -----------------------------------------------------------------------------
- 
 async applyForPosition(
   applicationId: string,
   applyDto: ApplyApplicantDto
@@ -841,8 +826,8 @@ async applyForPosition(
 
   if (!application) throw new NotFoundException("Application not found");
 
-  if (application.status !== ApplicantStatus.NEW) {
-    throw new BadRequestException(`Cannot apply...`);
+  if (application.status === ApplicantStatus.HIRED || application.status === ApplicantStatus.REJECTED) {
+    throw new BadRequestException(`Cannot apply for this position. Application has already been finalized.`);
   }
 
   const applicantId = application.applicantId;
@@ -864,7 +849,8 @@ async applyForPosition(
   // 3. ✅ SCORING DULU sebelum transaksi DB
   const scoringResult = await this.applicantResultsService.runScoring(
     applicationId,
-    cvFile.filePath
+    cvFile.filePath,
+    cvFile.mimeType ?? "application/pdf"
   );
   // Jika gagal → langsung throw error ke applicant, transaksi tidak pernah jalan
 
@@ -938,7 +924,11 @@ async applyForPosition(
   });
 
   // 5. ✅ Simpan hasil scoring ke DB (karena runScoring sekarang return hasil)
-  await this.applicantResultsService.saveResults(scoringResult, applicantId);
+  try {
+    await this.applicantResultsService.saveResults(scoringResult, applicantId);
+  } catch (err) {
+    this.logger.error('Failed to persist scoring results', err);
+  }
 
   const maxScore = scoringResult.experience?.length
     ? Math.max(...scoringResult.experience.map(e => e.similarity ?? 0))
@@ -983,7 +973,7 @@ async applyForPosition(
     photoFile?: Express.Multer.File
   ): Promise<QuickApplyResponseDto> {
 
-    // ── 1. Validate vacancy ─────────────────────────────────────────────────
+    // ── 1. Validate vacancy (read-only, before any side effect) ────────────
     const vacancy = await this.vacancyRepository.findOne({
       where: { id: dto.vacancyId },
       relations: ["pipeline"]
@@ -995,148 +985,188 @@ async applyForPosition(
     if (vacancy.endDate && new Date(vacancy.endDate) < new Date()) {
       throw new BadRequestException("Application deadline has passed");
     }
+    if (vacancy.isLimitApplicantEnabled && vacancy.applicantLimit) {
+      const currentCount = await this.applicationRepository.count({ where: { vacancyId: dto.vacancyId } });
+      if (currentCount >= vacancy.applicantLimit) {
+        throw new BadRequestException("Application limit reached for this vacancy");
+      }
+    }
+    if (!vacancy.pipelineId) {
+      throw new BadRequestException("This vacancy is not ready to accept applications yet");
+    }
 
-    // ── 2. Find or create applicant by email ────────────────────────────────
-    let applicant = await this.applicantRepository.findOne({
+    // ── 2. Early duplicate guard by email (read-only, before file upload) ──
+    // If the email already has an application for this vacancy, reject early
+    // so we don't waste time uploading files that will never be used.
+    const existingApplicantByEmail = await this.applicantRepository.findOne({
       where: { email: dto.email }
     });
-    if (!applicant) {
-      applicant = this.applicantRepository.create({
-        email: dto.email,
-        fullName: dto.fullName,
-        phone: dto.phone,
+    if (existingApplicantByEmail) {
+      const existingApplication = await this.applicationRepository.findOne({
+        where: { applicantId: existingApplicantByEmail.id, vacancyId: dto.vacancyId }
       });
-      applicant = await this.applicantRepository.save(applicant);
+      if (existingApplication) {
+        throw new BadRequestException("You have already applied to this vacancy");
+      }
     }
 
-    // ── 3. Guard: no duplicate application ──────────────────────────────────
-    const existing = await this.applicationRepository.findOne({
-      where: { applicantId: applicant.id, vacancyId: dto.vacancyId }
-    });
-    if (existing) {
-      throw new BadRequestException("You have already applied to this vacancy");
-    }
-
-    // ── 4a. Upload CV (before transaction — filePath needed for scoring) ────
+    // ── 3. Upload files to MinIO (must be outside transaction) ─────────────
+    // MinIO is not transactional. Files are uploaded first so their paths are
+    // available inside the DB transaction. On any subsequent failure, cleanup
+    // is performed in the catch block below.
+    // relatedEntityId is intentionally omitted for new applicants (not yet persisted).
+    // The File record's relatedEntityId will remain NULL until the applicant is created
+    // inside the transaction below. This is acceptable — the CV snapshot created inside
+    // the transaction (step 4h) carries the correct relatedEntityId='application'.
     const cvUploadDto: FileUploadDto = {
-      fileType: FileType.CV,
-      folder: "applicants/cv",
+      fileType:      FileType.CV,
+      folder:        "applicants/cv",
       relatedEntity: "applicant",
-      relatedEntityId: applicant.id,
+      relatedEntityId: existingApplicantByEmail?.id,
     };
-    const uploadedFile = await this.fileUploadService.uploadFile(cvFile, cvUploadDto, applicant.id);
+    const uploadedFile = await this.fileUploadService.uploadFile(cvFile, cvUploadDto, existingApplicantByEmail?.id);
 
-    // ── 4b. Upload photo (optional) ─────────────────────────────────────────
     let photoUrl: string | null = null;
     if (photoFile) {
       const photoUploadDto: FileUploadDto = {
-        fileType: FileType.PHOTO,
-        folder: "applicants/photos",
-        relatedEntity: "applicant",
-        relatedEntityId: applicant.id,
+        fileType:        FileType.PHOTO,
+        folder:          "applicants/photos",
+        relatedEntity:   "applicant",
+        relatedEntityId: existingApplicantByEmail?.id,
       };
-      const uploadedPhoto = await this.fileUploadService.uploadFile(photoFile, photoUploadDto, applicant.id);
-      photoUrl = uploadedPhoto.url ?? null;
+      const uploadedPhoto = await this.fileUploadService.uploadFile(photoFile, photoUploadDto, existingApplicantByEmail?.id);
+      photoUrl = uploadedPhoto.filePath ?? null;
     }
 
-    // ── 5. Create Application with status NEW ───────────────────────────────
-    const applicationNumber = await this.generateApplicationNumber(vacancy.jobCode);
-    const application = await this.applicationRepository.save(
-      this.applicationRepository.create({
-        applicationNumber,
-        applicantId: applicant.id,
-        vacancyId: vacancy.id,
-        pipelineId: vacancy.pipelineId,
-        status: ApplicantStatus.NEW,
-        appliedAt: new Date(),
-        lastActivityAt: new Date(),
-      })
-    );
+    // ── 4. Single atomic transaction ────────────────────────────────────────
+    // All DB writes happen here. If anything fails, the entire transaction
+    // rolls back and uploaded MinIO files are cleaned up in the catch block.
+    let txResult!: { applicant: Applicant; application: Application };
+    try {
+      txResult = await this.dataSource.transaction(async (manager) => {
+        // 4a. Find or create applicant inside the transaction
+        let applicant = await manager.findOne(Applicant, { where: { email: dto.email } });
+        if (!applicant) {
+          applicant = manager.create(Applicant, {
+            email:    dto.email,
+            fullName: dto.fullName,
+            phone:    dto.phone,
+          });
+          applicant = await manager.save(Applicant, applicant);
+        }
 
-    // ── 6. Run scoring via FastAPI (before DB transaction) ──────────────────
-    const scoringResult = await this.applicantResultsService.runScoring(
-      application.id,
-      uploadedFile.filePath
-    );
+        // 4b. Second duplicate guard inside transaction (prevents race condition)
+        const duplicate = await manager.findOne(Application, {
+          where: { applicantId: applicant.id, vacancyId: dto.vacancyId }
+        });
+        if (duplicate) {
+          throw new BadRequestException("You have already applied to this vacancy");
+        }
 
-    // ── 7. Transaction: update profile + finalize application ───────────────
-    const txResult = await this.dataSource.transaction(async (manager) => {
-      // Update applicant profile
-      Object.assign(applicant!, {
-        fullName:      dto.fullName,
-        phone:         dto.phone,
-        gender:        dto.gender,
-        maritalStatus: dto.maritalStatus,
-        placeOfBirth:  dto.placeOfBirth,
-        dateOfBirth:   new Date(dto.dateOfBirth),
-        ...(photoUrl ? { photoUrl } : {}),
-      });
-      const updatedApplicant = await manager.save(Applicant, applicant!);
+        // 4c. Update applicant profile with submitted data
+        Object.assign(applicant, {
+          fullName:      dto.fullName,
+          phone:         dto.phone,
+          gender:        dto.gender,
+          maritalStatus: dto.maritalStatus,
+          placeOfBirth:  dto.placeOfBirth,
+          dateOfBirth:   new Date(dto.dateOfBirth),
+          cvUrl:         uploadedFile.filePath,
+          ...(photoUrl ? { photoUrl } : {}),
+        });
+        const savedApplicant = await manager.save(Applicant, applicant);
 
-      // Save address if provided
-      if (dto.address) {
+        // 4d. Save address if provided
+        if (dto.address) {
+          await manager.save(
+            ApplicantAddress,
+            manager.create(ApplicantAddress, {
+              fullAddress: dto.address,
+              applicantId: savedApplicant.id,
+            })
+          );
+        }
+
+        // 4e. Generate application number (inside tx — uses manager to read committed data)
+        const applicationNumber = await this.generateApplicationNumberWithManager(manager, vacancy.jobCode);
+
+        // 4f. Create application
+        const now = new Date();
+        let application = manager.create(Application, {
+          applicationNumber,
+          applicantId:    savedApplicant.id,
+          vacancyId:      vacancy.id,
+          pipelineId:     vacancy.pipelineId,
+          status:         ApplicantStatus.APPLIED,
+          appliedAt:      now,
+          lastActivityAt: now,
+        });
+        application = await manager.save(Application, application);
+
+        // 4g. Find first pipeline stage and create StageActivity
+        const firstStage = await manager.findOne(PipelineStage, {
+          where: { pipelineId: vacancy.pipelineId },
+          order: { stageOrder: "ASC" }
+        });
+        if (!firstStage) throw new BadRequestException("This vacancy has no pipeline stages configured");
+
         await manager.save(
-          ApplicantAddress,
-          manager.create(ApplicantAddress, {
-            fullAddress: dto.address,
-            applicantId: applicant!.id,
+          StageActivity,
+          manager.create(StageActivity, {
+            applicationId: application.id,
+            stageId:       firstStage.id,
+            createdAt:     now,
+            status:        StageActivityStatus.IN_PROGRESS,
           })
         );
-      }
 
-      // Mark application as APPLIED
-      application.status    = ApplicantStatus.APPLIED;
-      application.appliedAt = new Date();
-      const updatedApplication = await manager.save(Application, application);
+        application.currentStageId = firstStage.id;
+        application.lastActivityAt = now;
+        const finalApplication = await manager.save(Application, application);
 
-      // Create first StageActivity
-      const firstStage = await manager.findOne(PipelineStage, {
-        where: { pipelineId: application.pipelineId },
-        order: { stageOrder: "ASC" }
+        // 4h. CV snapshot for permanent audit trail
+        await manager.save(
+          File,
+          manager.create(File, {
+            fileName:        uploadedFile.fileName,
+            originalName:    uploadedFile.originalName ?? uploadedFile.fileName,
+            filePath:        uploadedFile.filePath,
+            fileSize:        uploadedFile.fileSize,
+            mimeType:        uploadedFile.mimeType,
+            bucket:          "recruitment-files",
+            fileType:        FileType.CV,
+            relatedEntity:   "application",
+            relatedEntityId: finalApplication.id,
+            uploadedById:    savedApplicant.id,
+            description:     `CV snapshot - ${finalApplication.applicationNumber}`,
+          })
+        );
+
+        return { applicant: savedApplicant, application: finalApplication };
       });
-      if (!firstStage) throw new NotFoundException("Pipeline has no stages configured");
-
-      await manager.save(
-        StageActivity,
-        manager.create(StageActivity, {
-          applicationId: application.id,
-          stageId:       firstStage.id,
-          createdAt:     new Date(),
-          status:        StageActivityStatus.IN_PROGRESS,
-        })
+    } catch (txError) {
+      // Transaction rolled back — clean up MinIO files to prevent orphans
+      await this.fileUploadService.deleteFileByPath(uploadedFile.filePath).catch((e) =>
+        this.logger.error("Failed to delete orphaned CV after tx failure", e)
       );
+      if (photoUrl) {
+        await this.fileUploadService.deleteFileByPath(photoUrl).catch((e) =>
+          this.logger.error("Failed to delete orphaned photo after tx failure", e)
+        );
+      }
+      throw txError;
+    }
 
-      application.currentStageId = firstStage.id;
-      application.lastActivityAt = new Date();
-      await manager.save(Application, application);
-
-      // CV snapshot for audit trail
-      await manager.save(
-        File,
-        manager.create(File, {
-          fileName:        uploadedFile.fileName,
-          originalName:    uploadedFile.originalName ?? uploadedFile.fileName,
-          filePath:        uploadedFile.filePath,
-          fileSize:        uploadedFile.fileSize,
-          mimeType:        uploadedFile.mimeType,
-          bucket:          "recruitment-files",
-          fileType:        FileType.CV,
-          relatedEntity:   "application",
-          relatedEntityId: application.id,
-          uploadedById:    applicant!.id,
-          description:     `CV snapshot - ${application.applicationNumber}`,
-        })
-      );
-
-      return { applicant: updatedApplicant, application: updatedApplication };
-    });
-
-    // ── 8. Persist scoring results ──────────────────────────────────────────
-    await this.applicantResultsService.saveResults(scoringResult, applicant.id);
-
-    const maxScore = scoringResult.experience?.length
-      ? Math.max(...scoringResult.experience.map(e => e.similarity ?? 0))
-      : 0;
+    // ── 5. Fire-and-forget: CV scoring (non-blocking) ───────────────────────
+    // Scoring runs after the application is fully committed. Failure here does
+    // NOT affect the application — the candidate is already registered.
+    // EvaluationResult will simply be absent until scoring succeeds (or is retried).
+    void this.runScoringAsync(
+      txResult.application.id,
+      uploadedFile.filePath,
+      cvFile.mimetype,
+      txResult.applicant.id
+    );
 
     return {
       applicant: {
@@ -1150,41 +1180,54 @@ async applyForPosition(
         status:            txResult.application.status,
         appliedAt:         txResult.application.appliedAt,
       },
-      evaluationResult: {
-        maxExperienceScore: maxScore,
-        evaluatedAt:        new Date(),
-        scoringBreakdown: {
-          experiences: (scoringResult.experience ?? []).map(e => ({
-            role:          e.role ?? null,
-            description:   e.description ?? null,
-            start:         e.start ?? null,
-            end:           e.end ?? null,
-            durationYears: e.duration_years ?? null,
-            similarity:    e.similarity ?? null,
-            isTopMatch:    Math.abs((e.similarity ?? 0) - maxScore) < 0.0001,
-          })),
-          educations: (scoringResult.educations ?? []).map(e => ({
-            level:       e.level ?? null,
-            major:       e.major ?? null,
-            institution: e.institution ?? null,
-          })),
-        },
-      },
     };
   }
 
+  private async runScoringAsync(
+    applicationId: string,
+    cvFilePath: string,
+    cvMimeType: string,
+    applicantId: string
+  ): Promise<void> {
+    try {
+      const scoringResult = await this.applicantResultsService.runScoring(
+        applicationId,
+        cvFilePath,
+        cvMimeType
+      );
+      await this.applicantResultsService.saveResults(scoringResult, applicantId);
+    } catch (err) {
+      this.logger.error(
+        `Background scoring failed for applicationId=${applicationId}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
 
-// -----------------------------------------------------------------------------
-// PERUBAHAN 2: isReferencedByApplication  (method BARU)
-// Tambahkan method ini ke dalam class ApplicantService.
-// Letakkan di bagian bawah class, bersama method-method helper lainnya.
-//
-// Digunakan oleh controller sebelum menghapus file CV lama dari MinIO,
-// untuk memastikan tidak ada application-level snapshot yang masih mengandalkan
-// file tersebut. Jika masih ada, file fisik di MinIO dibiarkan — hanya record
-// di level applicant yang akan digantikan oleh upload baru.
-// -----------------------------------------------------------------------------
- 
+  private async generateApplicationNumberWithManager(
+    manager: import("typeorm").EntityManager,
+    jobCode: string
+  ): Promise<string> {
+    const year   = new Date().getFullYear();
+    const month  = new Date().getMonth() + 1;
+    const prefix = `${jobCode}${year}${month}`;
+
+    const lastApplication = await manager
+      .createQueryBuilder(Application, "application")
+      .where("application.applicationNumber LIKE :prefix", { prefix: `${prefix}-%` })
+      .orderBy("application.applicationNumber", "DESC")
+      .getOne();
+
+    let sequence = 1;
+    if (lastApplication) {
+      const parts = lastApplication.applicationNumber.split("-");
+      const last  = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(last)) sequence = last + 1;
+    }
+
+    return `${prefix}-${sequence.toString().padStart(3, "0")}`;
+  }
+
+
 /**
  * Memeriksa apakah suatu path file CV masih direferensikan oleh
  * application-level snapshot (relatedEntity = 'application').

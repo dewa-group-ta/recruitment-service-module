@@ -4,7 +4,7 @@ import {
   BadRequestException
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, FindOptionsWhere } from "typeorm";
+import { Repository, FindOptionsWhere, In, DataSource } from "typeorm";
 import { PipelineStage } from "../entities/pipeline-stage.entity";
 import {
   CreatePipelineStageDto,
@@ -13,12 +13,14 @@ import {
 } from "../dto";
 import { BaseFindAllDto } from "../../../shared/paginate/base-find-all.dto";
 import { PaginationResultInterface } from "../../../shared/paginate/pagination.results.interface";
+import { Application } from "../../applicants/entities/application.entity";
 
 @Injectable()
 export class PipelineStageService {
   constructor(
     @InjectRepository(PipelineStage)
-    private readonly pipelineStageRepository: Repository<PipelineStage>
+    private readonly pipelineStageRepository: Repository<PipelineStage>,
+    private readonly dataSource: DataSource
   ) {}
 
   /**
@@ -54,9 +56,8 @@ export class PipelineStageService {
 
       return this.mapToResponseDto(savedPipelineStage);
     } catch (error) {
-      throw new BadRequestException(
-        `Failed to create pipeline stage: ${error.message}`
-      );
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new BadRequestException(`Failed to create pipeline stage: ${msg}`);
     }
   }
 
@@ -195,9 +196,8 @@ export class PipelineStageService {
 
       return this.mapToResponseDto(updatedPipelineStage);
     } catch (error) {
-      throw new BadRequestException(
-        `Failed to update pipeline stage: ${error.message}`
-      );
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new BadRequestException(`Failed to update pipeline stage: ${msg}`);
     }
   }
 
@@ -215,14 +215,24 @@ export class PipelineStageService {
       throw new NotFoundException(`Pipeline stage with ID ${id} not found`);
     }
 
+    // prevent deletion if any live application is currently at this stage
+    const activeApplicationCount = await this.dataSource
+      .getRepository(Application)
+      .count({ where: { currentStageId: id } });
+
+    if (activeApplicationCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete stage: ${activeApplicationCount} active application(s) are currently at this stage`
+      );
+    }
+
     try {
       await this.pipelineStageRepository.remove(pipelineStage);
 
       return { message: "Pipeline stage deleted successfully" };
     } catch (error) {
-      throw new BadRequestException(
-        `Failed to delete pipeline stage: ${error.message}`
-      );
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new BadRequestException(`Failed to delete pipeline stage: ${msg}`);
     }
   }
 
@@ -270,35 +280,29 @@ export class PipelineStageService {
     pipelineId: string,
     stageOrders: { stageId: string; newOrder: number }[]
   ): Promise<{ message: string }> {
-    try {
-      // Validate that all stages belong to the pipeline
-      const stageIds = stageOrders.map((so) => so.stageId);
-      const existingStages = await this.pipelineStageRepository.find({
-        where: {
-          pipelineId,
-          id: stageIds[0]
-        } as FindOptionsWhere<PipelineStage>
-      });
+    const stageIds = stageOrders.map((so) => so.stageId);
 
-      if (existingStages.length !== stageIds.length) {
-        throw new BadRequestException(
-          "Some stages do not belong to this pipeline"
-        );
-      }
+    // validate all provided stage IDs belong to the given pipeline
+    const existingStages = await this.pipelineStageRepository.find({
+      where: { pipelineId, id: In(stageIds) } as FindOptionsWhere<PipelineStage>
+    });
 
-      // Update stage orders
+    if (existingStages.length !== stageIds.length) {
+      throw new BadRequestException(
+        "Some stages do not belong to this pipeline"
+      );
+    }
+
+    // wrap in transaction so partial reorder never leaves inconsistent order
+    await this.dataSource.transaction(async (manager) => {
       for (const stageOrder of stageOrders) {
-        await this.pipelineStageRepository.update(stageOrder.stageId, {
+        await manager.update(PipelineStage, stageOrder.stageId, {
           stageOrder: stageOrder.newOrder
         });
       }
+    });
 
-      return { message: "Pipeline stages reordered successfully" };
-    } catch (error) {
-      throw new BadRequestException(
-        `Failed to reorder pipeline stages: ${error.message}`
-      );
-    }
+    return { message: "Pipeline stages reordered successfully" };
   }
 
   /**

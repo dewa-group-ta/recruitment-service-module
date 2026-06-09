@@ -214,26 +214,6 @@ export class MoveToNextStageDto {
   score!: number;
 }
 
-export class AddCandidateScoreDto {
-  @ApiProperty({
-    description: 'Score value',
-    example: 85,
-    minimum: 0,
-    maximum: 100
-  })
-  @IsNumber()
-  score!: number;
-
-  @ApiProperty({
-    description: 'Notes about the score',
-    example: 'Excellent technical skills',
-    required: false
-  })
-  @IsOptional()
-  @IsString()
-  notes?: string;
-}
-
 export class UpdateTalentPoolDto {
   @ApiProperty({
     description: 'Talent pool status',

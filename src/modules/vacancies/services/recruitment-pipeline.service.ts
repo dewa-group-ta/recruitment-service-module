@@ -4,7 +4,7 @@ import {
   BadRequestException
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, FindOptionsWhere, IsNull } from "typeorm";
+import { Repository, FindOptionsWhere, IsNull, DataSource } from "typeorm";
 import { RecruitmentPipeline } from "../entities/recruitment-pipeline.entity";
 import {
   CreateRecruitmentPipelineDto,
@@ -17,7 +17,8 @@ import { BaseFindAllDto } from "../../../shared/paginate/base-find-all.dto";
 export class RecruitmentPipelineService {
   constructor(
     @InjectRepository(RecruitmentPipeline)
-    private readonly recruitmentPipelineRepository: Repository<RecruitmentPipeline>
+    private readonly recruitmentPipelineRepository: Repository<RecruitmentPipeline>,
+    private readonly dataSource: DataSource
   ) {}
 
   /**
@@ -44,7 +45,7 @@ export class RecruitmentPipelineService {
       return this.mapToResponseDto(savedRecruitmentPipeline);
     } catch (error) {
       throw new BadRequestException(
-        `Failed to create recruitment pipeline: ${error.message}`
+        `Failed to create recruitment pipeline: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
@@ -191,7 +192,7 @@ export class RecruitmentPipelineService {
       return this.mapToResponseDto(updatedRecruitmentPipeline);
     } catch (error) {
       throw new BadRequestException(
-        `Failed to update recruitment pipeline: ${error.message}`
+        `Failed to update recruitment pipeline: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
@@ -223,7 +224,7 @@ export class RecruitmentPipelineService {
       return { message: "Recruitment pipeline deleted successfully" };
     } catch (error) {
       throw new BadRequestException(
-        `Failed to delete recruitment pipeline: ${error.message}`
+        `Failed to delete recruitment pipeline: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
@@ -310,24 +311,21 @@ export class RecruitmentPipelineService {
     }
 
     try {
-      // First, unset all other default pipelines
-      await this.recruitmentPipelineRepository.update(
-        {
-          isDefault: true,
-          deletedAt: IsNull()
-        } as FindOptionsWhere<RecruitmentPipeline>,
-        { isDefault: false }
-      );
+      // wrap in transaction to prevent race condition where two pipelines end up as default
+      return await this.dataSource.transaction(async (manager) => {
+        await manager.update(
+          RecruitmentPipeline,
+          { isDefault: true, deletedAt: IsNull() } as FindOptionsWhere<RecruitmentPipeline>,
+          { isDefault: false }
+        );
 
-      // Set this pipeline as default
-      recruitmentPipeline.isDefault = true;
-      const updatedPipeline =
-        await this.recruitmentPipelineRepository.save(recruitmentPipeline);
-
-      return this.mapToResponseDto(updatedPipeline);
+        recruitmentPipeline.isDefault = true;
+        const updatedPipeline = await manager.save(RecruitmentPipeline, recruitmentPipeline);
+        return this.mapToResponseDto(updatedPipeline);
+      });
     } catch (error) {
       throw new BadRequestException(
-        `Failed to set recruitment pipeline as default: ${error.message}`
+        `Failed to set recruitment pipeline as default: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
@@ -363,7 +361,7 @@ export class RecruitmentPipelineService {
       return this.mapToResponseDto(updatedPipeline);
     } catch (error) {
       throw new BadRequestException(
-        `Failed to increment usage count: ${error.message}`
+        `Failed to increment usage count: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
@@ -444,7 +442,7 @@ export class RecruitmentPipelineService {
       return await this.findOne(savedPipeline.id);
     } catch (error) {
       throw new BadRequestException(
-        `Failed to create pipeline from template: ${error.message}`
+        `Failed to create pipeline from template: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
@@ -550,7 +548,7 @@ export class RecruitmentPipelineService {
       return await this.findOne(existingPipeline.id);
     } catch (error) {
       throw new BadRequestException(
-        `Failed to replace stages from template: ${error.message}`
+        `Failed to replace stages from template: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }

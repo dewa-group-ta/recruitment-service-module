@@ -41,12 +41,6 @@ export class StageProgressDto {
     example: true
   })
   canScore!: boolean;
-
-  @ApiProperty({
-    description: 'Whether this stage score is provided automatically by the system',
-    example: false
-  })
-  isScoreAutomatic!: boolean;
 }
 
 export class HiringProgressDto {
@@ -79,12 +73,6 @@ export class HiringProgressDto {
     example: false
   })
   upcomingStageCanScore!: boolean;
-
-  @ApiProperty({
-    description: 'Whether current stage score is provided automatically by the system',
-    example: true
-  })
-  currentStageIsScoreAutomatic!: boolean;
 
   @ApiProperty({
     description: 'List of stages with their progress',

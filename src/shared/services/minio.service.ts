@@ -15,16 +15,19 @@ export class MinioService implements OnModuleInit {
   }
 
   async onModuleInit() {
+    const accessKey = this.configService.get<string>("minio.accessKey");
+    const secretKey = this.configService.get<string>("minio.secretKey");
+    if (!accessKey || !secretKey) {
+      throw new Error("MinIO credentials (MINIO_ACCESS_KEY, MINIO_SECRET_KEY) must be set in environment");
+    }
+
     try {
       this.minioClient = new Minio.Client({
-        endPoint:
-          this.configService.get<string>("minio.endPoint") || "localhost",
-        port: this.configService.get<number>("minio.port") || 9000,
-        useSSL: this.configService.get<boolean>("minio.useSSL") || false,
-        accessKey:
-          this.configService.get<string>("minio.accessKey") || "minioadmin",
-        secretKey:
-          this.configService.get<string>("minio.secretKey") || "minioadmin"
+        endPoint: this.configService.get<string>("minio.endPoint") ?? "localhost",
+        port: this.configService.get<number>("minio.port") ?? 9000,
+        useSSL: this.configService.get<boolean>("minio.useSSL") ?? false,
+        accessKey,
+        secretKey,
       });
 
       // Check if bucket exists, create if not

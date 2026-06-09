@@ -43,13 +43,8 @@ export class VacancyExistsConstraint implements ValidatorConstraintInterface {
         return false;
       }
 
-      // Check if vacancy is in an active status (not closed or archived)
-      const activeStatuses = [
-        JobStatus.DRAFT,
-        JobStatus.PUBLISHED,
-        JobStatus.PAUSED
-      ];
-      return activeStatuses.includes(vacancy.status);
+      // Only published vacancies accept applications
+      return vacancy.status === JobStatus.PUBLISHED;
     } catch (_error) {
       return false;
     }

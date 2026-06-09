@@ -12,7 +12,6 @@ import {
   IsArray
 } from "class-validator";
 import {
-  JobStatus,
   EmploymentType,
   WorkModel,
   JobType,
@@ -74,16 +73,6 @@ export class UpdateVacancyDto {
   @IsString()
   @IsOptional()
   requirements?: string;
-
-  @ApiProperty({
-    description: "Vacancy status",
-    enum: JobStatus,
-    example: JobStatus.DRAFT,
-    required: false
-  })
-  @IsEnum(JobStatus)
-  @IsOptional()
-  status?: JobStatus;
 
   @ApiProperty({
     description: "Job type (recruitment or assessment)",

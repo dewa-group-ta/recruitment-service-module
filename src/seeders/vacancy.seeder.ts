@@ -45,12 +45,8 @@ export class VacancySeeder extends BaseSeeder {
   }
 
   private async createVacancies(pipelines: any[], jobCategories: any[]) {
-    const engineeringPipeline = pipelines.find(
-      (p) => p.category === "engineering"
-    );
-    const marketingPipeline = pipelines.find((p) => p.category === "marketing");
-    const salesPipeline = pipelines.find((p) => p.category === "sales");
-    const executivePipeline = pipelines.find((p) => p.category === "executive");
+    // All vacancies use the HCM Neuron pipeline (default)
+    const hcmPipeline = pipelines.find((p) => p.name === "HCM Neuron");
 
     // Map job categories by name
     const engineeringCategory = jobCategories.find(
@@ -59,6 +55,7 @@ export class VacancySeeder extends BaseSeeder {
     const marketingCategory = jobCategories.find((c) => c.name === "Marketing");
     const salesCategory = jobCategories.find((c) => c.name === "Sales");
     const productCategory = jobCategories.find((c) => c.name === "Product");
+    const designCategory = jobCategories.find((c) => c.name === "Design");
 
     const vacancyData = [
       // Engineering Positions
@@ -117,7 +114,7 @@ export class VacancySeeder extends BaseSeeder {
             salary: true
           }
         },
-        pipelineId: engineeringPipeline?.id,
+        pipelineId: hcmPipeline?.id,
         jobCategoryId: engineeringCategory?.id,
         createdById: "hr-team",
         updatedById: "hr-team"
@@ -177,7 +174,7 @@ export class VacancySeeder extends BaseSeeder {
             salary: true
           }
         },
-        pipelineId: engineeringPipeline?.id,
+        pipelineId: hcmPipeline?.id,
         jobCategoryId: engineeringCategory?.id,
         createdById: "hr-team",
         updatedById: "hr-team"
@@ -237,7 +234,7 @@ export class VacancySeeder extends BaseSeeder {
             salary: true
           }
         },
-        pipelineId: engineeringPipeline?.id,
+        pipelineId: hcmPipeline?.id,
         jobCategoryId: engineeringCategory?.id,
         createdById: "hr-team",
         updatedById: "hr-team"
@@ -298,7 +295,7 @@ export class VacancySeeder extends BaseSeeder {
             salary: true
           }
         },
-        pipelineId: marketingPipeline?.id,
+        pipelineId: hcmPipeline?.id,
         jobCategoryId: marketingCategory?.id,
         createdById: "hr-team",
         updatedById: "hr-team"
@@ -358,7 +355,7 @@ export class VacancySeeder extends BaseSeeder {
             salary: true
           }
         },
-        pipelineId: marketingPipeline?.id,
+        pipelineId: hcmPipeline?.id,
         jobCategoryId: marketingCategory?.id,
         createdById: "hr-team",
         updatedById: "hr-team"
@@ -419,7 +416,7 @@ export class VacancySeeder extends BaseSeeder {
             salary: true
           }
         },
-        pipelineId: salesPipeline?.id,
+        pipelineId: hcmPipeline?.id,
         jobCategoryId: salesCategory?.id,
         createdById: "hr-team",
         updatedById: "hr-team"
@@ -479,7 +476,7 @@ export class VacancySeeder extends BaseSeeder {
             salary: true
           }
         },
-        pipelineId: salesPipeline?.id,
+        pipelineId: hcmPipeline?.id,
         jobCategoryId: salesCategory?.id,
         createdById: "hr-team",
         updatedById: "hr-team"
@@ -540,7 +537,7 @@ export class VacancySeeder extends BaseSeeder {
             salary: true
           }
         },
-        pipelineId: executivePipeline?.id,
+        pipelineId: hcmPipeline?.id,
         jobCategoryId: engineeringCategory?.id,
         createdById: "hr-team",
         updatedById: "hr-team"
@@ -600,8 +597,71 @@ export class VacancySeeder extends BaseSeeder {
             salary: true
           }
         },
-        pipelineId: engineeringPipeline?.id,
+        pipelineId: hcmPipeline?.id,
         jobCategoryId: productCategory?.id,
+        createdById: "hr-team",
+        updatedById: "hr-team"
+      },
+      // Design Positions
+      {
+        id: this.generateId(),
+        title: "UI/UX Designer",
+        jobCode: "UIUX-001",
+        description:
+          "As a UI/UX Designer, you will be responsible for creating intuitive, engaging, and user-centered digital experiences across web and mobile applications. You will collaborate closely with Product, Business Analyst, Developer, and QA teams to understand user needs, translate business requirements into effective designs, and continuously improve product usability through research, testing, and iterative design improvements.",
+        responsibilities:
+          "Conduct user research and gather insights to understand user needs and pain points. Create user flows, wireframes, mockups, and interactive prototypes for web and mobile applications. Design intuitive and visually appealing user interfaces that align with business objectives and user expectations. Collaborate with Product, Business Analyst, Developers, and QA teams throughout the product development lifecycle. Conduct usability testing and analyze feedback to improve user experience. Maintain consistency of design standards, components, and design systems across products. Translate business requirements into user-centered design solutions. Continuously improve existing products through data-driven and user-focused design enhancements. Prepare design documentation and handoff materials for development teams.",
+        requirements:
+          "Domiciled in Bandung or willing to work onsite in Bandung. Graduated from SMK/D3/S1 in Information Technology, Design, Multimedia, Visual Communication Design, or related fields. Minimum 1 year of experience as a UI/UX Designer or possess a strong portfolio showcasing UI/UX projects. Experience designing web applications, mobile applications, or digital products. Proficient in design and prototyping tools such as Figma, Adobe XD, or similar tools. Proficient in Adobe Creative Suite (Photoshop, Illustrator, or equivalent). Strong understanding of UI principles, UX methodologies, usability, accessibility, and user-centered design. Experience conducting usability testing and implementing design improvements based on findings. Strong communication skills and ability to collaborate effectively with cross-functional teams. Able to present design concepts, rationale, and solutions clearly to stakeholders. Possess a portfolio demonstrating UI/UX design capabilities.",
+        status: JobStatus.PUBLISHED,
+        jobType: JobType.RECRUITMENT,
+        employmentType: EmploymentType.FULL_TIME,
+        workModel: WorkModel.ON_SITE,
+        startDate: new Date("2026-06-01"),
+        endDate: new Date("2026-08-31"),
+        isLimitApplicantEnabled: true,
+        applicantLimit: 50,
+        officeAddresses: ["Bandung Office - Jl. Asia Afrika No. 456"],
+        department: "design",
+        salaryMin: 8000000,
+        salaryMax: 15000000,
+        salaryPeriod: SalaryPeriod.MONTHLY,
+        currency: "IDR",
+        requiredEducation: EducationLevel.DIPLOMA,
+        requiredExperienceYears: 1,
+        hoursPerWeekMin: 40,
+        hoursPerWeekMax: 40,
+        generatedPosterUrl: "uiux-designer-poster.jpg",
+        posterConfiguration: {
+          jobDetails: {
+            dueDate: true,
+            jobTitle: true,
+            jobType: true,
+            applicantLimit: true
+          },
+          employmentDetails: {
+            employmentType: true,
+            category: true,
+            education: true,
+            experience: true
+          },
+          jobOverview: {
+            description: true,
+            responsibilities: true,
+            requirements: true
+          },
+          locations: {
+            locations: true
+          },
+          workModel: {
+            workModel: true
+          },
+          salary: {
+            salary: true
+          }
+        },
+        pipelineId: hcmPipeline?.id,
+        jobCategoryId: designCategory?.id,
         createdById: "hr-team",
         updatedById: "hr-team"
       },
@@ -660,7 +720,7 @@ export class VacancySeeder extends BaseSeeder {
             salary: true
           }
         },
-        pipelineId: engineeringPipeline?.id,
+        pipelineId: hcmPipeline?.id,
         jobCategoryId: engineeringCategory?.id,
         createdById: "hr-team",
         updatedById: "hr-team"

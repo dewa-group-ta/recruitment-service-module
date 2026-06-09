@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, SelectQueryBuilder, In, DataSource } from "typeorm";
 import { Application } from "../../applicants/entities/application.entity";
@@ -147,6 +147,8 @@ export interface CandidatesResponse {
 
 @Injectable()
 export class CandidatesService {
+  private readonly logger = new Logger(CandidatesService.name);
+
   constructor(
     @InjectRepository(Application)
     private readonly applicationRepository: Repository<Application>,
@@ -477,23 +479,13 @@ export class CandidatesService {
         if (s === 'talent-pool') {
           return `application.isTalentPool = true`;
         }
-        const statusMap: Record<string, string> = {
-          'new': 'applied',
-          'qualified': 'hired',
-          'disqualified': 'rejected'
-        };
         return `application.status = :status${index}`;
       });
-      
+
       queryBuilder.andWhere(`(${statusConditions.join(' OR ')})`);
       status.forEach((s, index) => {
         if (s !== 'talent-pool') {
-          const statusMap: Record<string, string> = {
-            'new': 'applied',
-            'qualified': 'hired',
-            'disqualified': 'rejected'
-          };
-          queryBuilder.setParameter(`status${index}`, statusMap[s] || s);
+          queryBuilder.setParameter(`status${index}`, s);
         }
       });
     }
@@ -503,7 +495,7 @@ export class CandidatesService {
     }
 
     if (stage && stage.length > 0) {
-      queryBuilder.andWhere('currentStage.stageTemplate.id IN (:...stage)', { stage });
+      queryBuilder.andWhere('currentStage.id IN (:...stage)', { stage });
     }
 
     if (vacancyId) {
@@ -586,23 +578,13 @@ export class CandidatesService {
         if (s === 'talent-pool') {
           return `application.isTalentPool = true`;
         }
-        const statusMap: Record<string, string> = {
-          'new': 'applied',
-          'qualified': 'hired',
-          'disqualified': 'rejected'
-        };
         return `application.status = :status${index}`;
       });
-      
+
       queryBuilder.andWhere(`(${statusConditions.join(' OR ')})`);
       status.forEach((s, index) => {
         if (s !== 'talent-pool') {
-          const statusMap: Record<string, string> = {
-            'new': 'applied',
-            'qualified': 'hired',
-            'disqualified': 'rejected'
-          };
-          queryBuilder.setParameter(`status${index}`, statusMap[s] || s);
+          queryBuilder.setParameter(`status${index}`, s);
         }
       });
     }
@@ -612,7 +594,7 @@ export class CandidatesService {
     }
 
     if (stage && stage.length > 0) {
-      queryBuilder.andWhere('stageTemplate.name IN (:...stage)', { stage });
+      queryBuilder.andWhere('currentStage.id IN (:...stage)', { stage });
     }
 
     if (vacancyId) {
@@ -712,15 +694,7 @@ export class CandidatesService {
     
     const age = calculateAge(applicant.dateOfBirth);
 
-    // Map status using consistent mapping
-    const statusMap: Record<string, string> = {
-      'applied': 'new',
-      'accepted': 'qualified', 
-      'rejected': 'disqualified',
-      'hired': 'qualified'
-    };
-
-    const status = statusMap[application.status] || 'new';
+    const status = application.status;
     const isTalentPool = application.isTalentPool;
 
     return {
@@ -981,31 +955,17 @@ export class CandidatesService {
       return stage.stageTemplate?.name || stage.name || 'Unknown Stage';
     };
     
-    // Fetch evaluation result once for full-precision score on isScoreAutomatic stages
-    const evalResult = await this.evaluationResultRepository.findOne({
-      where: { applicationId },
-      select: ['maxExperienceScore'],
-    });
-
     // Create stage progress
     const stageProgress = availableStages.map(stage => {
       const activity = activities.find(act => act.stage?.id === stage.id);
-      const isScoreAutomatic = stage.stageTemplate?.isScoreAutomatic || false;
-
-      // Use full-precision score from evaluation_results for automatic stages
-      // (stage_activities.score is numeric(10,2) and loses precision)
-      const score = isScoreAutomatic && activity?.score != null
-        ? (evalResult?.maxExperienceScore ?? activity.score)
-        : activity?.score;
 
       return {
         title: getStageName(stage),
         date: activity?.createdAt ? this.toISOString(activity.createdAt) : undefined,
         status: (activity?.status ?? StageActivityStatus.PENDING) as StageActivityStatus,
-        score,
+        score: activity?.score,
         notes: activity?.notes,
         canScore: stage.stageTemplate?.canScore || false,
-        isScoreAutomatic,
       };
     });
 
@@ -1021,7 +981,6 @@ export class CandidatesService {
 
     // Get canScore for current and upcoming stages
     const currentStageCanScore = application.currentStage?.stageTemplate?.canScore || false;
-    const currentStageIsScoreAutomatic = application.currentStage?.stageTemplate?.isScoreAutomatic || false;
     const upcomingStageCanScore = currentStageIndex < availableStages.length - 1
       ? (availableStages[currentStageIndex + 1] as any)?.stageTemplate?.canScore || false
       : false;
@@ -1031,7 +990,6 @@ export class CandidatesService {
       upcomingStage,
       overallScore: application.currentScore,
       currentStageCanScore,
-      currentStageIsScoreAutomatic,
       upcomingStageCanScore,
       stages: stageProgress
     };
@@ -1055,25 +1013,27 @@ export class CandidatesService {
       throw new NotFoundException(`Application with ID ${applicationId} not found`);
     }
 
-    // When rejecting, mark the current in-progress stage activity as failed
-    if (status === ApplicantStatus.REJECTED && application.currentStageId) {
-      const currentActivity = application.activities?.find(
-        act => act.stageId === application.currentStageId &&
-               act.status === StageActivityStatus.IN_PROGRESS
-      );
-      if (currentActivity) {
-        await this.stageActivityRepository.update(currentActivity.id, {
-          status: StageActivityStatus.FAILED,
-          notes: notes,
-          score: score,
-        });
+    await this.dataSource.transaction(async (manager) => {
+      // When rejecting, mark the current in-progress stage activity as failed
+      if (status === ApplicantStatus.REJECTED && application.currentStageId) {
+        const currentActivity = application.activities?.find(
+          act => act.stageId === application.currentStageId &&
+                 act.status === StageActivityStatus.IN_PROGRESS
+        );
+        if (currentActivity) {
+          await manager.update(StageActivity, currentActivity.id, {
+            status: StageActivityStatus.FAILED,
+            notes: notes,
+            score: score,
+          });
+        }
       }
-    }
 
-    // Update application status
-    await this.applicationRepository.update(applicationId, {
-      status: status as any,
-      lastActivityAt: new Date()
+      // Update application status
+      await manager.update(Application, applicationId, {
+        status: status as any,
+        lastActivityAt: new Date()
+      });
     });
 
     // Send status update notification to applicant
@@ -1096,8 +1056,7 @@ export class CandidatesService {
         );
       }
     } catch (error) {
-      // Log error but don't fail the operation
-      console.error('Failed to send status update notification:', error);
+      this.logger.error('Failed to send status update notification:', error);
     }
 
     // Return updated candidate
@@ -1123,24 +1082,24 @@ export class CandidatesService {
         throw new NotFoundException(`Application with ID ${applicationId} not found`);
       }
 
+      if (application.status === ApplicantStatus.HIRED || application.status === ApplicantStatus.REJECTED) {
+        throw new BadRequestException(`Cannot move application in terminal state: ${application.status}`);
+      }
+
       const currentStage = application.currentStage;
+      if (!currentStage) {
+        throw new BadRequestException(`Application has no current stage. Ensure applyForPosition was called first.`);
+      }
 
       // Find next stage
       const stages = application.pipeline?.stages || [];
-      const nextStage = stages.find(stage => stage.stageOrder > currentStage?.stageOrder);
+      const nextStage = stages.find(stage => stage.stageOrder > currentStage.stageOrder);
       if (!nextStage) {
         throw new NotFoundException(`Next stage not found`);
       }
 
-      // If current stage score is provided by system, fetch it from evaluation_results
-      let effectiveScore = score;
-      if (currentStage?.stageTemplate?.isScoreAutomatic) {
-        const evalResult = await this.evaluationResultRepository.findOne({
-          where: { applicationId },
-          select: ['maxExperienceScore'],
-        });
-        effectiveScore = evalResult?.maxExperienceScore ?? undefined;
-      }
+      // Stage score is always provided by HR — no automatic scoring from evaluation results
+      const effectiveScore = score;
 
       // calculate overall score
       const activityWithScore = application.activities.filter(activity => activity.score !== undefined && activity.score !== null);
@@ -1205,39 +1164,13 @@ export class CandidatesService {
           }
         } catch (error) {
           // Log error but don't fail the transaction
-          console.error('Failed to send stage update notification:', error);
+          this.logger.error('Failed to send stage update notification:', error);
         }
       }
 
       // Return updated candidate
       return this.getCandidateDetail(applicationId);
     });
-  }
-
-  /**
-   * Add candidate score
-   */
-  async addCandidateScore(
-    applicationId: string,
-    score: number,
-    notes?: string
-  ): Promise<Candidate> {
-    const application = await this.applicationRepository.findOne({
-      where: { id: applicationId }
-    });
-
-    if (!application) {
-      throw new Error(`Application with ID ${applicationId} not found`);
-    }
-
-    // Update application score
-    await this.applicationRepository.update(applicationId, {
-      currentScore: score,
-      lastActivityAt: new Date()
-    });
-
-    // Return updated candidate
-    return this.getCandidateDetail(applicationId);
   }
 
   /**

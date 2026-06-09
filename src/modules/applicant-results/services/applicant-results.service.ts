@@ -70,7 +70,8 @@ export class ApplicantResultsService {
   // ─────────────────────────────────────────────────────────────────────────────
   async runScoring(
     applicationId: string,
-    cvFilePath: string
+    cvFilePath: string,
+    cvMimeType: string
   ): Promise<FastApiScoringResponseDto> {
     this.logger.log(`Memulai scoring untuk applicationId=${applicationId}`);
     const application = await this.applicationRepository.findOne({
@@ -82,14 +83,14 @@ export class ApplicantResultsService {
       throw new NotFoundException(`Application ${applicationId} tidak ditemukan`);
     }
 
-    const { applicant, vacancy } = application;
+    const { vacancy } = application;
     const cvBuffer = await this.minioService.getFileBuffer(cvFilePath);
 
-    // Hapus parameter requiredEducationLevel
     const scoringResult = await this.callFastApiScoring(
       applicationId,
       cvBuffer,
       cvFilePath,
+      cvMimeType,
       vacancy.responsibilities ?? ""
     );
 
@@ -108,35 +109,35 @@ export class ApplicantResultsService {
   // PRIVATE: FastAPI call
   // ─────────────────────────────────────────────────────────────────────────────
   private async callFastApiScoring(
-  applicationId: string,
-  cvBuffer: Buffer,
-  cvFilePath: string,
-  jobResponsibilities: string    // ← rename parameter
-): Promise<FastApiScoringResponseDto> {
+    applicationId: string,
+    cvBuffer: Buffer,
+    cvFilePath: string,
+    cvMimeType: string,
+    jobResponsibilities: string
+  ): Promise<FastApiScoringResponseDto> {
 
-  const url = `${this.fastApiBaseUrl}/parse-and-evaluate/`;
-  const form = new FormData();
-  const fileName = cvFilePath.split("/").pop() ?? "cv.pdf";
+    const url = `${this.fastApiBaseUrl}/parse-and-evaluate/`;
+    const form = new FormData();
+    const fileName = cvFilePath.split("/").pop() ?? "cv.pdf";
 
-  form.append("cv_file", cvBuffer, { filename: fileName, contentType: "application/pdf" });
-  form.append("application_id", applicationId);
-  form.append("job_responsibilities", jobResponsibilities);  // ← ganti dari role_description
-  // required_education_level dihapus
+    form.append("cv_file", cvBuffer, { filename: fileName, contentType: cvMimeType });
+    form.append("application_id", applicationId);
+    form.append("job_responsibilities", jobResponsibilities);
 
-  try {
-    const response = await firstValueFrom(
-      this.httpService.post<FastApiScoringResponseDto>(url, form, {
-        headers: { ...form.getHeaders() },
-        timeout: 120_000
-      })
-    );
-    return response.data;
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    this.logger.error(`FastAPI scoring gagal: ${message}`);
-    throw new InternalServerErrorException(`Gagal menghubungi FastAPI Scoring Service: ${message}`);
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post<FastApiScoringResponseDto>(url, form, {
+          headers: { ...form.getHeaders() },
+          timeout: 120_000,
+        })
+      );
+      return response.data;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`FastAPI scoring gagal: ${message}`);
+      throw new InternalServerErrorException(`Gagal menghubungi FastAPI Scoring Service: ${message}`);
+    }
   }
-}
 
   // ─────────────────────────────────────────────────────────────────────────────
   // PRIVATE: Simpan ke database
