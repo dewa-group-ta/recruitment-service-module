@@ -21,27 +21,29 @@ export class MinioService implements OnModuleInit {
       throw new Error("MinIO credentials (MINIO_ACCESS_KEY, MINIO_SECRET_KEY) must be set in environment");
     }
 
-    try {
-      this.minioClient = new Minio.Client({
-        endPoint: this.configService.get<string>("minio.endPoint") ?? "localhost",
-        port: this.configService.get<number>("minio.port") ?? 9000,
-        useSSL: this.configService.get<boolean>("minio.useSSL") ?? false,
-        accessKey,
-        secretKey,
-        region: this.configService.get<string>("minio.region") ?? "us-east-1",
-      });
+    this.minioClient = new Minio.Client({
+      endPoint: this.configService.get<string>("minio.endPoint") ?? "localhost",
+      port: this.configService.get<number>("minio.port") ?? 9000,
+      useSSL: this.configService.get<boolean>("minio.useSSL") ?? false,
+      accessKey,
+      secretKey,
+      region: this.configService.get<string>("minio.region") ?? "us-east-1",
+    });
 
-      // Check if bucket exists, create if not
+    try {
       const bucketExists = await this.minioClient.bucketExists(this.bucketName);
       if (!bucketExists) {
-        await this.minioClient.makeBucket(this.bucketName, "us-east-1");
+        await this.minioClient.makeBucket(
+          this.bucketName,
+          this.configService.get<string>("minio.region") ?? "us-east-1",
+        );
         this.logger.log(`Bucket ${this.bucketName} created successfully`);
       }
-
       this.logger.log("MinIO client initialized successfully");
     } catch (error) {
-      this.logger.error("Failed to initialize MinIO client", error);
-      throw error;
+      // Bucket check failed — log warning but don't crash app.
+      // Bucket already exists in S3; actual upload errors surface per-request.
+      this.logger.warn(`Bucket check failed, continuing: ${(error as Error).message}`);
     }
   }
 
