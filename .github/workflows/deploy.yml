@@ -115,7 +115,7 @@ jobs:
 
             # Update .env dengan nilai dari GitHub Secrets
             cat > /opt/recruitment/.env << 'ENVEOF'
-            GITHUB_REPOSITORY_OWNER=${{ secrets.GITHUB_REPOSITORY_OWNER }}
+            GITHUB_REPOSITORY_OWNER=${{ github.repository_owner }}
             DB_NAME=${{ secrets.DB_NAME }}
             DB_USERNAME=${{ secrets.DB_USERNAME }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
