@@ -13,7 +13,12 @@ async function bootstrap() {
 
   appHttp.enableShutdownHooks();
 
-  appHttp.enableCors();
+  appHttp.enableCors({
+    origin: process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(",")
+      : true,
+    credentials: true
+  });
 
   // Configure class-validator to use NestJS container
   useContainer(appHttp.select(AppModule), { fallbackOnErrors: true });

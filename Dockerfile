@@ -1,34 +1,54 @@
-FROM node:22.11.0-slim
+# ── Stage 1: Install all dependencies (dev + prod, needed for build) ──────────
+FROM node:22.11.0-slim AS deps
+WORKDIR /app
 
-# Install tzdata and set timezone
-RUN apt-get update && apt-get install -y tzdata \
-  && ln -sf /usr/share/zoneinfo/Asia/Jakarta /etc/localtime \
-  && echo "Asia/Jakarta" > /etc/timezone \
-  && dpkg-reconfigure -f noninteractive tzdata \
-  && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN npm install -g pnpm@9
 
-# 2) Install + deps + fonts
-RUN apt-get update && apt-get install -y \
-  fonts-dejavu fonts-noto fonts-noto-cjk fontconfig \
-  libnss3 libxss1 libx11-6 libx11-xcb1 libxcomposite1 libxcursor1 libxdamage1 \
-  libxext6 libxi6 libxrender1 libxtst6 libcups2 libdrm2 libgbm1 libasound2 \
-  && rm -rf /var/lib/apt/lists/*
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# ── Stage 2: Build TypeScript ─────────────────────────────────────────────────
+FROM node:22.11.0-slim AS builder
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json pnpm-lock.yaml tsconfig.json tsconfig.build.json nest-cli.json ./
+COPY src/ ./src/
+
+RUN pnpm build
+
+# ── Stage 3: Production runner ────────────────────────────────────────────────
+FROM node:22.11.0-slim AS runner
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tzdata \
+    fonts-dejavu \
+    fonts-noto \
+    fonts-noto-cjk \
+    fontconfig \
+    curl \
+    && ln -sf /usr/share/zoneinfo/Asia/Jakarta /etc/localtime \
+    && echo "Asia/Jakarta" > /etc/timezone \
+    && dpkg-reconfigure -f noninteractive tzdata \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ENV TZ=Asia/Jakarta
-
+ENV NODE_ENV=production
 ENV RUN_IN_DOCKER=1
 
 WORKDIR /app
 
-# Root
-COPY ./package.json ./
-COPY ./node_modules/ ./node_modules/
+RUN npm install -g pnpm@9
 
-# This package
-COPY ./dist/ ./dist/
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
 
-# 5) Jalankan sebagai user non-root
+COPY --from=builder /app/dist ./dist
+
 USER node
 
 EXPOSE 3000
-CMD ["yarn", "start:prod"]
+
+CMD ["node", "dist/main"]

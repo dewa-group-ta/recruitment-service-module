@@ -1,0 +1,115 @@
+version: "3.9"
+
+networks:
+  # Internal network: NestJS ↔ FastAPI berkomunikasi di sini
+  # FastAPI TIDAK terekspos ke internet — hanya NestJS yang bisa reach via Docker DNS
+  app-internal:
+    driver: bridge
+  # Database-only network: isolasi PostgreSQL dari FastAPI
+  db-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:17-alpine
+    container_name: recruitment_postgres
+    restart: unless-stopped
+    networks:
+      - db-network
+    environment:
+      TZ: Asia/Jakarta
+      PGTZ: Asia/Jakarta
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── FastAPI Screening Service ───────────────────────────────────────────────
+  # Tidak ada ports: — hanya NestJS yang bisa akses lewat Docker internal network
+  fastapi:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/screening-service:latest
+    container_name: recruitment_fastapi
+    restart: unless-stopped
+    networks:
+      - app-internal
+    environment:
+      OLLAMA_HOST: ${OLLAMA_HOST}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.1-8b-instant}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1200M
+
+  # ── NestJS Backend ──────────────────────────────────────────────────────────
+  nestjs:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/recruitment-service:latest
+    container_name: recruitment_nestjs
+    restart: unless-stopped
+    networks:
+      - app-internal
+      - db-network
+    ports:
+      - "80:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      SERVICE_CODE: ${SERVICE_CODE:-RECRUITMENT}
+      # Database
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      # AWS S3 — menggunakan MinIO SDK yang S3-compatible
+      # Tidak perlu ubah kode NestJS, cukup arahkan endpoint ke S3
+      MINIO_ENDPOINT: s3.${AWS_REGION:-ap-southeast-3}.amazonaws.com
+      MINIO_PORT: "443"
+      MINIO_USE_SSL: "true"
+      MINIO_ACCESS_KEY: ${AWS_ACCESS_KEY_ID}
+      MINIO_SECRET_KEY: ${AWS_SECRET_ACCESS_KEY}
+      MINIO_BUCKET_NAME: ${S3_BUCKET_NAME}
+      # Email
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
+      # FastAPI — Docker DNS name, BUKAN localhost
+      FASTAPI_BASE_URL: http://fastapi:8000
+      # Auth
+      JWT_SECRET: ${JWT_SECRET}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      TZ: Asia/Jakarta
+    depends_on:
+      postgres:
+        condition: service_healthy
+      fastapi:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

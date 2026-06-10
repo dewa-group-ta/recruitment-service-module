@@ -26,8 +26,8 @@ import { AppCacheModule } from "./shared/modules/cache.module";
 import { CacheService } from "./shared/services/cache.service";
 import { CacheInterceptor } from "./shared/interceptors/cache.interceptor";
 import minioConfig from "./config/minio.config";
-import { Applicant } from "./modules/applicants";
 import { ApplicantResultsModule } from "./modules/applicant-results/applicant-results.module";
+import { HealthModule } from "./modules/health/health.module";
 
 dotenv.config();
 
@@ -51,7 +51,8 @@ dotenv.config();
     DepartmentModule,
     AnalyticsModule,
     CandidatesModule,
-    ApplicantResultsModule
+    ApplicantResultsModule,
+    HealthModule
   ],
   controllers: [],
   providers: [

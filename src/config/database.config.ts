@@ -12,7 +12,7 @@ const databaseConfig: TypeOrmModuleOptions = {
   password: String(process.env.DB_PASSWORD),
   database: String(process.env.DB_NAME),
   entities: [__dirname + "/../**/*.entity.{js,ts}"],
-  synchronize: true,
+  synchronize: process.env.NODE_ENV !== "production",
   logging: process.env.NODE_ENV === "debug",
   autoLoadEntities: true
 };

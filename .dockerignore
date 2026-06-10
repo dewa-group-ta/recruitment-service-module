@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.nyc_output/
+.git/
+.gitignore
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+.vscode/
+.idea/
+README*.md
+API_*.md
+BUGFIX_*.md

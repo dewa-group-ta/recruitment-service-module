@@ -1,0 +1,164 @@
+name: Build, Push, and Deploy
+
+on:
+  push:
+    branches:
+      - chore/ci-cd
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: "Force deploy meski tidak ada perubahan"
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/recruitment-service
+
+jobs:
+  # ── Test ────────────────────────────────────────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: pnpm test
+        env:
+          NODE_ENV: test
+
+  # ── Build & Push NestJS image ────────────────────────────────────────────────
+  build:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login ke GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=latest
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build dan push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Deploy ke EC2 ────────────────────────────────────────────────────────────
+  # Workflow ini sekaligus mendeploy KEDUA service (nestjs + fastapi) karena
+  # docker-compose.prod.yml ada di repo ini.
+  deploy:
+    name: Deploy ke EC2
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: production
+      url: http://${{ secrets.EC2_HOST }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update .env dan deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          port: 22
+          script_stop: true
+          command_timeout: 15m
+          script: |
+            set -euo pipefail
+            cd /opt/recruitment
+
+            # Pull kode terbaru dari repo ini (docker-compose.prod.yml)
+            git fetch origin chore/ci-cd
+            git reset --hard origin/chore/ci-cd
+
+            # Update .env dengan nilai dari GitHub Secrets
+            cat > /opt/recruitment/.env << 'ENVEOF'
+            GITHUB_REPOSITORY_OWNER=${{ secrets.GITHUB_REPOSITORY_OWNER }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_USERNAME=${{ secrets.DB_USERNAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            AWS_REGION=${{ secrets.AWS_REGION }}
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            SMTP_HOST=${{ secrets.SMTP_HOST }}
+            SMTP_PORT=${{ secrets.SMTP_PORT }}
+            SMTP_SECURE=false
+            SMTP_USER=${{ secrets.SMTP_USER }}
+            SMTP_PASS=${{ secrets.SMTP_PASS }}
+            SMTP_FROM_NAME=${{ secrets.SMTP_FROM_NAME }}
+            SMTP_FROM_EMAIL=${{ secrets.SMTP_FROM_EMAIL }}
+            OLLAMA_HOST=${{ secrets.OLLAMA_HOST }}
+            OLLAMA_MODEL=${{ secrets.OLLAMA_MODEL }}
+            GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
+            GROQ_MODEL=${{ secrets.GROQ_MODEL }}
+            SERVICE_CODE=RECRUITMENT
+            ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+            ENVEOF
+            chmod 600 /opt/recruitment/.env
+
+            # Login ke GHCR untuk pull image
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
+              -u "${{ github.actor }}" --password-stdin
+
+            # Pull image terbaru (keduanya menggunakan :latest)
+            echo "==> Pulling images..."
+            docker compose -f docker-compose.prod.yml pull
+
+            # Deploy — semua service
+            echo "==> Deploying..."
+            docker compose -f docker-compose.prod.yml up -d \
+              --remove-orphans \
+              --wait \
+              --wait-timeout 120
+
+            echo "==> Status:"
+            docker compose -f docker-compose.prod.yml ps
+
+            # Bersihkan image lama
+            docker image prune -f --filter "until=72h"
+
+            echo "==> Deployment selesai!"
