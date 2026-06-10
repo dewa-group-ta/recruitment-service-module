@@ -70,7 +70,6 @@ export class MinioService implements OnModuleInit {
         {
           "Content-Type": file.mimetype,
           "Original-Name": file.originalname,
-          "x-amz-acl": "public-read"
         }
       );
 
