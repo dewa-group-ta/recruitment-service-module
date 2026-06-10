@@ -82,6 +82,7 @@ services:
       DB_NAME: ${DB_NAME}
       # AWS S3 — menggunakan MinIO SDK yang S3-compatible
       # Tidak perlu ubah kode NestJS, cukup arahkan endpoint ke S3
+      AWS_REGION: ${AWS_REGION:-ap-southeast-3}
       MINIO_ENDPOINT: s3.${AWS_REGION:-ap-southeast-3}.amazonaws.com
       MINIO_PORT: "443"
       MINIO_USE_SSL: "true"
