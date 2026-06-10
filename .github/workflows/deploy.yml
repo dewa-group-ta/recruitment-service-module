@@ -92,7 +92,7 @@ jobs:
     needs: build
     environment:
       name: production
-      url: http://${{ secrets.EC2_HOST }}
+      url: http://16.79.51.131
     steps:
       - uses: actions/checkout@v4
 
