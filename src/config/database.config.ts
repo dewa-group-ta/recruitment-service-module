@@ -19,8 +19,8 @@ const databaseConfig: TypeOrmModuleOptions = {
 
 const migrationConfig: TypeOrmModuleOptions = {
   ...databaseConfig,
-  entities: ["./src/modules/" + "{,./}**/*.entity{.ts,.js}"],
-  migrations: ["src/migrations/*.ts"]
+  entities: [__dirname + "/../**/*.entity.{js,ts}"],
+  migrations: [__dirname + "/../migrations/*.{js,ts}"]
 };
 
 export { databaseConfig };
