@@ -28,6 +28,7 @@ export class MinioService implements OnModuleInit {
         useSSL: this.configService.get<boolean>("minio.useSSL") ?? false,
         accessKey,
         secretKey,
+        region: this.configService.get<string>("minio.region") ?? "us-east-1",
       });
 
       // Check if bucket exists, create if not

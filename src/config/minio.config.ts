@@ -6,5 +6,6 @@ export default registerAs("minio", () => ({
   useSSL: process.env.MINIO_USE_SSL === "true",
   accessKey: process.env.MINIO_ACCESS_KEY || "minioadmin",
   secretKey: process.env.MINIO_SECRET_KEY || "minioadmin",
-  bucketName: process.env.MINIO_BUCKET_NAME || "recruitment-files"
+  bucketName: process.env.MINIO_BUCKET_NAME || "recruitment-files",
+  region: process.env.AWS_REGION || "us-east-1",
 }));
