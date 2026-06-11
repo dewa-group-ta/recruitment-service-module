@@ -21,28 +21,28 @@ export class HealthController {
     const seconds = uptime % 60;
 
     return {
-      message: "Halo dari AWS - Sistem Rekrutmen Cerdas Siap Digunakan!",
+      message: "Halo dari AWS EC2 Jakarta — Sistem Rekrutmen Cerdas",
       tagline:
-        "Dari kode ke cloud dalam hitungan menit, otomatis, andal, dan terukur.",
-      service: "Recruitment Service (NestJS)",
+        "Platform rekrutmen berbasis AI yang menghubungkan talenta terbaik dengan peluang yang tepat.",
+      service: "Recruitment Service",
       region: `AWS EC2 Jakarta (${process.env.AWS_REGION ?? "ap-southeast-3"})`,
       environment: process.env.NODE_ENV ?? "production",
       cicd: {
-        headline:
-          "Setiap push kode langsung live di AWS tanpa intervensi manual.",
+        description:
+          "Setiap perubahan kode di-deploy otomatis ke AWS tanpa downtime melalui pipeline CI/CD.",
         pipeline: "GitHub Actions",
-        steps: [
-          "1. Push ke GitHub  ->  CI/CD otomatis terpicu",
-          "2. Unit test dijalankan  ->  Build Docker image",
-          "3. Image di-push ke GHCR  ->  Deploy via SSH ke EC2",
-          "4. Container berjalan  ->  Endpoint ini aktif kembali"
+        flow: [
+          "Push ke GitHub -> Automated testing -> Docker image build",
+          "Image push ke GitHub Container Registry (GHCR)",
+          "SSH deploy ke EC2 -> Container restart -> Live"
         ],
         stack: {
-          backend: "NestJS (TypeScript) + FastAPI (Python + SBERT + Groq AI)",
+          backend: "NestJS (TypeScript) + FastAPI (Python)",
+          ai: "SBERT Semantic Matching",
           database: "PostgreSQL 17",
-          storage: "AWS S3 (ap-southeast-3)",
+          storage: "AWS S3",
           infra: "Docker Compose on EC2 t3.medium",
-          registry: "GitHub Container Registry (GHCR)"
+          registry: "GitHub Container Registry"
         }
       },
       deployment: {
@@ -51,14 +51,24 @@ export class HealthController {
         currentTime: new Date().toISOString()
       },
       callToAction: {
-        applyNow:
-          "POST /applicants/quick-apply  ->  Upload CV dan lamar lowongan dalam satu langkah",
-        aiScreening:
-          "CV Anda dianalisis otomatis oleh AI menggunakan SBERT semantic matching dan Groq LLM",
-        viewVacancies:
-          "GET /public/vacancies  ->  Lihat semua lowongan yang tersedia"
+        quickApply: {
+          method: "POST",
+          endpoint: "/applicants/quick-apply",
+          description:
+            "Lamar lowongan sekarang. Unggah CV Anda dan sistem AI kami akan mencocokkan profil Anda secara otomatis."
+        },
+        exploreVacancies: {
+          method: "GET",
+          endpoint: "/public/vacancies",
+          description:
+            "Temukan lowongan yang sesuai dengan keahlian dan pengalaman Anda."
+        },
+        aiScreening: {
+          description:
+            "CV Anda dianalisis secara semantik menggunakan model SBERT dan Groq LLM untuk menghasilkan skor kesesuaian yang akurat dan objektif."
+        }
       },
-      status: "All systems operational - NestJS, FastAPI, PostgreSQL, S3"
+      status: "All systems operational"
     };
   }
 }
