@@ -1075,7 +1075,7 @@ export class CandidatesService {
     return await this.dataSource.transaction(async (manager) => {
       const application = await manager.findOne(Application, {
         where: { id: applicationId },
-        relations: ["currentStage", "currentStage.stageTemplate", "pipeline", "pipeline.stages", "activities"]
+        relations: ["currentStage", "currentStage.stageTemplate", "pipeline", "pipeline.stages", "pipeline.stages.stageTemplate", "activities"]
       });
 
       if (!application) {

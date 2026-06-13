@@ -294,11 +294,16 @@ export class SystemConfigurationSeeder extends BaseSeeder {
         sortOrder: 1,
         configValueJson: {
           subject: "Registration Success - {{applicant_name}}",
-          body: `Thank you for registering on our platform. To proceed with your application, please access the link below and complete the required information:
-          <a href="{{application_link}}">Access Application</a>
-          Best regards,
-          {{company_name}}
-          {{company_website}}`
+          body: `<div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1a1a1a;">
+            <h2 style="color: #1a1a1a; margin-bottom: 16px;">Registration Successful</h2>
+            <p>Dear <strong>{{applicant_name}}</strong>,</p>
+            <p>Thank you for registering on our platform. To proceed with your application, please access the link below and complete the required information.</p>
+            <p>
+              <a href="{{application_link}}" style="display: inline-block; background-color: #c3571c; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold;">Access Application</a>
+            </p>
+            <p style="color: #888888; font-size: 12px;">If the button does not work, copy this link: {{application_link}}</p>
+            <p>Best regards,<br>{{company_name}}</p>
+          </div>`
         }
       },
       {
@@ -307,16 +312,27 @@ export class SystemConfigurationSeeder extends BaseSeeder {
         configType: ConfigType.JSON,
         groupName: "notifications",
         label: "Applicant Apply Notification",
-        description: "Notifikasi pendaftaran calon karyawan",
+        description: "Notifikasi pendaftaran calon karyawan (quick apply)",
         isRequired: false,
         isPublic: true,
         sortOrder: 2,
         configValueJson: {
           subject: "Application Received - {{vacancy_name}}",
-          body: `Thank you for applying for the {{vacancy_name}} position at {{company_name}}. To proceed with your application, please access the link below and complete the required information: <a href="{{application_link}}">Access Application</a>
-          Best regards,
-          {{company_name}}
-          {{company_website}}`
+          body: `<div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1a1a1a;">
+            <h2 style="color: #1a1a1a; margin-bottom: 16px;">Application Confirmed</h2>
+            <p>Dear <strong>{{applicant_name}}</strong>,</p>
+            <p>Your application for the <strong>{{vacancy_name}}</strong> position at <strong>{{company_name}}</strong> has been successfully received.</p>
+            <div style="background-color: #fdf7ed; border-left: 4px solid #c3571c; padding: 16px; margin: 24px 0; border-radius: 4px;">
+              <p style="margin: 0 0 8px 0; color: #555555; font-size: 14px;">Your Application Code</p>
+              <p style="margin: 0; font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #c3571c;">{{registration_code}}</p>
+            </div>
+            <p>Keep this code safe — you will need it to track your application status.</p>
+            <p>
+              <a href="{{tracking_link}}" style="display: inline-block; background-color: #c3571c; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold;">Track My Application</a>
+            </p>
+            <p style="color: #888888; font-size: 12px;">If the button does not work, copy this link: {{tracking_link}}</p>
+            <p>Best regards,<br>{{company_name}}</p>
+          </div>`
         }
       },
       {
@@ -331,13 +347,46 @@ export class SystemConfigurationSeeder extends BaseSeeder {
         sortOrder: 3,
         configValueJson: {
           subject: "Application Status Update - {{vacancy_name}}",
-          body: `Your application for the {{vacancy_name}} position at {{company_name}} has been updated.
-          Please check your application status at <a href="{{application_link}}">Application Tracking</a>
-          We will continue to keep you informed about any further updates.
-          Best regards,
-          {{company_name}}
-          {{company_website}}`
+          body: `<div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1a1a1a;">
+            <h2 style="color: #1a1a1a; margin-bottom: 16px;">Application Status Update</h2>
+            <p>Dear <strong>{{applicant_name}}</strong>,</p>
+            <p>Your application for the <strong>{{vacancy_name}}</strong> position at <strong>{{company_name}}</strong> has been updated.</p>
+            <p>Please check your application status for further details.</p>
+            <p>Best regards,<br>{{company_name}}</p>
+          </div>`
         }
+      },
+      {
+        configKey: "notification_applicant_stage_update",
+        configValue: "",
+        configType: ConfigType.JSON,
+        groupName: "notifications",
+        label: "Applicant Stage Update Notification",
+        description: "Notifikasi pembaruan tahap rekrutmen calon karyawan",
+        isRequired: false,
+        isPublic: true,
+        sortOrder: 4,
+        configValueJson: {
+          subject: "Recruitment Stage Update - {{vacancy_name}}",
+          body: `<div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1a1a1a;">
+            <h2 style="color: #1a1a1a; margin-bottom: 16px;">Recruitment Stage Update</h2>
+            <p>Dear <strong>{{applicant_name}}</strong>,</p>
+            <p>Your application for the <strong>{{vacancy_name}}</strong> position has been moved to the next stage: <strong>{{stage_name}}</strong>.</p>
+            <p>Please check your application status for further details.</p>
+            <p>Best regards,<br>{{company_name}}</p>
+          </div>`
+        }
+      },
+      {
+        configKey: "notification_door_enabled",
+        configValue: "true",
+        configType: ConfigType.TEXT,
+        groupName: "notifications",
+        label: "DOOR Notification Enabled",
+        description: "Toggle untuk mengaktifkan/menonaktifkan notifikasi DOOR",
+        isRequired: false,
+        isPublic: false,
+        sortOrder: 5
       },
       {
         configKey: "notification_applicant_login_token",
@@ -348,27 +397,20 @@ export class SystemConfigurationSeeder extends BaseSeeder {
         description: "Notifikasi token login untuk calon karyawan",
         isRequired: false,
         isPublic: true,
-        sortOrder: 4,
+        sortOrder: 6,
         configValueJson: {
           subject: "Your Login Token - {{company_name}}",
-          body: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">Login to Your Account</h2>
+          body: `<div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1a1a1a;">
+            <h2 style="color: #1a1a1a; margin-bottom: 16px;">Login to Your Account</h2>
             <p>Hello <strong>{{applicant_name}}</strong>,</p>
             <p>You requested to login to your recruitment account. Click the link below to access your account:</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="{{application_link}}" 
-                 style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                Login to My Account
-              </a>
-            </div>
-            <p>Or copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; color: #666;">{{application_link}}</p>
-            <p><strong>This link will expire in 24 hours.</strong></p>
-            <p>If you didn't request this login, please ignore this email.</p>
-            <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-            <p style="color: #666; font-size: 12px;">
-              This is an automated message from {{company_name}}. Please do not reply to this email.
+            <p>
+              <a href="{{application_link}}" style="display: inline-block; background-color: #c3571c; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold;">Login to My Account</a>
             </p>
+            <p style="color: #888888; font-size: 12px;">If the button does not work, copy this link: {{application_link}}</p>
+            <p><strong>This link will expire in 24 hours.</strong></p>
+            <p style="color: #888888; font-size: 12px;">If you didn't request this login, please ignore this email. This is an automated message from {{company_name}}. Please do not reply to this email.</p>
+            <p>Best regards,<br>{{company_name}}</p>
           </div>`
         }
       },

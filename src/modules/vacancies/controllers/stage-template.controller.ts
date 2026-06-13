@@ -9,7 +9,8 @@ import {
   Query,
   HttpStatus,
   HttpCode,
-  BadRequestException
+  BadRequestException,
+  Req
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -28,6 +29,7 @@ import { Pagination } from "../../../shared/paginate/pagination";
 import { QueryStageTemplateDto } from "../dto/query-stage-template.dto";
 import { ResponseMessage } from "../../../shared/decorators/response.decorator";
 import { responseMessage } from "../../../shared/utils/constant";
+import { AuthenticatedRequest } from "../../../shared/interface";
 
 @ApiTags("Stage Templates")
 @Controller("stage-templates")
@@ -48,8 +50,13 @@ export class StageTemplateController {
     description: "Invalid input data"
   })
   async create(
-    @Body() createStageTemplateDto: CreateStageTemplateDto
+    @Body() createStageTemplateDto: CreateStageTemplateDto,
+    @Req() req: AuthenticatedRequest
   ): Promise<StageTemplateResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException("User not authenticated");
+    }
+    createStageTemplateDto.createdById = req.user.id;
     return await this.stageTemplateService.create(createStageTemplateDto);
   }
 

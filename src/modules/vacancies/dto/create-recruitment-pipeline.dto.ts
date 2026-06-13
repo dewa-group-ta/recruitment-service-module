@@ -5,7 +5,6 @@ import {
   IsBoolean,
   IsOptional,
   IsNumber,
-  IsUUID,
   MaxLength,
   Min
 } from "class-validator";
@@ -87,11 +86,10 @@ export class CreateRecruitmentPipelineDto {
   @Min(0)
   usageCount?: number;
 
-  @ApiProperty({
-    description: "ID of user creating this pipeline",
-    example: "123e4567-e89b-12d3-a456-426614174000"
+  @ApiPropertyOptional({
+    description: "ID of user creating this pipeline"
   })
-  @IsUUID()
-  @IsNotEmpty()
-  createdById: string;
+  @IsString()
+  @IsOptional()
+  createdById?: string;
 }

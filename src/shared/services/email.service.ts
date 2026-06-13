@@ -230,6 +230,20 @@ export class EmailService implements IEmailService {
     );
   }
 
+  async sendQuickApplyConfirmationEmail(
+    applicantEmail: string,
+    applicantName: string,
+    jobTitle: string,
+    registrationCode: string,
+    trackingLink: string
+  ): Promise<boolean> {
+    return this.sendTemplateEmail(
+      EmailTemplateName.QUICK_APPLY_CONFIRMATION,
+      { email: applicantEmail, name: applicantName },
+      { applicantName, jobTitle, registrationCode, trackingLink }
+    );
+  }
+
   /**
    * Send application status update email
    * @param applicantEmail Applicant email

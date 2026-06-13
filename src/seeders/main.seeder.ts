@@ -1,7 +1,6 @@
 import { DataSource } from "typeorm";
 import { BaseSeeder } from "./base.seeder";
 import { StageTemplateSeeder } from "./stage-template.seeder";
-import { PipelineTemplateSeeder } from "./pipeline-template.seeder";
 import { RecruitmentPipelineSeeder } from "./recruitment-pipeline.seeder";
 import { VacancySeeder } from "./vacancy.seeder";
 import { ApplicantSourceSeeder } from "./applicant-source.seeder";
@@ -36,7 +35,6 @@ export class MainSeeder extends BaseSeeder {
       new JobCategorySeeder(this.dataSource),
       new DepartmentSeeder(this.dataSource),
       new StageTemplateSeeder(this.dataSource),
-      new PipelineTemplateSeeder(this.dataSource),
       new ApplicantSourceSeeder(this.dataSource),
       new RecruitmentPipelineSeeder(this.dataSource),
       new VacancySeeder(this.dataSource),

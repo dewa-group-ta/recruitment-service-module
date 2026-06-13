@@ -4,7 +4,6 @@ import {
   IsNotEmpty,
   IsBoolean,
   IsOptional,
-  IsUUID,
   MaxLength
 } from "class-validator";
 
@@ -46,11 +45,10 @@ export class CreateDepartmentDto {
   @IsOptional()
   isActive?: boolean;
 
-  @ApiProperty({
-    description: "ID of user creating this department",
-    example: "123e4567-e89b-12d3-a456-426614174000"
+  @ApiPropertyOptional({
+    description: "ID of user creating this department"
   })
-  @IsUUID()
-  @IsNotEmpty()
-  createdById: string;
+  @IsString()
+  @IsOptional()
+  createdById?: string;
 }

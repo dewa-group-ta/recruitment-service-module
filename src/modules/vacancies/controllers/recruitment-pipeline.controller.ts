@@ -53,8 +53,13 @@ export class RecruitmentPipelineController {
     description: "Invalid input data"
   })
   async create(
-    @Body() createRecruitmentPipelineDto: CreateRecruitmentPipelineDto
+    @Body() createRecruitmentPipelineDto: CreateRecruitmentPipelineDto,
+    @Req() req: AuthenticatedRequest
   ): Promise<RecruitmentPipelineResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException("User not authenticated");
+    }
+    createRecruitmentPipelineDto.createdById = req.user.id;
     return await this.recruitmentPipelineService.create(
       createRecruitmentPipelineDto
     );

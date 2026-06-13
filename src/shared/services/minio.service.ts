@@ -37,6 +37,18 @@ export class MinioService implements OnModuleInit {
         this.logger.log(`Bucket ${this.bucketName} created successfully`);
       }
 
+      // Ensure bucket allows public GET so frontend CDN URLs resolve without auth
+      const publicReadPolicy = JSON.stringify({
+        Version: "2012-10-17",
+        Statement: [{
+          Effect: "Allow",
+          Principal: { AWS: ["*"] },
+          Action: ["s3:GetObject"],
+          Resource: [`arn:aws:s3:::${this.bucketName}/*`]
+        }]
+      });
+      await this.minioClient.setBucketPolicy(this.bucketName, publicReadPolicy);
+
       this.logger.log("MinIO client initialized successfully");
     } catch (error) {
       this.logger.error("Failed to initialize MinIO client", error);

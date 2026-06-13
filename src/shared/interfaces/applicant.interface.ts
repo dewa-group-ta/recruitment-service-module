@@ -4,6 +4,7 @@ import { ApplyApplicantDto } from "../../modules/applicants/dto/apply-applicant.
 import { Applicant } from "../../modules/applicants/entities/applicant.entity";
 import { Application } from "../../modules/applicants/entities/application.entity";
 import { ApplicationTrackingResponseDto } from "../../modules/applicants/dto/application-tracking-response.dto";
+import { ApplicationTrackingPublicDto, ApplicationTrackingQueryDto } from "../../modules/applicants/dto/application-tracking-public.dto";
 
 /**
  * Interface for applicant service operations
@@ -76,6 +77,14 @@ export interface IApplicantService {
    * @returns Promise<Application[]> - List of applications
    */
   getApplicantApplications(applicantId: string): Promise<Application[]>;
+
+  /**
+   * Get public tracking data by registration code + email (no auth required)
+   * @param query - Email and registrationCode
+   * @returns Promise<ApplicationTrackingPublicDto> - Candidate-safe tracking data
+   * @throws NotFoundException - When no matching application found
+   */
+  getApplicationTrackingByCode(query: ApplicationTrackingQueryDto): Promise<ApplicationTrackingPublicDto>;
 }
 
 /**

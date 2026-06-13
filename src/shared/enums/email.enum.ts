@@ -8,6 +8,7 @@ export enum EmailTemplateName {
 
   // Application related templates
   APPLICATION_RECEIVED = "application_received",
+  QUICK_APPLY_CONFIRMATION = "quick_apply_confirmation",
   APPLICATION_STATUS_UPDATE = "application_status_update",
   APPLICATION_REJECTED = "application_rejected",
   APPLICATION_ACCEPTED = "application_accepted",

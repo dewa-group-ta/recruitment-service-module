@@ -77,10 +77,10 @@ export class CreateJobCategoryDto {
   @IsBoolean()
   isActive?: boolean;
 
-  @ApiProperty({
-    description: "ID of the user creating the category",
-    example: "123e4567-e89b-12d3-a456-426614174000"
+  @ApiPropertyOptional({
+    description: "ID of the user creating the category"
   })
+  @IsOptional()
   @IsString()
-  createdById: string;
+  createdById?: string;
 }

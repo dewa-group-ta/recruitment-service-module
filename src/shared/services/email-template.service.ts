@@ -49,6 +49,40 @@ Recruitment Team`,
       `
     });
 
+    // Quick apply confirmation template
+    this.templates.set(EmailTemplateName.QUICK_APPLY_CONFIRMATION, {
+      subject: "Application Confirmed - {{jobTitle}}",
+      text: `Dear {{applicantName}},
+
+Your application for the {{jobTitle}} position has been successfully received.
+
+Your Registration Code is: {{registrationCode}}
+
+Keep this code safe — you will need it to track your application status.
+
+To track your application, visit: {{trackingLink}}
+
+Best regards,
+Recruitment Team`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Application Confirmed</h2>
+          <p>Dear <strong>{{applicantName}}</strong>,</p>
+          <p>Your application for the <strong>{{jobTitle}}</strong> position has been successfully received.</p>
+          <div style="background-color: #f5f5f5; border-left: 4px solid #007bff; padding: 16px; margin: 24px 0; border-radius: 4px;">
+            <p style="margin: 0 0 8px 0; color: #555; font-size: 14px;">Your Registration Code</p>
+            <p style="margin: 0; font-size: 24px; font-weight: bold; letter-spacing: 2px; color: #007bff;">{{registrationCode}}</p>
+          </div>
+          <p>Keep this code safe — you will need it to track your application status.</p>
+          <p>
+            <a href="{{trackingLink}}" style="display: inline-block; background-color: #007bff; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold;">Track My Application</a>
+          </p>
+          <p style="color: #888; font-size: 12px;">If the button does not work, copy this link: {{trackingLink}}</p>
+          <p>Best regards,<br>Recruitment Team</p>
+        </div>
+      `
+    });
+
     // Application status update template
     this.templates.set(EmailTemplateName.APPLICATION_STATUS_UPDATE, {
       subject: "Application Status Update - {{jobTitle}}",

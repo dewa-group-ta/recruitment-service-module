@@ -46,6 +46,9 @@ import { FileUploadDto } from "../../../shared/dto/file-upload.dto";
 import { File, FileType } from "../../../shared/entities/file.entity";
 import { ApplyApplicantResponseDto } from "../dto/apply-applicant-response.dto";
 import { EvaluationResultResponseDto } from "src/modules/applicant-results/dto/evaluation-result-response.dto";
+import { ApplicationTrackingPublicDto, ApplicationTrackingQueryDto } from "../dto/application-tracking-public.dto";
+import { EmailService } from "../../../shared/services/email.service";
+import { SystemConfigEmailService } from "../../../shared/services/system-config-email.service";
 
 /**
  * Service for managing applicant operations
@@ -86,6 +89,8 @@ export class ApplicantService implements IApplicantService {
     @InjectRepository(File)
     private readonly fileRepository: Repository<File>,
     private readonly fileUploadService: FileUploadService,
+    private readonly emailService: EmailService,
+    private readonly systemConfigEmailService: SystemConfigEmailService,
   ) {}
 
   /**
@@ -1010,7 +1015,16 @@ async applyForPosition(
       }
     }
 
-    // ── 3. Upload files to MinIO (must be outside transaction) ─────────────
+    // ── 3. Generate registration code (with collision retry) ────────────────
+    let registrationCode = this.generateRegistrationCode();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const collision = await this.applicationRepository.findOne({ where: { registrationCode } });
+      if (!collision) break;
+      if (attempt === 2) throw new Error('Failed to generate unique registration code after 3 attempts');
+      registrationCode = this.generateRegistrationCode();
+    }
+
+    // ── 4. Upload files to MinIO (must be outside transaction) ─────────────
     // MinIO is not transactional. Files are uploaded first so their paths are
     // available inside the DB transaction. On any subsequent failure, cleanup
     // is performed in the catch block below.
@@ -1038,7 +1052,7 @@ async applyForPosition(
       photoUrl = uploadedPhoto.filePath ?? null;
     }
 
-    // ── 4. Single atomic transaction ────────────────────────────────────────
+    // ── 5. Single atomic transaction ────────────────────────────────────────
     // All DB writes happen here. If anything fails, the entire transaction
     // rolls back and uploaded MinIO files are cleaned up in the catch block.
     let txResult!: { applicant: Applicant; application: Application };
@@ -1094,6 +1108,7 @@ async applyForPosition(
         const now = new Date();
         let application = manager.create(Application, {
           applicationNumber,
+          registrationCode,
           applicantId:    savedApplicant.id,
           vacancyId:      vacancy.id,
           pipelineId:     vacancy.pipelineId,
@@ -1157,7 +1172,7 @@ async applyForPosition(
       throw txError;
     }
 
-    // ── 5. Fire-and-forget: CV scoring (non-blocking) ───────────────────────
+    // ── 6. Fire-and-forget: CV scoring (non-blocking) ───────────────────────
     // Scoring runs after the application is fully committed. Failure here does
     // NOT affect the application — the candidate is already registered.
     // EvaluationResult will simply be absent until scoring succeeds (or is retried).
@@ -1168,6 +1183,22 @@ async applyForPosition(
       txResult.applicant.id
     );
 
+    // ── 7. Fire-and-forget: confirmation email (non-blocking) ───────────────
+    // Email failure must NOT fail the quick apply response. Candidate already
+    // has the registrationCode on the submitted page before the email arrives.
+    const trackingLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tracking-application?email=${encodeURIComponent(txResult.applicant.email)}&code=${txResult.application.registrationCode}`;
+    void this.systemConfigEmailService.sendEmailFromConfig(
+      'notification_applicant_apply',
+      { email: txResult.applicant.email, name: txResult.applicant.fullName },
+      {
+        applicant_name: txResult.applicant.fullName,
+        vacancy_name: vacancy.title,
+        registration_code: txResult.application.registrationCode,
+        tracking_link: trackingLink,
+        application_link: trackingLink,
+      }
+    ).catch((err) => this.logger.error('Failed to send quick apply confirmation email', err));
+
     return {
       applicant: {
         id:       txResult.applicant.id,
@@ -1177,10 +1208,81 @@ async applyForPosition(
       application: {
         id:                txResult.application.id,
         applicationNumber: txResult.application.applicationNumber,
+        registrationCode:  txResult.application.registrationCode,
         status:            txResult.application.status,
         appliedAt:         txResult.application.appliedAt,
       },
     };
+  }
+
+  async getApplicationTrackingByCode(
+    query: ApplicationTrackingQueryDto
+  ): Promise<ApplicationTrackingPublicDto> {
+    const { email, registrationCode } = query;
+
+    const application = await this.applicationRepository
+      .createQueryBuilder('app')
+      .leftJoinAndSelect('app.applicant', 'applicant')
+      .leftJoinAndSelect('app.vacancy', 'vacancy')
+      .leftJoinAndSelect('app.currentStage', 'currentStage')
+      .leftJoinAndSelect('currentStage.stageTemplate', 'currentStageTemplate')
+      .where('applicant.email = :email', { email })
+      .andWhere('app.registrationCode = :registrationCode', { registrationCode })
+      .getOne();
+
+    if (!application) {
+      throw new NotFoundException('Application not found');
+    }
+
+    const stageActivities = await this.stageActivityRepository
+      .createQueryBuilder('sa')
+      .leftJoinAndSelect('sa.stage', 'stage')
+      .leftJoinAndSelect('stage.stageTemplate', 'stageTemplate')
+      .where('sa.applicationId = :applicationId', { applicationId: application.id })
+      .orderBy('stage.stageOrder', 'ASC')
+      .getMany();
+
+    const stageStatusMap: Record<string, string> = {
+      pending:     'Pending',
+      in_progress: 'In Progress',
+      done:        'Completed',
+      failed:      'Failed',
+    };
+
+    const currentStageActivity = stageActivities.find(
+      (sa) => sa.stageId === application.currentStageId
+    );
+
+    return {
+      application: {
+        id:                application.id,
+        applicationNumber: application.applicationNumber,
+        registrationCode:  application.registrationCode,
+        vacancyTitle:      application.vacancy?.title ?? '',
+        status:            application.status,
+        appliedAt:         application.appliedAt,
+        lastActivityAt:    application.lastActivityAt ?? null,
+        applicantName:     application.applicant?.fullName ?? '',
+      },
+      currentStage: application.currentStage ? {
+        name:   application.currentStage.stageTemplate?.name ?? '',
+        status: stageStatusMap[currentStageActivity?.status ?? ''] ?? 'In Progress',
+      } : null,
+      stages: stageActivities.map((sa) => ({
+        name:        sa.stage?.stageTemplate?.name ?? '',
+        status:      stageStatusMap[sa.status] ?? sa.status,
+        notes:       sa.notes ?? null,
+        completedAt: sa.status === 'done' || sa.status === 'failed' ? sa.createdAt : null,
+      })),
+    };
+  }
+
+  private generateRegistrationCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const code = Array.from({ length: 8 }, () =>
+      chars[Math.floor(Math.random() * chars.length)]
+    ).join('');
+    return `REG-${code}`;
   }
 
   private async runScoringAsync(

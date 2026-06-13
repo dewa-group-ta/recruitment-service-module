@@ -3,7 +3,6 @@ import {
   IsString,
   IsOptional,
   IsBoolean,
-  IsUUID,
   MaxLength
 } from "class-validator";
 
@@ -45,10 +44,9 @@ export class UpdateDepartmentDto {
   isActive?: boolean;
 
   @ApiPropertyOptional({
-    description: "ID of user updating this department",
-    example: "123e4567-e89b-12d3-a456-426614174000"
+    description: "ID of user updating this department"
   })
-  @IsUUID()
+  @IsString()
   @IsOptional()
   updatedById?: string;
 }

@@ -8,7 +8,9 @@ import {
   Delete,
   Query,
   HttpCode,
-  HttpStatus
+  HttpStatus,
+  Req,
+  BadRequestException
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -26,6 +28,7 @@ import { Public } from "../../../shared/decorators/public.decorator";
 import { responseMessage } from "src/shared/utils/constant";
 import { ResponseMessage } from "src/shared/decorators/response.decorator";
 import { QueryJobCategoryDto } from "../dto/query-job-category.dto";
+import { AuthenticatedRequest } from "../../../shared/interface";
 
 @ApiTags("Job Categories")
 @Controller("job-categories")
@@ -48,8 +51,13 @@ export class JobCategoryController {
     description: "Invalid input data"
   })
   async create(
-    @Body() createJobCategoryDto: CreateJobCategoryDto
+    @Body() createJobCategoryDto: CreateJobCategoryDto,
+    @Req() req: AuthenticatedRequest
   ): Promise<JobCategoryResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException("User not authenticated");
+    }
+    createJobCategoryDto.createdById = req.user.id;
     return this.jobCategoryService.create(createJobCategoryDto);
   }
 
@@ -148,8 +156,13 @@ export class JobCategoryController {
   })
   async update(
     @Param("id") id: string,
-    @Body() updateJobCategoryDto: UpdateJobCategoryDto
+    @Body() updateJobCategoryDto: UpdateJobCategoryDto,
+    @Req() req: AuthenticatedRequest
   ): Promise<JobCategoryResponseDto> {
+    if (!req.user?.id) {
+      throw new BadRequestException("User not authenticated");
+    }
+    updateJobCategoryDto.updatedById = req.user.id;
     return this.jobCategoryService.update(id, updateJobCategoryDto);
   }
 

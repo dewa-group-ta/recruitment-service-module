@@ -46,6 +46,7 @@ import { FileUploadDto } from "../../../shared/dto/file-upload.dto";
 import { ValidateTokenDto } from "../dto/validate-token.dto";
 import { ApplyApplicantDto } from "../dto/apply-applicant.dto";
 import { ApplicationTrackingResponseDto } from "../dto/application-tracking-response.dto";
+import { ApplicationTrackingPublicDto, ApplicationTrackingQueryDto } from "../dto/application-tracking-public.dto";
 
 @ApiTags("Applicants")
 @Controller("applicants")
@@ -452,6 +453,35 @@ export class ApplicationController {
     const trackingData =
       await this.applicantService.getApplicationTracking(applicantId);
     return trackingData;
+  }
+
+  @Get("tracking")
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ResponseMessage(responseMessage.SUCCESS)
+  @ApiOperation({
+    summary: "Get application tracking by registration code (public)",
+    description:
+      "Look up an application using email and registration code. No authentication required. Returns candidate-safe stage information only."
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Application tracking retrieved successfully",
+    type: ApplicationTrackingPublicDto
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Application not found — email and/or registration code did not match"
+  })
+  async getApplicationTrackingByCode(
+    @Query('email') email: string,
+    @Query('registrationCode') registrationCode: string
+  ): Promise<ApplicationTrackingPublicDto> {
+    if (!email || !registrationCode) {
+      throw new BadRequestException('email and registrationCode query params are required');
+    }
+    const query: ApplicationTrackingQueryDto = { email, registrationCode };
+    return this.applicantService.getApplicationTrackingByCode(query);
   }
 
   // ========== PROFILE MANAGEMENT ==========

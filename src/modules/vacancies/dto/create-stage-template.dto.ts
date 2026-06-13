@@ -5,7 +5,6 @@ import {
   IsBoolean,
   IsOptional,
   IsNumber,
-  IsUUID,
   MaxLength,
   Min
 } from "class-validator";
@@ -83,11 +82,10 @@ export class CreateStageTemplateDto {
   @MaxLength(100)
   category?: string;
 
-  @ApiProperty({
-    description: "ID of user creating this stage template",
-    example: "123e4567-e89b-12d3-a456-426614174000"
+  @ApiPropertyOptional({
+    description: "ID of user creating this stage template"
   })
-  @IsUUID()
-  @IsNotEmpty()
-  createdById: string;
+  @IsString()
+  @IsOptional()
+  createdById?: string;
 }

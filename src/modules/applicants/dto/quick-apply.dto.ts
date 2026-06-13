@@ -65,6 +65,7 @@ export class QuickApplyResponseDto {
   application: {
     id: string;
     applicationNumber: string;
+    registrationCode: string;
     status: string;
     appliedAt: Date;
   };

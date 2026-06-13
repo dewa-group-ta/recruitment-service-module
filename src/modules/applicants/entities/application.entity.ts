@@ -31,6 +31,9 @@ export class Application {
   @Column({ type: "varchar", length: 50, unique: true })
   applicationNumber!: string;
 
+  @Column({ type: "varchar", length: 15, unique: true })
+  registrationCode!: string;
+
   @ManyToOne(() => Applicant)
   @JoinColumn({ name: "applicant_id" })
   applicant!: Applicant;
