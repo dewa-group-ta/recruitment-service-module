@@ -16,9 +16,9 @@ import {
   QuerySystemConfigurationDto,
   SystemConfigurationResponseDto
 } from "../dto";
-import { FileUploadService } from "src/shared/services/file-upload.service";
-import { FileUploadDto } from "src/shared/dto/file-upload.dto";
-import { FileType } from "src/shared/entities/file.entity";
+import { FileUploadService } from "../../../shared/services/file-upload.service";
+import { FileUploadDto } from "../../../shared/dto/file-upload.dto";
+import { FileType } from "../../../shared/entities/file.entity";
 
 @Injectable()
 export class SystemConfigurationService {

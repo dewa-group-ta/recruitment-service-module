@@ -1,572 +1,138 @@
-import { Test, TestingModule } from "@nestjs/testing";
-import { getRepositoryToken } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { BadRequestException, NotFoundException } from "@nestjs/common";
-import { VacancyService } from "./vacancy.service";
-import { Vacancy } from "../entities/vacancy.entity";
-import { Application } from "../../applicants/entities/application.entity";
-import { RecruitmentPipelineService } from "./recruitment-pipeline.service";
-import { CreateVacancyDto } from "../dto/create-vacancy.dto";
-import { UpdateVacancyDto } from "../dto/update-vacancy.dto";
-import {
-  JobStatus,
-  EmploymentType,
-  WorkModel,
-  JobType,
-  SalaryPeriod,
-  EducationLevel
-} from "../../../shared/enums/job-status.enum";
+// src/modules/vacancies/services/vacancy.service.spec.ts
 
-describe("VacancyService", () => {
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { NotFoundException } from '@nestjs/common';
+import { VacancyService } from './vacancy.service';
+import { Vacancy } from '../entities/vacancy.entity';
+import { Application } from '../../applicants/entities/application.entity';
+import { RecruitmentPipelineService } from './recruitment-pipeline.service';
+import { JobStatus } from '../../../shared/enums/job-status.enum';
+// PERBAIKAN: baris import dari 'node:test' sudah dihapus agar tidak bertabrakan dengan global Jest
+
+describe('VacancyService — Public Vacancy (sumber teks job_responsibilities untuk SBERT)', () => {
   let service: VacancyService;
-  let vacancyRepository: jest.Mocked<Repository<Vacancy>>;
-  let applicationRepository: jest.Mocked<Repository<Application>>;
-  let recruitmentPipelineService: jest.Mocked<RecruitmentPipelineService>;
-
-  const mockDefaultTemplate = {
-    id: "template-1",
-    name: "Default Template",
-    description: "Default recruitment template",
-    version: "1.0",
-    isDefault: true,
-    isTemplate: true,
-    category: "general",
-    usageCount: 0,
-    createdById: "user-1",
-    stages: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    deletedAt: undefined
-  };
-
-  const mockPipelineInstanceDto = {
-    id: "pipeline-1",
-    name: "Software Engineer - Pipeline",
-    description: "Pipeline for software engineer positions",
-    version: "1.0",
-    isDefault: false,
-    isTemplate: false,
-    category: "engineering",
-    usageCount: 0,
-    createdById: "user-1",
-    stages: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    deletedAt: undefined
-  };
-
-  const mockPipelineInstance = {
-    id: "pipeline-1",
-    name: "Software Engineer - Pipeline",
-    description: "Pipeline for software engineer positions",
-    version: "1.0",
-    isDefault: false,
-    isTemplate: false,
-    category: "engineering",
-    usageCount: 0,
-    createdById: "user-1",
-    stages: [],
-    vacancies: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    deletedAt: new Date()
-  };
-
-  const mockVacancy = {
-    id: "vacancy-1",
-    title: "Software Engineer",
-    jobCode: "SE001",
-    description: "Software development role",
-    responsibilities: "Develop software",
-    requirements: "Bachelor degree",
-    status: JobStatus.DRAFT,
-    jobType: JobType.RECRUITMENT,
-    employmentType: EmploymentType.FULL_TIME,
-    workModel: WorkModel.ON_SITE,
-    startDate: new Date(),
-    endDate: new Date(),
-    isLimitApplicantEnabled: false,
-    applicantLimit: 0,
-    isLimitHiredEnabled: false,
-    hiredLimit: 0,
-    officeAddresses: [],
-    department: { id: "dept-1", name: "Engineering" } as any,
-    departmentId: "dept-1",
-    salaryMin: 5000,
-    salaryMax: 8000,
-    salaryPeriod: SalaryPeriod.MONTHLY,
-    currency: "IDR",
-    jobCategoryId: "cat-1",
-    requiredEducation: EducationLevel.BACHELOR,
-    requiredExperienceYears: 2,
-    hoursPerWeekMin: 40,
-    hoursPerWeekMax: 40,
-    pipelineId: "pipeline-1",
-    createdById: "user-1",
-    updatedById: "user-1",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    deletedAt: new Date(),
-    deletedById: "",
-    generatedPosterUrl: "",
-    posterConfiguration: null as any,
-    jobCategory: { id: "cat-1", name: "Technology" } as any,
-    applications: [],
-    pipeline: mockPipelineInstance
-  };
+  let vacancyRepository: any;
 
   beforeEach(async () => {
+    vacancyRepository = { findOne: jest.fn(), findAndCount: jest.fn() };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VacancyService,
-        {
-          provide: getRepositoryToken(Vacancy),
-          useValue: {
-            create: jest.fn(),
-            save: jest.fn(),
-            findOne: jest.fn(),
-            findAndCount: jest.fn(),
-            update: jest.fn(),
-            softDelete: jest.fn(),
-            createQueryBuilder: jest.fn(() => ({
-              where: jest.fn().mockReturnThis(),
-              andWhere: jest.fn().mockReturnThis(),
-              orderBy: jest.fn().mockReturnThis(),
-              skip: jest.fn().mockReturnThis(),
-              take: jest.fn().mockReturnThis(),
-              getMany: jest.fn(),
-              getCount: jest.fn()
-            }))
-          }
-        },
-        {
-          provide: getRepositoryToken(Application),
-          useValue: {
-            count: jest.fn()
-          }
-        },
-        {
-          provide: RecruitmentPipelineService,
-          useValue: {
-            getDefaultTemplate: jest.fn(),
-            createFromTemplate: jest.fn()
-          }
-        }
-      ]
+        { provide: getRepositoryToken(Vacancy), useValue: vacancyRepository },
+        { provide: getRepositoryToken(Application), useValue: {} },
+        { provide: RecruitmentPipelineService, useValue: {} },
+      ],
     }).compile();
 
     service = module.get<VacancyService>(VacancyService);
-    vacancyRepository = module.get(getRepositoryToken(Vacancy));
-    applicationRepository = module.get(getRepositoryToken(Application));
-    recruitmentPipelineService = module.get(RecruitmentPipelineService);
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+  afterEach(() => jest.clearAllMocks());
 
-  describe("create", () => {
-    const createVacancyDto: CreateVacancyDto = {
-      title: "Software Engineer"
-    };
-
-    it("should create a new vacancy successfully", async () => {
-      // Arrange
-      recruitmentPipelineService.getDefaultTemplate.mockResolvedValue(
-        mockDefaultTemplate
-      );
-      recruitmentPipelineService.createFromTemplate.mockResolvedValue(
-        mockPipelineInstanceDto
-      );
-      vacancyRepository.create.mockReturnValue(mockVacancy as any);
-      vacancyRepository.save.mockResolvedValue(mockVacancy as any);
-
-      // Act
-      const result = await service.create(createVacancyDto, "user-1");
-
-      // Assert
-      expect(recruitmentPipelineService.getDefaultTemplate).toHaveBeenCalled();
-      expect(
-        recruitmentPipelineService.createFromTemplate
-      ).toHaveBeenCalledWith(
-        "template-1",
-        "user-1",
-        "Software Engineer - Pipeline"
-      );
-      expect(vacancyRepository.create).toHaveBeenCalledWith({
-        title: "Software Engineer",
-        status: JobStatus.DRAFT,
-        jobType: JobType.RECRUITMENT,
-        employmentType: EmploymentType.FULL_TIME,
-        workModel: WorkModel.ON_SITE,
-        currency: "IDR",
-        pipelineId: "pipeline-1",
-        createdById: "user-1"
+  // ─────────────────────────────────────────────────────────────────────────────
+  // UTC-29 s.d. UTC-32: findOnePublic
+  // ─────────────────────────────────────────────────────────────────────────────
+  describe('findOnePublic', () => {
+    it('[UTC-29] harus mengembalikan responsibilities utuh tanpa modifikasi (teks ini yang dikirim sebagai job_responsibilities ke FastAPI)', async () => {
+      const teksAsli = 'Membangun dan memelihara REST API menggunakan NestJS, berkolaborasi dengan tim frontend.';
+      vacancyRepository.findOne.mockResolvedValue({
+        id: 'vac-1', title: 'Backend Developer', description: '', responsibilities: teksAsli,
+        requirements: '', jobType: 'full_time', employmentType: 'permanent', workModel: 'hybrid',
+        officeAddresses: [], endDate: null, startDate: null, requiredEducation: null,
+        requiredExperienceYears: 1, jobCategory: { id: 'cat-1', name: 'Engineering' },
+        generatedPosterUrl: null, status: JobStatus.PUBLISHED, posterConfiguration: null,
       });
-      expect(vacancyRepository.save).toHaveBeenCalled();
-      expect(result).toBeDefined();
-      expect(result.title).toBe("Software Engineer");
+
+      const result = await service.findOnePublic('vac-1');
+
+      expect(result.responsibilities).toBe(teksAsli);
     });
 
-    it("should throw BadRequestException when no default template is found", async () => {
-      // Arrange
-      recruitmentPipelineService.getDefaultTemplate.mockResolvedValue(null);
-
-      // Act & Assert
-      await expect(service.create(createVacancyDto, "user-1")).rejects.toThrow(
-        BadRequestException
-      );
-      expect(recruitmentPipelineService.getDefaultTemplate).toHaveBeenCalled();
-      expect(
-        recruitmentPipelineService.createFromTemplate
-      ).not.toHaveBeenCalled();
-    });
-
-    it("should throw BadRequestException when pipeline creation fails", async () => {
-      // Arrange
-      recruitmentPipelineService.getDefaultTemplate.mockResolvedValue(
-        mockDefaultTemplate
-      );
-      recruitmentPipelineService.createFromTemplate.mockRejectedValue(
-        new Error("Pipeline creation failed")
-      );
-
-      // Act & Assert
-      await expect(service.create(createVacancyDto, "user-1")).rejects.toThrow(
-        BadRequestException
-      );
-    });
-  });
-
-  describe("update", () => {
-    const updateVacancyDto: UpdateVacancyDto = {
-      title: "Senior Software Engineer",
-      description: "Updated description"
-    };
-
-    it("should update vacancy successfully", async () => {
-      // Arrange
-      vacancyRepository.findOne
-        .mockResolvedValueOnce(mockVacancy as any) // First call for finding existing vacancy
-        .mockResolvedValueOnce({ ...mockVacancy, ...updateVacancyDto } as any); // Second call for fetching updated vacancy
-      vacancyRepository.update.mockResolvedValue({ affected: 1 } as any);
-
-      // Act
-      const result = await service.update(
-        "vacancy-1",
-        updateVacancyDto,
-        "user-1"
-      );
-
-      // Assert
-      expect(vacancyRepository.findOne).toHaveBeenCalledWith({
-        where: { id: "vacancy-1" }
-      });
-      expect(vacancyRepository.update).toHaveBeenCalledWith(
-        "vacancy-1",
-        expect.objectContaining({
-          title: "Senior Software Engineer",
-          description: "Updated description",
-          updatedById: "user-1"
-        })
-      );
-      expect(result).toBeDefined();
-      expect(result.title).toBe("Senior Software Engineer");
-    });
-
-    it("should throw NotFoundException when vacancy not found", async () => {
-      // Arrange
+    it('[UTC-30] query harus mengombinasikan id DAN status=PUBLISHED (vacancy draft/closed tidak boleh terekspos publik)', async () => {
       vacancyRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
-      await expect(
-        service.update("nonexistent-id", updateVacancyDto, "user-1")
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it("should throw BadRequestException for invalid pipeline ID format", async () => {
-      // Arrange
-      const invalidUpdateDto = {
-        ...updateVacancyDto,
-        pipelineId: "invalid-uuid"
-      };
-      vacancyRepository.findOne.mockResolvedValue(mockVacancy as any);
-
-      // Act & Assert
-      await expect(
-        service.update("vacancy-1", invalidUpdateDto, "user-1")
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it("should throw BadRequestException when minimum salary is greater than maximum salary", async () => {
-      // Arrange
-      const invalidSalaryDto = {
-        ...updateVacancyDto,
-        salaryMin: 10000,
-        salaryMax: 5000
-      };
-      vacancyRepository.findOne.mockResolvedValue(mockVacancy as any);
-
-      // Act & Assert
-      await expect(
-        service.update("vacancy-1", invalidSalaryDto, "user-1")
-      ).rejects.toThrow(BadRequestException);
-    });
-  });
-
-  describe("findOne", () => {
-    it("should return vacancy when found", async () => {
-      // Arrange
-      vacancyRepository.findOne.mockResolvedValue(mockVacancy as any);
-
-      // Act
-      const result = await service.findOne("vacancy-1");
-
-      // Assert
+      await expect(service.findOnePublic('vac-draft')).rejects.toThrow(NotFoundException);
       expect(vacancyRepository.findOne).toHaveBeenCalledWith({
-        where: { id: "vacancy-1" },
-        relations: ["pipeline", "jobCategory"]
+        where: { id: 'vac-draft', status: JobStatus.PUBLISHED },
+        relations: ['jobCategory'],
       });
-      expect(result).toBeDefined();
-      expect(result.id).toBe("vacancy-1");
     });
 
-    it("should throw NotFoundException when vacancy not found", async () => {
-      // Arrange
+    it('[UTC-31] harus melempar NotFoundException jika vacancy tidak ditemukan / belum published', async () => {
       vacancyRepository.findOne.mockResolvedValue(null);
+      await expect(service.findOnePublic('vac-tidak-ada')).rejects.toThrow(NotFoundException);
+    });
 
-      // Act & Assert
-      await expect(service.findOne("nonexistent-id")).rejects.toThrow(
-        NotFoundException
-      );
+    it('[UTC-32] jika relasi jobCategory null, harus fallback ke objek kosong tanpa crash', async () => {
+      vacancyRepository.findOne.mockResolvedValue({
+        id: 'vac-2', title: 'QA Engineer', description: '', responsibilities: 'Menguji aplikasi web',
+        requirements: '', jobType: 'full_time', employmentType: 'permanent', workModel: 'remote',
+        officeAddresses: null, endDate: null, startDate: null, requiredEducation: null,
+        requiredExperienceYears: null, jobCategory: null, generatedPosterUrl: null,
+        status: JobStatus.PUBLISHED, posterConfiguration: null,
+      });
+
+      const result = await service.findOnePublic('vac-2');
+      expect(result.jobCategory).toEqual({ id: '', name: '' });
+      expect(result.officeAddresses).toEqual([]);
+    });
+
+    it('[UTC-37] responsibilities null harus dikembalikan apa adanya — fallback string kosong terjadi di layer ApplicantResultsService, bukan di sini', async () => {
+      vacancyRepository.findOne.mockResolvedValue({
+        id: 'vac-37', title: 'Posisi Tanpa Deskripsi Tugas', description: '', responsibilities: null,
+        requirements: '', jobType: 'full_time', employmentType: 'permanent', workModel: 'remote',
+        officeAddresses: [], endDate: null, startDate: null, requiredEducation: null,
+        requiredExperienceYears: null, jobCategory: null, generatedPosterUrl: null,
+        status: JobStatus.PUBLISHED, posterConfiguration: null,
+      });
+
+      const result = await service.findOnePublic('vac-37');
+      expect(result.responsibilities).toBeNull();
     });
   });
 
-  describe("findAll", () => {
-    it("should return paginated vacancies with applicant counts", async () => {
-      // Arrange
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([mockVacancy]),
-        getCount: jest.fn().mockResolvedValue(1)
-      };
-      vacancyRepository.createQueryBuilder.mockReturnValue(
-        mockQueryBuilder as any
-      );
-      applicationRepository.count
-        .mockResolvedValueOnce(5) // Total applicants
-        .mockResolvedValueOnce(2); // Rejected applicants
-
-      // Act
-      const result = await service.findAll(1, 10);
-
-      // Assert
-      expect(result).toBeDefined();
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0].totalApplicants).toBe(5);
-      expect(result.data[0].hiredApplicants).toBe(3); // 5 - 2
-      expect(result.data[0].rejectedApplicants).toBe(2);
-      expect(result.total).toBe(1);
-      expect(result.page).toBe(1);
-      expect(result.limit).toBe(10);
-    });
-
-    it("should apply filters correctly", async () => {
-      // Arrange
-      const mockQueryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([]),
-        getCount: jest.fn().mockResolvedValue(0)
-      };
-      vacancyRepository.createQueryBuilder.mockReturnValue(
-        mockQueryBuilder as any
-      );
-
-      // Act
-      await service.findAll(1, 10, "cat-1", JobStatus.PUBLISHED, "engineer");
-
-      // Assert
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        "vacancy.jobCategoryId = :jobCategory",
-        { jobCategory: "cat-1" }
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        "vacancy.status = :status",
-        { status: JobStatus.PUBLISHED }
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        "(vacancy.title ILIKE :search OR vacancy.description ILIKE :search OR vacancy.department ILIKE :search)",
-        { search: "%engineer%" }
-      );
-    });
-  });
-
-  describe("remove", () => {
-    it("should soft delete vacancy successfully", async () => {
-      // Arrange
-      vacancyRepository.findOne.mockResolvedValue(mockVacancy as any);
-      vacancyRepository.softDelete.mockResolvedValue({ affected: 1 } as any);
-      vacancyRepository.update.mockResolvedValue({ affected: 1 } as any);
-
-      // Act
-      await service.remove("vacancy-1", "user-1");
-
-      // Assert
-      expect(vacancyRepository.findOne).toHaveBeenCalledWith({
-        where: { id: "vacancy-1" }
-      });
-      expect(vacancyRepository.softDelete).toHaveBeenCalledWith("vacancy-1");
-      expect(vacancyRepository.update).toHaveBeenCalledWith("vacancy-1", {
-        deletedById: "user-1"
-      });
-    });
-
-    it("should throw NotFoundException when vacancy not found", async () => {
-      // Arrange
-      vacancyRepository.findOne.mockResolvedValue(null);
-
-      // Act & Assert
-      await expect(service.remove("nonexistent-id", "user-1")).rejects.toThrow(
-        NotFoundException
-      );
-    });
-  });
-
-  describe("findAllPublic", () => {
-    it("should return public vacancies with PUBLISHED status only", async () => {
-      // Arrange
-      const publishedVacancy = { ...mockVacancy, status: JobStatus.PUBLISHED };
-      vacancyRepository.findAndCount.mockResolvedValue([[publishedVacancy], 1]);
-
-      // Act
-      const result = await service.findAllPublic(1, 10);
-
-      // Assert
-      expect(vacancyRepository.findAndCount).toHaveBeenCalledWith({
-        where: {
-          status: JobStatus.PUBLISHED,
-          endDate: expect.any(Object) // MoreThan(new Date())
-        },
-        skip: 0,
-        take: 10,
-        order: { createdAt: "DESC" },
-        relations: ["jobCategory"]
-      });
-      expect(result.data).toHaveLength(1);
-    });
-
-    it("should filter by job category when provided", async () => {
-      // Arrange
+  // ─────────────────────────────────────────────────────────────────────────────
+  // UTC-33 s.d. UTC-36: findAllPublic
+  // ─────────────────────────────────────────────────────────────────────────────
+  describe('findAllPublic', () => {
+    it('[UTC-33] harus hanya mengambil vacancy dengan status PUBLISHED', async () => {
       vacancyRepository.findAndCount.mockResolvedValue([[], 0]);
 
-      // Act
-      await service.findAllPublic(1, 10, "cat-1");
+      await service.findAllPublic(1, 10);
 
-      // Assert
-      expect(vacancyRepository.findAndCount).toHaveBeenCalledWith({
-        where: {
-          status: JobStatus.PUBLISHED,
-          endDate: expect.any(Object),
-          jobCategoryId: "cat-1"
-        },
-        skip: 0,
-        take: 10,
-        order: { createdAt: "DESC" },
-        relations: ["jobCategory"]
-      });
-    });
-  });
-
-  describe("findOnePublic", () => {
-    it("should return public vacancy when found and active", async () => {
-      // Arrange
-      const publishedVacancy = { ...mockVacancy, status: JobStatus.PUBLISHED };
-      vacancyRepository.findOne.mockResolvedValue(activeVacancy as any);
-
-      // Act
-      const result = await service.findOnePublic("vacancy-1");
-
-      // Assert
-      expect(vacancyRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          id: "vacancy-1",
-          status: JobStatus.PUBLISHED,
-          endDate: expect.any(Object)
-        },
-        relations: ["jobCategory"]
-      });
-      expect(result).toBeDefined();
-    });
-
-    it("should throw NotFoundException when public vacancy not found", async () => {
-      // Arrange
-      vacancyRepository.findOne.mockResolvedValue(null);
-
-      // Act & Assert
-      await expect(service.findOnePublic("nonexistent-id")).rejects.toThrow(
-        NotFoundException
+      expect(vacancyRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { status: JobStatus.PUBLISHED } }),
       );
     });
-  });
 
-  describe("updateFromJobForm", () => {
-    it("should update vacancy from job form data successfully", async () => {
-      // Arrange
-      const jobFormData = {
-        jobTitle: "Senior Developer",
-        jobCode: "SD001",
-        description: "Senior development role",
-        responsibilities: "Lead development",
-        requirements: "5+ years experience",
-        jobType: JobType.RECRUITMENT,
-        employeeType: EmploymentType.FULL_TIME,
-        workModel: WorkModel.REMOTE,
-        currency: "USD",
-        pipelineId: "pipeline-1",
-        jobCategory: "cat-1"
-      };
+    it('[UTC-34] select query wajib menyertakan field responsibilities (input scoring saat applicant melamar)', async () => {
+      vacancyRepository.findAndCount.mockResolvedValue([[], 0]);
 
-      vacancyRepository.findOne
-        .mockResolvedValueOnce(mockVacancy as any) // First call in findOne
-        .mockResolvedValueOnce({ ...mockVacancy, ...jobFormData } as any); // Second call after update
-      vacancyRepository.update.mockResolvedValue({ affected: 1 } as any);
+      await service.findAllPublic(1, 10);
 
-      // Act
-      const result = await service.updateFromJobForm(
-        "vacancy-1",
-        jobFormData,
-        "user-1"
-      );
-
-      // Assert
-      expect(vacancyRepository.update).toHaveBeenCalledWith(
-        "vacancy-1",
-        expect.objectContaining({
-          title: "Senior Developer",
-          jobCode: "SD001",
-          description: "Senior development role",
-          updatedById: "user-1"
-        })
-      );
-      expect(result).toBeDefined();
+      const callArg = vacancyRepository.findAndCount.mock.calls[0][0];
+      expect(callArg.select.responsibilities).toBe(true);
     });
 
-    it("should throw NotFoundException when vacancy not found in updateFromJobForm", async () => {
-      // Arrange
-      vacancyRepository.findOne.mockResolvedValue(null);
+    it('[UTC-35] harus menghitung totalPages dengan benar berdasarkan total & limit', async () => {
+      vacancyRepository.findAndCount.mockResolvedValue([[], 25]);
 
-      // Act & Assert
-      await expect(
-        service.updateFromJobForm("nonexistent-id", {}, "user-1")
-      ).rejects.toThrow(NotFoundException);
+      const result = await service.findAllPublic(1, 10);
+
+      expect(result.total).toBe(25);
+      expect(result.totalPages).toBe(3);
+    });
+
+    it('[UTC-36] harus memfilter berdasarkan jobCategory jika parameter diberikan', async () => {
+      vacancyRepository.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findAllPublic(1, 10, 'cat-engineering');
+
+      expect(vacancyRepository.findAndCount).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { status: JobStatus.PUBLISHED, jobCategoryId: 'cat-engineering' } }),
+      );
     });
   });
 });

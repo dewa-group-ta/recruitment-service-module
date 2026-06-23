@@ -17,8 +17,8 @@ import { UpdateApplicationNotesDto } from "../../applicants/dto/update-applicati
 import { ApplicationNotesResponseDto } from "../../applicants/dto/application-notes-response.dto";
 import { QueryApplicationNotesDto } from "../../applicants/dto/query-application-notes.dto";
 import { HiringProgressDto } from "../dto/hiring-progress.dto";
-import { JobStatus } from "src/shared/enums/job-status.enum";
-import { StageActivityStatus } from "src/shared/enums/pipeline.enum";
+import { JobStatus } from "../../../shared/enums/job-status.enum";
+import { StageActivityStatus } from "../../../shared/enums/pipeline.enum";
 import { NotificationService } from "../../../shared/services/notification.service";
 import { MinioService } from "../../../shared/services/minio.service";
 
