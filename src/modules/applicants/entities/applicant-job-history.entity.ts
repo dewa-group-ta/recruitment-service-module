@@ -33,7 +33,7 @@ export class ApplicantJobHistory {
   startDate!: Date;
 
   @Column({ type: "date", nullable: true })
-  endDate!: Date;
+  endDate!: Date | null;
 
   @Column({ name: "duration_years", type: "float", nullable: true })
   durationYears!: number | null;

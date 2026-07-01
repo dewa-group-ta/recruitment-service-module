@@ -93,13 +93,14 @@ export interface Candidate {
   educations?: Array<{
     id: string;
     applicantId: string;
-    schoolName: string;
-    major: string;
-    degree: string;
-    gpa?: number;
-    startMonth: string;
-    endMonth?: string;
-    diplomaFileName?: string;
+    schoolName: string | null;
+    major: string | null;
+    degree: string | null;
+    gpa?: number | null;
+    startMonth: string | null;
+    endMonth?: string | null;
+    diplomaFileName?: string | null;
+    level?: string | null;
     order: number;
     createdAt: string;
     updatedAt: string;
@@ -111,11 +112,12 @@ export interface Candidate {
     position: string | null;
     employeeStatus: string | null;
     company: string | null;
-    startDate: Date;
-    endDate?: Date;
-    location?: string;
-    description?: string;
-    achievements?: string;
+    startDate: string | null;
+    endDate?: string | null;
+    location?: string | null;
+    description?: string | null;
+    achievements?: string | null;
+    durationYears?: number | null;
     order: number;
     createdAt: string;
     updatedAt: string;
@@ -126,6 +128,7 @@ export interface Candidate {
     maxExperienceScore: number | null;
     decision: string | null;
     evaluatedAt: Date | null;
+    errorMessage: string | null;
     scoringBreakdown: ScoringBreakdown | null;
   } | null;
 }
@@ -539,10 +542,20 @@ export class CandidatesService {
     );
 
     // Transform to DTO — inject maxExperienceScore dari WSM scoring
-    const data: ApplicantTableItemDto[] = applications.map(app => ({
+    const transformed = applications.map(app => ({
       ...this.transformToApplicantTableItem(app),
       maxExperienceScore: evalMap.get(app.id) ?? null
     }));
+
+    // Convert avatar file paths to public Minio URLs in parallel
+    const data: ApplicantTableItemDto[] = await Promise.all(
+      transformed.map(async (item) => ({
+        ...item,
+        avatar: item.avatar
+          ? await this.minioService.getFileUrl(item.avatar).catch(() => undefined)
+          : undefined
+      }))
+    );
 
     const totalPages = Math.ceil(total / limit);
 
@@ -679,19 +692,19 @@ export class CandidatesService {
     // Calculate age from date of birth
     const calculateAge = (dateOfBirth: Date | string | null | undefined): number | undefined => {
       if (!dateOfBirth) return undefined;
-      
+
       const birthDate = new Date(dateOfBirth);
       const today = new Date();
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
-      
+
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
-      
+
       return age;
     };
-    
+
     const age = calculateAge(applicant.dateOfBirth);
 
     const status = application.status;
@@ -762,9 +775,67 @@ export class CandidatesService {
 // =============================================================================
  
   /**
+   * Parse evaluateDetail into ScoringBreakdown with guaranteed non-null arrays
+   * Ensures robust data binding on frontend - educations & experiences always exist
+   */
+  private parseEvaluateDetail(evalResult: EvaluationResult | null): ScoringBreakdown {
+    const emptyBreakdown: ScoringBreakdown = { experiences: [], educations: [] };
+
+    if (!evalResult?.evaluateDetail) return emptyBreakdown;
+
+    try {
+      const detail: Record<string, any> =
+        typeof evalResult.evaluateDetail === "string"
+          ? JSON.parse(evalResult.evaluateDetail)
+          : evalResult.evaluateDetail;
+
+      if (!detail) return emptyBreakdown;
+
+      const maxScore = evalResult.maxExperienceScore ?? null;
+
+      // 1. Parse experiences with robust null handling
+      const experienceEntries: ScoringBreakdown["experiences"] = (
+        Array.isArray(detail.experience) ? detail.experience : []
+      ).map((e: any) => ({
+        role:          e?.role ?? null,
+        description:   e?.description ?? null,
+        start:         e?.start ?? null,
+        end:           e?.end ?? null,
+        durationYears: e?.duration_years ?? null,
+        similarity:    typeof e?.similarity === "number" ? e.similarity : null,
+        isTopMatch:
+          maxScore !== null &&
+          typeof e?.similarity === "number" &&
+          Math.abs(e.similarity - maxScore) < 0.0001
+      }));
+
+      // 2. Parse educations with robust null handling
+      const educationEntries: ScoringBreakdown["educations"] = (
+        Array.isArray(detail.educations) ? detail.educations : []
+      ).map((e: any) => ({
+        level:       typeof e?.level === "number" ? e.level : null,
+        major:       e?.major ?? null,
+        institution: e?.institution ?? null
+      }));
+
+      return {
+        experiences: experienceEntries,
+        educations: educationEntries
+      };
+    } catch (error) {
+      this.logger.error(`Failed to parse evaluateDetail: ${error}`);
+      return emptyBreakdown;
+    }
+  }
+
+  /**
    * Get candidate detail by application ID.
-   * Termasuk scoring breakdown lengkap yang siap ditampilkan oleh HR:
-   * tiap entri pengalaman beserta role, perusahaan, deskripsi, dan skor similarity-nya.
+   *
+   * ROBUST GUARANTEES:
+   * - evaluationResult is ALWAYS present (created at application submission)
+   * - scoringBreakdown.educations & experiences are ALWAYS arrays (never null/undefined)
+   * - Scoring updates happen async without blocking response
+   * - Frontend always has consistent data structure to bind to
    */
   async getCandidateDetail(applicationId: string): Promise<Candidate> {
     const application = await this.applicationRepository.findOne({
@@ -780,56 +851,18 @@ export class CandidatesService {
         "applicant.addresses"
       ]
     });
- 
+
     if (!application) {
       throw new NotFoundException(`Application with ID ${applicationId} not found`);
     }
 
+    // GUARANTEED to exist (created at application submission in quickApply step 4i)
     const evalResult = await this.evaluationResultRepository.findOne({
       where: { applicationId }
     });
- 
-    // ── Parse evaluateDetail → ScoringBreakdown ───────────────────────────
-    let scoringBreakdown: ScoringBreakdown | null = null;
 
-    if (evalResult?.evaluateDetail) {
-      const detail: Record<string, any> =
-        typeof evalResult.evaluateDetail === "string"
-          ? JSON.parse(evalResult.evaluateDetail)
-          : evalResult.evaluateDetail;
-
-      const maxScore = evalResult.maxExperienceScore ?? null;
-
-      // 1. Mapping Experience (Struktur baru: array langsung, bukan object 'entries')
-      const experienceEntries: ScoringBreakdown["experiences"] = (
-        detail.experience ?? []
-      ).map((e: any) => ({
-        role:          e.role           ?? null,
-        description:   e.description    ?? null,
-        start:         e.start          ?? null,
-        end:           e.end            ?? null,
-        durationYears: e.duration_years ?? null,
-        similarity:    e.similarity     ?? null,
-        isTopMatch:
-          maxScore !== null &&
-          e.similarity !== null &&
-          Math.abs(e.similarity - maxScore) < 0.0001
-      }));
-
-      // 2. Mapping Educations (Struktur baru: array langsung, bukan di dalam 'cv_parsed')
-      const educationEntries: ScoringBreakdown["educations"] = (
-        detail.educations ?? []
-      ).map((e: any) => ({
-        level:       e.level       ?? null,
-        major:       e.major       ?? null,
-        institution: e.institution ?? null
-      }));
-
-      scoringBreakdown = {
-        experiences: experienceEntries,
-        educations:  educationEntries
-      };
-    }
+    // Parse with guaranteed non-null arrays
+    const scoringBreakdown = this.parseEvaluateDetail(evalResult);
     // ─────────────────────────────────────────────────────────────────────
  
     return {
@@ -843,7 +876,9 @@ export class CandidatesService {
       currentStage: application.currentStage?.stageTemplate?.name || "Applied",
       score: application.currentScore,
       appliedAt: application.appliedAt,
-      avatar: application.applicant.photoUrl,
+      avatar: application.applicant.photoUrl
+        ? await this.minioService.getFileUrl(application.applicant.photoUrl).catch(() => undefined)
+        : undefined,
       education: this.getEducationLevel(application.applicant.educations),
       experience: this.getExperienceLevel(application.applicant.jobHistories),
       coverLetter: application.coverLetter,
@@ -889,17 +924,50 @@ export class CandidatesService {
         updatedAt: this.toISOString(addr.updatedAt),
         deletedAt: this.toISOString(addr.deletedAt) || null
       })) ?? [],
-      evaluationResult: evalResult
-        ? {
-            maxExperienceScore: evalResult.maxExperienceScore ?? null,
-            decision:
-              typeof evalResult.decision === "string" ? evalResult.decision
-              : evalResult.decision != null ? String(evalResult.decision)
-              : null,
-            evaluatedAt:     evalResult.evaluatedAt ?? null,
-            scoringBreakdown
-          }
-        : null
+      educations: application.applicant.educations?.map(edu => ({
+        id: edu.id,
+        applicantId: edu.applicantId,
+        schoolName: edu.schoolName,
+        degree: edu.degree,
+        major: edu.major,
+        gpa: edu.gpa,
+        startMonth: edu.startMonth,
+        endMonth: edu.endMonth,
+        diplomaFileName: edu.diplomaFileName,
+        level: edu.level,
+        order: edu.order,
+        createdAt: this.toISOString(edu.createdAt),
+        updatedAt: this.toISOString(edu.updatedAt),
+        deletedAt: this.toISOString(edu.deletedAt) || null,
+      })) ?? [],
+      jobHistories: application.applicant.jobHistories?.map(job => ({
+        id: job.id,
+        applicantId: job.applicantId,
+        position: job.position,
+        company: job.company,
+        employeeStatus: job.employeeStatus,
+        startDate: job.startDate ? this.toISOString(job.startDate) : null,
+        endDate: job.endDate ? this.toISOString(job.endDate) : null,
+        location: job.location,
+        description: job.description,
+        achievements: job.achievements,
+        durationYears: job.durationYears,
+        order: job.order,
+        createdAt: this.toISOString(job.createdAt),
+        updatedAt: this.toISOString(job.updatedAt),
+        deletedAt: this.toISOString(job.deletedAt) || null,
+      })) ?? [],
+      // GUARANTEED to exist and have consistent structure
+      evaluationResult: {
+        maxExperienceScore: evalResult?.maxExperienceScore ?? null,
+        decision:
+          typeof evalResult?.decision === "string" ? evalResult.decision
+          : evalResult?.decision != null ? String(evalResult.decision)
+          : null,
+        evaluatedAt: evalResult?.evaluatedAt ?? null,
+        errorMessage: evalResult?.errorMessage ?? null,
+        scoringBreakdown
+      }
     };
   }
 

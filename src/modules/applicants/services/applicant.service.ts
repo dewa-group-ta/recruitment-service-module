@@ -35,6 +35,7 @@ import { ApplicantProjectHistory } from "../entities/applicant-project-history.e
 import { ApplicantSource } from "../entities/applicant-source.entity";
 import { ApplyApplicantDto } from "../dto/apply-applicant.dto";
 import { QuickApplyDto, QuickApplyResponseDto } from "../dto/quick-apply.dto";
+import { ApplyFormBasedDto, ApplyFormBasedResponseDto } from "../dto/apply-form-based.dto";
 import { PipelineStage } from "../../vacancies/entities/pipeline-stage.entity";
 import { StageActivity } from "../../vacancies/entities/stage-activity.entity";
 import { ApplicationTrackingResponseDto } from "../dto/application-tracking-response.dto";
@@ -46,6 +47,7 @@ import { FileUploadDto } from "../../../shared/dto/file-upload.dto";
 import { File, FileType } from "../../../shared/entities/file.entity";
 import { ApplyApplicantResponseDto } from "../dto/apply-applicant-response.dto";
 import { EvaluationResultResponseDto } from "src/modules/applicant-results/dto/evaluation-result-response.dto";
+import { EvaluationResult } from "src/modules/applicant-results/entities/evaluation-results.entity";
 import { ApplicationTrackingPublicDto, ApplicationTrackingQueryDto } from "../dto/application-tracking-public.dto";
 import { EmailService } from "../../../shared/services/email.service";
 import { SystemConfigEmailService } from "../../../shared/services/system-config-email.service";
@@ -85,6 +87,8 @@ export class ApplicantService implements IApplicantService {
     private readonly pipelineStageRepository: Repository<PipelineStage>,
     @InjectRepository(StageActivity)
     private readonly stageActivityRepository: Repository<StageActivity>,
+    @InjectRepository(EvaluationResult)
+    private readonly evaluationResultRepository: Repository<EvaluationResult>,
     private readonly applicantResultsService: ApplicantResultsService,
     @InjectRepository(File)
     private readonly fileRepository: Repository<File>,
@@ -121,7 +125,7 @@ export class ApplicantService implements IApplicantService {
     await queryRunner.startTransaction();
 
     try {
-      // Validate vacancy and application eligibility
+      // Validate vacancy and application eligibility (without quota constraints)
       const vacancy = await this.validateVacancyAndEligibility(
         registerDto,
         queryRunner
@@ -186,18 +190,6 @@ export class ApplicantService implements IApplicantService {
 
     if (vacancy.endDate && new Date() > vacancy.endDate) {
       throw new BadRequestException("Application deadline has passed");
-    }
-
-    if (vacancy.isLimitApplicantEnabled && vacancy.applicantLimit) {
-      const currentApplicationsCount = await this.applicationRepository.count({
-        where: { vacancyId: registerDto.vacancyId }
-      });
-
-      if (currentApplicationsCount >= vacancy.applicantLimit) {
-        throw new BadRequestException(
-          "Application limit reached for this vacancy"
-        );
-      }
     }
 
     if (
@@ -852,12 +844,19 @@ async applyForPosition(
   }
 
   // 3. ✅ SCORING DULU sebelum transaksi DB
-  const scoringResult = await this.applicantResultsService.runScoring(
-    applicationId,
-    cvFile.filePath,
-    cvFile.mimeType ?? "application/pdf"
-  );
-  // Jika gagal → langsung throw error ke applicant, transaksi tidak pernah jalan
+  let scoringResult: any = null;
+  let scoringError: string | null = null;
+  try {
+    scoringResult = await this.applicantResultsService.runScoring(
+      applicationId,
+      cvFile.filePath,
+      cvFile.mimeType ?? "application/pdf"
+    );
+  } catch (err) {
+    scoringError = err instanceof Error ? err.message : "CV analysis failed";
+    this.logger.error(`Scoring failed for applicationId=${applicationId}: ${scoringError}`);
+    // Lanjut dengan transaksi, simpan error message nanti
+  }
 
   // 4. ✅ Scoring berhasil → baru jalankan transaksi DB
   const result = await this.dataSource.transaction(async (manager) => {
@@ -928,11 +927,17 @@ async applyForPosition(
     return { applicant: updatedApplicant, application: updatedApplication };
   });
 
-  // 5. ✅ Simpan hasil scoring ke DB (karena runScoring sekarang return hasil)
-  try {
-    await this.applicantResultsService.saveResults(scoringResult, applicantId);
-  } catch (err) {
-    this.logger.error('Failed to persist scoring results', err);
+  // 5. ✅ Simpan hasil scoring ke DB atau error message
+  if (scoringError) {
+    // Jika scoring gagal, simpan error message
+    await this.applicantResultsService.saveEvaluationError(applicationId, scoringError);
+  } else if (scoringResult) {
+    // Jika scoring berhasil, simpan hasil
+    try {
+      await this.applicantResultsService.saveResults(scoringResult, applicantId);
+    } catch (err) {
+      this.logger.error('Failed to persist scoring results', err);
+    }
   }
 
   const maxScore = scoringResult.experience?.length
@@ -989,15 +994,6 @@ async applyForPosition(
     }
     if (vacancy.endDate && new Date(vacancy.endDate) < new Date()) {
       throw new BadRequestException("Application deadline has passed");
-    }
-    if (vacancy.isLimitApplicantEnabled && vacancy.applicantLimit) {
-      const currentCount = await this.applicationRepository.count({ where: { vacancyId: dto.vacancyId } });
-      if (currentCount >= vacancy.applicantLimit) {
-        throw new BadRequestException("Application limit reached for this vacancy");
-      }
-    }
-    if (!vacancy.pipelineId) {
-      throw new BadRequestException("This vacancy is not ready to accept applications yet");
     }
 
     // ── 2. Early duplicate guard by email (read-only, before file upload) ──
@@ -1157,6 +1153,15 @@ async applyForPosition(
           })
         );
 
+        // 4i. Create placeholder EvaluationResult to guarantee data structure consistency
+        // This ensures evaluationResult is ALWAYS present for the frontend,
+        // even before async scoring completes. Scoring will update this record with actual data.
+        // This is essential for robust frontend data binding.
+        const placeholder = manager.create(EvaluationResult);
+        placeholder.applicationId = finalApplication.id;
+        placeholder.evaluateDetail = { experiences: [], educations: [] };
+        await manager.save(EvaluationResult, placeholder);
+
         return { applicant: savedApplicant, application: finalApplication };
       });
     } catch (txError) {
@@ -1198,6 +1203,202 @@ async applyForPosition(
         application_link: trackingLink,
       }
     ).catch((err) => this.logger.error('Failed to send quick apply confirmation email', err));
+
+    return {
+      applicant: {
+        id:       txResult.applicant.id,
+        fullName: txResult.applicant.fullName,
+        email:    txResult.applicant.email,
+      },
+      application: {
+        id:                txResult.application.id,
+        applicationNumber: txResult.application.applicationNumber,
+        registrationCode:  txResult.application.registrationCode,
+        status:            txResult.application.status,
+        appliedAt:         txResult.application.appliedAt,
+      },
+    };
+  }
+
+  async applyFormBased(dto: ApplyFormBasedDto): Promise<ApplyFormBasedResponseDto> {
+    // ── 1. Validate vacancy ────────────────────────────────────────────────
+    const vacancy = await this.vacancyRepository.findOne({
+      where: { id: dto.vacancyId },
+      relations: ["pipeline"]
+    });
+    if (!vacancy) throw new NotFoundException("Vacancy not found");
+    if (vacancy.status !== JobStatus.PUBLISHED) {
+      throw new BadRequestException("Vacancy is not currently accepting applications");
+    }
+    if (vacancy.endDate && new Date(vacancy.endDate) < new Date()) {
+      throw new BadRequestException("Application deadline has passed");
+    }
+
+    // ── 2. Early duplicate guard ────────────────────────────────────────────
+    const existingApplicant = await this.applicantRepository.findOne({ where: { email: dto.email } });
+    if (existingApplicant) {
+      const existingApplication = await this.applicationRepository.findOne({
+        where: { applicantId: existingApplicant.id, vacancyId: dto.vacancyId }
+      });
+      if (existingApplication) {
+        throw new BadRequestException("You have already applied to this vacancy");
+      }
+    }
+
+    // ── 3. Generate registration code ──────────────────────────────────────
+    let registrationCode = this.generateRegistrationCode();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const collision = await this.applicationRepository.findOne({ where: { registrationCode } });
+      if (!collision) break;
+      if (attempt === 2) throw new Error("Failed to generate unique registration code after 3 attempts");
+      registrationCode = this.generateRegistrationCode();
+    }
+
+    // ── 4. Atomic DB transaction ────────────────────────────────────────────
+    const txResult = await this.dataSource.transaction(async (manager) => {
+      // 4a. Find or create applicant
+      let applicant = await manager.findOne(Applicant, { where: { email: dto.email } });
+      if (!applicant) {
+        applicant = manager.create(Applicant, { email: dto.email, fullName: dto.fullName, phone: dto.phone });
+        applicant = await manager.save(Applicant, applicant);
+      }
+
+      // 4b. Second duplicate guard (race condition protection)
+      const duplicate = await manager.findOne(Application, {
+        where: { applicantId: applicant.id, vacancyId: dto.vacancyId }
+      });
+      if (duplicate) throw new BadRequestException("You have already applied to this vacancy");
+
+      // 4c. Update applicant profile
+      Object.assign(applicant, {
+        fullName:      dto.fullName,
+        phone:         dto.phone,
+        gender:        dto.gender,
+        maritalStatus: dto.maritalStatus,
+        placeOfBirth:  dto.placeOfBirth,
+        dateOfBirth:   new Date(dto.dateOfBirth),
+        availability:  dto.availability,
+        ...(dto.availabilityAt ? { availabilityAt: new Date(dto.availabilityAt) } : {}),
+        ...(dto.photoUrl        ? { photoUrl: dto.photoUrl }              : {}),
+        ...(dto.cvUrl           ? { cvUrl: dto.cvUrl }                   : {}),
+        ...(dto.socialMediaUrl  ? { socialMediaUrl: dto.socialMediaUrl } : {}),
+        ...(dto.linkedinUrl     ? { linkedinUrl: dto.linkedinUrl }       : {}),
+      });
+      const savedApplicant = await manager.save(Applicant, applicant);
+
+      // 4d. Save address
+      await manager.save(
+        ApplicantAddress,
+        manager.create(ApplicantAddress, {
+          applicantId: savedApplicant.id,
+          province:    dto.address.province,
+          regency:     dto.address.regency,
+          district:    dto.address.district,
+          village:     dto.address.village,
+          fullAddress: dto.address.fullAddress,
+        })
+      );
+
+      // 4e. Save education
+      await manager.save(
+        ApplicantEducation,
+        manager.create(ApplicantEducation, {
+          applicantId:  savedApplicant.id,
+          schoolName:   dto.education.institutionName,
+          degree:       dto.education.degree,
+          major:        dto.education.major ?? null,
+          startMonth:   dto.education.monthStart,
+          endMonth:     dto.education.monthEnd,
+        })
+      );
+
+      // 4f. Save experiences as job histories
+      for (let i = 0; i < dto.experiences.length; i++) {
+        const exp = dto.experiences[i];
+        await manager.save(
+          ApplicantJobHistory,
+          manager.create(ApplicantJobHistory, {
+            applicantId:    savedApplicant.id,
+            position:       exp.position,
+            company:        exp.company || null,
+            employeeStatus: exp.employeeStatus,
+            startDate:      new Date(exp.startDate),
+            endDate:        exp.endDate ? new Date(exp.endDate) : null,
+            description:    exp.description,
+            order:          i + 1,
+          })
+        );
+      }
+
+      // 4g. Generate application number and create application
+      const applicationNumber = await this.generateApplicationNumberWithManager(manager, vacancy.jobCode);
+      const now = new Date();
+      let application = manager.create(Application, {
+        applicationNumber,
+        registrationCode,
+        applicantId:    savedApplicant.id,
+        vacancyId:      vacancy.id,
+        pipelineId:     vacancy.pipelineId,
+        status:         ApplicantStatus.APPLIED,
+        appliedAt:      now,
+        lastActivityAt: now,
+      });
+      application = await manager.save(Application, application);
+
+      // 4h. Initialize first pipeline stage
+      const firstStage = await manager.findOne(PipelineStage, {
+        where: { pipelineId: vacancy.pipelineId },
+        order: { stageOrder: "ASC" }
+      });
+      if (!firstStage) throw new BadRequestException("This vacancy has no pipeline stages configured");
+
+      await manager.save(
+        StageActivity,
+        manager.create(StageActivity, {
+          applicationId: application.id,
+          stageId:       firstStage.id,
+          createdAt:     now,
+          status:        StageActivityStatus.IN_PROGRESS,
+        })
+      );
+
+      application.currentStageId = firstStage.id;
+      application.lastActivityAt = now;
+      const finalApplication = await manager.save(Application, application);
+
+      // 4i. Create EvaluationResult placeholder — same guarantee as quickApply (step 4i).
+      // Frontend detects evaluatedAt === null to show "Processing..." while scoring runs.
+      const placeholder = manager.create(EvaluationResult);
+      placeholder.applicationId = finalApplication.id;
+      placeholder.evaluateDetail = { experiences: [], educations: [] };
+      await manager.save(EvaluationResult, placeholder);
+
+      return { applicant: savedApplicant, application: finalApplication };
+    });
+
+    // ── 5. Fire-and-forget: SBERT scoring ──────────────────────────────────
+    const experiencesWithCompany = dto.experiences.filter(e => e.company);
+    if (experiencesWithCompany.length > 0) {
+      void this.runFormBasedScoringAsync(
+        txResult.application.id,
+        vacancy.responsibilities ?? "",
+        experiencesWithCompany.map(e => ({ position: e.position, company: e.company!, description: e.description, startDate: e.startDate, endDate: e.endDate }))
+      );
+    }
+
+    // ── 6. Fire-and-forget: confirmation email ──────────────────────────────
+    const trackingLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/tracking-application?email=${encodeURIComponent(txResult.applicant.email)}&code=${txResult.application.registrationCode}`;
+    void this.systemConfigEmailService.sendEmailFromConfig(
+      "notification_applicant_apply",
+      { email: txResult.applicant.email, name: txResult.applicant.fullName },
+      {
+        applicant_name:    txResult.applicant.fullName,
+        vacancy_name:      vacancy.title,
+        registration_code: txResult.application.registrationCode,
+        tracking_link:     trackingLink,
+        application_link:  trackingLink,
+      }
+    ).catch((err) => this.logger.error("Failed to send form-based apply confirmation email", err));
 
     return {
       applicant: {
@@ -1285,6 +1486,22 @@ async applyForPosition(
     return `REG-${code}`;
   }
 
+  private async runFormBasedScoringAsync(
+    applicationId: string,
+    jobResponsibilities: string,
+    experiences: { position: string; company: string; description: string; startDate?: string; endDate?: string }[]
+  ): Promise<void> {
+    try {
+      await this.applicantResultsService.runFormBasedScoring(applicationId, jobResponsibilities, experiences);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "CV analysis failed";
+      this.logger.error(`Form-based scoring failed for applicationId=${applicationId}: ${message}`);
+      await this.applicantResultsService.saveEvaluationError(applicationId, message).catch((saveErr) =>
+        this.logger.error(`Failed to persist evaluation error for applicationId=${applicationId}`, saveErr)
+      );
+    }
+  }
+
   private async runScoringAsync(
     applicationId: string,
     cvFilePath: string,
@@ -1299,8 +1516,10 @@ async applyForPosition(
       );
       await this.applicantResultsService.saveResults(scoringResult, applicantId);
     } catch (err) {
-      this.logger.error(
-        `Background scoring failed for applicationId=${applicationId}: ${err instanceof Error ? err.message : String(err)}`
+      const message = err instanceof Error ? err.message : "CV analysis failed";
+      this.logger.error(`Background scoring failed for applicationId=${applicationId}: ${message}`);
+      await this.applicantResultsService.saveEvaluationError(applicationId, message).catch((saveErr) =>
+        this.logger.error(`Failed to persist evaluation error for applicationId=${applicationId}`, saveErr)
       );
     }
   }

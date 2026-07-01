@@ -77,7 +77,7 @@ export class SystemConfigurationSeeder extends BaseSeeder {
       },
       {
         configKey: "company_employees",
-        configValue: "70 - 100 employees",
+        configValue: "200 - 250",
         configType: ConfigType.TEXT,
         groupName: "company",
         label: "Employees",
@@ -99,7 +99,7 @@ export class SystemConfigurationSeeder extends BaseSeeder {
       },
       {
         configKey: "company_address",
-        configValue: "Jl. Sudirman No. 123, Jakarta Pusat 10270, Indonesia",
+        configValue: "Komp. Buah Batu Regency A2 No.9 - 10 Kel. Kujangsari, Kec. Bandung Kidul, Bandung, Jawa Barat, Indonesia.",
         configType: ConfigType.TEXT,
         groupName: "company",
         label: "Address",

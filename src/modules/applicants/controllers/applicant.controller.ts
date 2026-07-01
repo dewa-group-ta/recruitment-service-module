@@ -47,6 +47,7 @@ import { ValidateTokenDto } from "../dto/validate-token.dto";
 import { ApplyApplicantDto } from "../dto/apply-applicant.dto";
 import { ApplicationTrackingResponseDto } from "../dto/application-tracking-response.dto";
 import { ApplicationTrackingPublicDto, ApplicationTrackingQueryDto } from "../dto/application-tracking-public.dto";
+import { ApplyFormBasedDto } from "../dto/apply-form-based.dto";
 
 @ApiTags("Applicants")
 @Controller("applicants")
@@ -171,6 +172,30 @@ export class ApplicationController {
         }
         // applicationNumber race or any other unique constraint
         throw new BadRequestException('A submission conflict occurred. Please try again.');
+      }
+      throw err;
+    }
+  }
+
+  @Public()
+  @Post("apply-form-based")
+  @HttpCode(HttpStatus.CREATED)
+  @ResponseMessage(responseMessage.SUCCESSFULLY_CREATED)
+  @ApiOperation({ summary: "Apply via form fields (no LLM/CV parsing)" })
+  @ApiBody({ type: ApplyFormBasedDto })
+  @ApiResponse({ status: 201, description: "Application submitted successfully" })
+  async applyFormBased(@Body() dto: ApplyFormBasedDto) {
+    try {
+      return await this.applicantService.applyFormBased(dto);
+    } catch (err: any) {
+      if (err?.code === "23505") {
+        if (err?.constraint === "UQ_applications_applicant_vacancy") {
+          throw new BadRequestException("You have already applied to this vacancy.");
+        }
+        if (err?.detail?.includes("email")) {
+          throw new BadRequestException("A submission with this email is already in progress. Please try again.");
+        }
+        throw new BadRequestException("A submission conflict occurred. Please try again.");
       }
       throw err;
     }

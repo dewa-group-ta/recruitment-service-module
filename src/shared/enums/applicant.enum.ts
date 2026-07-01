@@ -30,10 +30,12 @@ export enum AddressTypeEnum {
 export enum EmployeeStatus {
   FULL_TIME = "full_time",
   PART_TIME = "part_time",
+  TEMPORARY = "temporary",
   CONTRACT = "contract",
   INTERNSHIP = "internship",
   FREELANCE = "freelance",
-  TEMPORARY = "temporary"
+  PERMANENT_EMPLOYEE = "permanent_employee",
+  PROJECT = "project",
 }
 
 export enum AvailabilityEnum {

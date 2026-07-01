@@ -105,6 +105,68 @@ export class ApplicantResultsService {
     return scoringResult;
   }
 
+  async runFormBasedScoring(
+    applicationId: string,
+    jobResponsibilities: string,
+    experiences: { position: string; company: string; description: string; startDate?: string; endDate?: string }[]
+  ): Promise<void> {
+    this.logger.log(`Memulai form-based scoring untuk applicationId=${applicationId}`);
+
+    const url = `${this.fastApiBaseUrl}/scoring/score-experiences`;
+    const payload = { application_id: applicationId, job_responsibilities: jobResponsibilities, experiences };
+
+    let scores: { position: string; company: string; description: string; similarity: number }[] = [];
+    let maxScore = 0;
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post<{ data: { application_id: string; scores: typeof scores; max_score: number } }>(
+          url, payload, { headers: { "Content-Type": "application/json" }, timeout: 60_000 }
+        )
+      );
+      scores = response.data?.data?.scores ?? [];
+      maxScore = response.data?.data?.max_score ?? 0;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      this.logger.error(`Form-based scoring FastAPI call failed: ${message}`);
+      throw new InternalServerErrorException(`Gagal menghubungi FastAPI Scoring Service: ${message}`);
+    }
+
+    await this.dataSource.transaction(async (manager) => {
+      const evaluateDetail = {
+        experience: scores.map((s) => {
+          const orig = experiences.find(e => e.position === s.position);
+          return {
+            role:           s.position,
+            description:    s.description,
+            start:          orig?.startDate ?? null,
+            end:            orig?.endDate ?? null,
+            duration_years: null,
+            similarity:     s.similarity,
+          };
+        }),
+        educations: [],
+      };
+
+      const existing = await manager.findOne(EvaluationResult, { where: { applicationId } });
+      if (existing) {
+        existing.maxExperienceScore = maxScore;
+        existing.evaluateDetail = evaluateDetail;
+        existing.evaluatedAt = new Date();
+        await manager.save(EvaluationResult, existing);
+      } else {
+        const evalResult = manager.create(EvaluationResult);
+        evalResult.applicationId = applicationId;
+        evalResult.maxExperienceScore = maxScore;
+        evalResult.evaluateDetail = evaluateDetail;
+        evalResult.evaluatedAt = new Date();
+        await manager.save(EvaluationResult, evalResult);
+      }
+    });
+
+    this.logger.log(`Form-based scoring selesai: applicationId=${applicationId}, maxScore=${maxScore}`);
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
   // PRIVATE: FastAPI call
   // ─────────────────────────────────────────────────────────────────────────────
@@ -116,7 +178,7 @@ export class ApplicantResultsService {
     jobResponsibilities: string
   ): Promise<FastApiScoringResponseDto> {
 
-    const url = `${this.fastApiBaseUrl}/parse-and-evaluate/`;
+    const url = `${this.fastApiBaseUrl}/parse-and-evaluate`;
     const form = new FormData();
     const fileName = cvFilePath.split("/").pop() ?? "cv.pdf";
 
@@ -146,7 +208,20 @@ export class ApplicantResultsService {
     await this.dataSource.transaction(async (manager) => {
       const { application_id, educations, experience } = result;
 
-      await manager.delete(EvaluationResult, { applicationId: application_id });
+      // Find existing EvaluationResult (created as placeholder in quickApply)
+      const existingEvalResult = await manager.findOne(EvaluationResult, {
+        where: { applicationId: application_id }
+      });
+
+      if (existingEvalResult) {
+        // Update existing placeholder with actual scoring data
+        existingEvalResult.evaluateDetail = { educations, experience };
+        existingEvalResult.evaluatedAt = new Date();
+        // maxExperienceScore akan diupdate di bawah
+      } else {
+        // Fallback: jika somehow EvaluationResult tidak ada, delete yang lama
+        await manager.delete(EvaluationResult, { applicationId: application_id });
+      }
 
       // 1. Timpa ApplicantEducation
       await manager.softDelete(ApplicantEducation, { applicantId });
@@ -181,24 +256,25 @@ export class ApplicantResultsService {
         await manager.save(ApplicantJobHistory, jobHistoryEntities);
       }
 
-      // 3. Simpan EvaluationResult
+      // 3. Update/Save EvaluationResult dengan scoring data
       // Hitung max similarity score secara dinamis dari array experience
-      const maxScore = experience && experience.length > 0 
-        ? Math.max(...experience.map(e => e.similarity ?? 0)) 
+      const maxScore = experience && experience.length > 0
+        ? Math.max(...experience.map(e => e.similarity ?? 0))
         : 0;
 
-      const evalResult = new EvaluationResult();
-      evalResult.applicationId = application_id;
-      evalResult.maxExperienceScore = maxScore;
-      
-      // Simpan snapshot JSON
-      evalResult.evaluateDetail = {
-        educations,
-        experience
-      };
-      
-      evalResult.evaluatedAt = new Date();
-      await manager.save(EvaluationResult, evalResult);
+      // Update existing placeholder atau create baru jika tidak ada
+      if (existingEvalResult) {
+        existingEvalResult.maxExperienceScore = maxScore;
+        await manager.save(EvaluationResult, existingEvalResult);
+      } else {
+        // Fallback: create new jika somehow tidak ada di database
+        const evalResult = new EvaluationResult();
+        evalResult.applicationId = application_id;
+        evalResult.maxExperienceScore = maxScore;
+        evalResult.evaluateDetail = { educations, experience };
+        evalResult.evaluatedAt = new Date();
+        await manager.save(EvaluationResult, evalResult);
+      }
     });
   }
 
@@ -234,5 +310,25 @@ export class ApplicantResultsService {
       5: EducationLevel.DOCTORATE,
     };
     return numericToEnum[level] ?? null;
+  }
+
+  async saveEvaluationError(applicationId: string, errorMessage: string): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const existing = await manager.findOne(EvaluationResult, {
+        where: { applicationId }
+      });
+
+      if (existing) {
+        existing.evaluatedAt = new Date();
+        existing.errorMessage = errorMessage;
+        await manager.save(EvaluationResult, existing);
+      } else {
+        const evalResult = new EvaluationResult();
+        evalResult.applicationId = applicationId;
+        evalResult.evaluatedAt = new Date();
+        evalResult.errorMessage = errorMessage;
+        await manager.save(EvaluationResult, evalResult);
+      }
+    });
   }
 }

@@ -43,6 +43,9 @@ export class EvaluationResult {
   @Column({ name: "evaluated_at", type: "timestamp", nullable: true })
     evaluatedAt!: Date;
 
+  @Column({ name: "error_message", type: "text", nullable: true })
+    errorMessage!: string;
+
   @CreateDateColumn({ name: "created_at" })
     createdAt!: Date;
 

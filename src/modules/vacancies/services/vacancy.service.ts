@@ -59,7 +59,9 @@ export class VacancyService {
         workModel: WorkModel.ON_SITE,
         currency: "IDR",
         pipelineId: pipelineInstance.id,
-        createdById
+        createdById,
+        isLimitApplicantEnabled: false,
+        isLimitHiredEnabled: false
       });
 
       const savedVacancy = await this.vacancyRepository.save(vacancy);
@@ -492,8 +494,6 @@ export class VacancyService {
     }
 
     const numberFields = [
-      "applicantLimit",
-      "hiredLimit",
       "salaryMin",
       "salaryMax",
       "requiredExperienceYears",
@@ -507,13 +507,11 @@ export class VacancyService {
       }
     });
 
-    // Boolean toggle fields
-    const booleanFields = ["isLimitApplicantEnabled", "isLimitHiredEnabled"];
-    booleanFields.forEach((field) => {
-      if (updateVacancyDto[field] !== undefined) {
-        updateData[field] = updateVacancyDto[field];
-      }
-    });
+    // Quota constraints disabled — applicantLimit, hiredLimit, isLimitApplicantEnabled, isLimitHiredEnabled always set to null/false
+    updateData.isLimitApplicantEnabled = false;
+    (updateData as any).applicantLimit = null;
+    updateData.isLimitHiredEnabled = false;
+    (updateData as any).hiredLimit = null;
 
     if (updateVacancyDto.officeAddresses !== undefined) {
       updateData.officeAddresses = updateVacancyDto.officeAddresses;
@@ -550,10 +548,10 @@ export class VacancyService {
       workModel: vacancy.workModel,
       startDate: vacancy.startDate,
       endDate: vacancy.endDate,
-      isLimitApplicantEnabled: vacancy.isLimitApplicantEnabled,
-      applicantLimit: vacancy.applicantLimit,
-      isLimitHiredEnabled: vacancy.isLimitHiredEnabled,
-      hiredLimit: vacancy.hiredLimit,
+      isLimitApplicantEnabled: false,
+      applicantLimit: null as any,
+      isLimitHiredEnabled: false,
+      hiredLimit: null as any,
       officeAddresses: vacancy.officeAddresses,
       department: vacancy.department?.name ?? null,
       departmentId: vacancy.departmentId,
