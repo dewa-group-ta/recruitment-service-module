@@ -164,6 +164,9 @@ export class EvaluationScoreDetailDto {
 
   @ApiProperty({ nullable: true })
   evaluatedAt!: Date | null;
+
+  @ApiProperty({ nullable: true, description: 'Error message jika scoring gagal' })
+  errorMessage!: string | null;
 }
 
 export class UpdateCandidateStatusDto {
