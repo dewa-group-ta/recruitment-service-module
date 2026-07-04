@@ -178,7 +178,7 @@ export class ApplicantResultsService {
     jobResponsibilities: string
   ): Promise<FastApiScoringResponseDto> {
 
-    const url = `${this.fastApiBaseUrl}/parse-and-evaluate`;
+    const url = `${this.fastApiBaseUrl}/parse-and-evaluate/`;
     const form = new FormData();
     const fileName = cvFilePath.split("/").pop() ?? "cv.pdf";
 

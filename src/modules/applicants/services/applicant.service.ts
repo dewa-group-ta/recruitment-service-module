@@ -46,12 +46,8 @@ import { FileUploadService } from "../../../shared/services/file-upload.service"
 import { FileUploadDto } from "../../../shared/dto/file-upload.dto";
 import { File, FileType } from "../../../shared/entities/file.entity";
 import { ApplyApplicantResponseDto } from "../dto/apply-applicant-response.dto";
-<<<<<<< HEAD
 import { EvaluationResultResponseDto } from "../../../modules/applicant-results/dto/evaluation-result-response.dto";
-=======
-import { EvaluationResultResponseDto } from "src/modules/applicant-results/dto/evaluation-result-response.dto";
-import { EvaluationResult } from "src/modules/applicant-results/entities/evaluation-results.entity";
->>>>>>> e9e9743da852496d788350532b5c80e2197e8316
+import { EvaluationResult } from "../../../modules/applicant-results/entities/evaluation-results.entity";
 import { ApplicationTrackingPublicDto, ApplicationTrackingQueryDto } from "../dto/application-tracking-public.dto";
 import { EmailService } from "../../../shared/services/email.service";
 import { SystemConfigEmailService } from "../../../shared/services/system-config-email.service";

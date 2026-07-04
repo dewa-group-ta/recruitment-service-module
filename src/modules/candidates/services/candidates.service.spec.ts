@@ -1,4 +1,7 @@
 // src/modules/candidates/services/candidates.service.spec.ts
+//
+// Cakupan: HANYA bagian pemeringkatan (sorting berdasarkan maxExperienceScore,
+// getSortField, dan parseEvaluateDetail/isTopMatch di getCandidateDetail).
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -16,42 +19,15 @@ import { File } from '../../../shared/entities/file.entity';
 import { NotificationService } from '../../../shared/services/notification.service';
 import { MinioService } from '../../../shared/services/minio.service';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Mock application minimal yang memenuhi semua field yang diakses
-// transformToApplicantTableItem: application.applicant, application.vacancy,
-// application.currentStage, application.status, application.isTalentPool, dll.
-// ─────────────────────────────────────────────────────────────────────────────
 function makeApplication(id: string): any {
   return {
-    id,
-    status: 'applied',
-    isTalentPool: false,
-    appliedAt: new Date(),
-    lastActivityAt: null,
-    currentScore: null,
-    source: null,
-    expectedStartDate: null,
-    coverLetter: null,
-    currentStage: null,
-    applicant: {
-      id: `cand-${id}`,
-      fullName: 'Test Kandidat',
-      email: `test-${id}@mail.com`,
-      phone: '0800',
-      photoUrl: null,
-      dateOfBirth: null,
-    },
-    vacancy: {
-      id: 'vac-1',
-      title: 'Backend Developer',
-      status: 'published',
-      department: null,
-      officeAddresses: [],
-    },
+    id, status: 'applied', isTalentPool: false, appliedAt: new Date(), lastActivityAt: null,
+    currentScore: null, source: null, expectedStartDate: null, coverLetter: null, currentStage: null,
+    applicant: { id: `cand-${id}`, fullName: 'Test Kandidat', email: `test-${id}@mail.com`, phone: '0800', photoUrl: null, dateOfBirth: null },
+    vacancy: { id: 'vac-1', title: 'Backend Developer', status: 'published', department: null, officeAddresses: [] },
   };
 }
 
-// Helper: bikin mock QueryBuilder TypeORM yang chainable
 function createMockQueryBuilder(applications: any[], total: number) {
   const qb: any = {
     leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -76,10 +52,7 @@ describe('CandidatesService', () => {
   let fileRepository: any;
 
   beforeEach(async () => {
-    applicationRepository = {
-      createQueryBuilder: jest.fn(),
-      findOne: jest.fn(),
-    };
+    applicationRepository = { createQueryBuilder: jest.fn(), findOne: jest.fn() };
     evaluationResultRepository = { find: jest.fn(), findOne: jest.fn() };
     fileRepository = { findOne: jest.fn() };
 
@@ -105,15 +78,12 @@ describe('CandidatesService', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // SORTING TABEL PEMERINGKATAN (UTC-70 s.d. UTC-73, UTC-83)
-  // ───────────────────────────────────────────────────────────────────────────
-  describe('getApplicantsTable — sorting berdasarkan Skor Shortlist', () => {
-    it('[UTC-70] harus LEFT JOIN ke evaluation_results dan sort DESC + NULLS LAST saat sortBy=maxExperienceScore', async () => {
-      const qb = createMockQueryBuilder(
-        [makeApplication('app-1'), makeApplication('app-2')],
-        2,
-      );
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Sorting tabel kandidat berdasarkan Skor Pemeringkatan (REQ-FR-01)
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe('getApplicantsTable — sorting berdasarkan maxExperienceScore', () => {
+    it('[UTC-122] harus LEFT JOIN ke evaluation_results dan sort DESC + NULLS LAST saat sortBy=maxExperienceScore', async () => {
+      const qb = createMockQueryBuilder([makeApplication('app-1'), makeApplication('app-2')], 2);
       applicationRepository.createQueryBuilder.mockReturnValue(qb);
       evaluationResultRepository.find.mockResolvedValue([
         { applicationId: 'app-1', maxExperienceScore: 0.91 },
@@ -122,25 +92,20 @@ describe('CandidatesService', () => {
 
       await service.getApplicantsTable({ sortBy: 'maxExperienceScore', sortOrder: 'desc' } as any);
 
-      expect(qb.leftJoin).toHaveBeenCalledWith(
-        EvaluationResult,
-        'evalSort',
-        expect.stringContaining('evalSort.applicationId = application.id'),
-      );
+      expect(qb.leftJoin).toHaveBeenCalledWith(EvaluationResult, 'evalSort', expect.stringContaining('evalSort.applicationId = application.id'));
       expect(qb.orderBy).toHaveBeenCalledWith('evalSort.maxExperienceScore', 'DESC', 'NULLS LAST');
     });
 
-    it('[UTC-71] kandidat tanpa hasil evaluasi harus mendapat maxExperienceScore = null pada hasil akhir', async () => {
+    it('[UTC-123] kandidat tanpa hasil evaluasi harus mendapat maxExperienceScore = null pada hasil akhir', async () => {
       const qb = createMockQueryBuilder([makeApplication('app-3')], 1);
       applicationRepository.createQueryBuilder.mockReturnValue(qb);
-      evaluationResultRepository.find.mockResolvedValue([]); // belum ada hasil scoring
+      evaluationResultRepository.find.mockResolvedValue([]);
 
       const result = await service.getApplicantsTable({ sortBy: 'maxExperienceScore', sortOrder: 'desc' } as any);
-
       expect(result.data[0].maxExperienceScore).toBeNull();
     });
 
-    it('[UTC-72] harus sort by kolom biasa (mis. name) tanpa LEFT JOIN ke evaluation_results', async () => {
+    it('[UTC-124] harus sort by kolom biasa (mis. name) tanpa LEFT JOIN ke evaluation_results', async () => {
       const qb = createMockQueryBuilder([], 0);
       applicationRepository.createQueryBuilder.mockReturnValue(qb);
       evaluationResultRepository.find.mockResolvedValue([]);
@@ -151,7 +116,7 @@ describe('CandidatesService', () => {
       expect(qb.leftJoin).not.toHaveBeenCalled();
     });
 
-    it('[UTC-73] harus tetap menerapkan filter vacancyId saat menampilkan pemeringkatan per lowongan', async () => {
+    it('[UTC-125] harus tetap menerapkan filter vacancyId saat menampilkan pemeringkatan per lowongan', async () => {
       const qb = createMockQueryBuilder([], 0);
       applicationRepository.createQueryBuilder.mockReturnValue(qb);
       evaluationResultRepository.find.mockResolvedValue([]);
@@ -161,14 +126,9 @@ describe('CandidatesService', () => {
       expect(qb.andWhere).toHaveBeenCalledWith('application.vacancyId = :vacancyId', { vacancyId: 'vac-1' });
     });
 
-    it('[UTC-83] skor harus terpasang ke applicationId yang benar saat ada beberapa kandidat (verifikasi integritas pemetaan, bukan asumsi urutan array)', async () => {
-      const qb = createMockQueryBuilder(
-        [makeApplication('app-x'), makeApplication('app-y'), makeApplication('app-z')],
-        3,
-      );
+    it('[UTC-126] skor harus terpasang ke applicationId yang benar walau urutan hasil query tidak sama dengan urutan evaluationResult (verifikasi integritas pemetaan)', async () => {
+      const qb = createMockQueryBuilder([makeApplication('app-x'), makeApplication('app-y'), makeApplication('app-z')], 3);
       applicationRepository.createQueryBuilder.mockReturnValue(qb);
-      // Sengaja dikembalikan TIDAK seurutan dengan application di atas,
-      // dan app-y sengaja tidak punya hasil evaluasi sama sekali
       evaluationResultRepository.find.mockResolvedValue([
         { applicationId: 'app-z', maxExperienceScore: 0.30 },
         { applicationId: 'app-x', maxExperienceScore: 0.99 },
@@ -183,87 +143,59 @@ describe('CandidatesService', () => {
     });
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // MAPPING KOLOM SORT (UTC-74 s.d. UTC-79)
-  // akses private method untuk verifikasi mapping murni
-  // ───────────────────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // getSortField — mapping nama kolom sort (private method)
+  // ═══════════════════════════════════════════════════════════════════════════
   describe('getSortField — mapping nama kolom sort', () => {
-    it('[UTC-74] sortBy="name" harus dipetakan ke "applicant.fullName"', () => {
-      const result = (service as any).getSortField('name');
-      expect(result).toBe('applicant.fullName');
+    it('[UTC-127] sortBy="name" harus dipetakan ke "applicant.fullName"', () => {
+      expect((service as any).getSortField('name')).toBe('applicant.fullName');
     });
 
-    it('[UTC-75] sortBy="applyDate" harus dipetakan ke "application.appliedAt"', () => {
-      const result = (service as any).getSortField('applyDate');
-      expect(result).toBe('application.appliedAt');
+    it('[UTC-128] sortBy="applyDate" harus dipetakan ke "application.appliedAt"', () => {
+      expect((service as any).getSortField('applyDate')).toBe('application.appliedAt');
     });
 
-    it('[UTC-76] sortBy="currentScore" harus dipetakan ke "application.currentScore"', () => {
-      const result = (service as any).getSortField('currentScore');
-      expect(result).toBe('application.currentScore');
+    it('[UTC-129] sortBy="currentScore" harus dipetakan ke "application.currentScore"', () => {
+      expect((service as any).getSortField('currentScore')).toBe('application.currentScore');
     });
 
-    it('[UTC-77] sortBy="stage" harus dipetakan ke "stageTemplate.name"', () => {
-      const result = (service as any).getSortField('stage');
-      expect(result).toBe('stageTemplate.name');
+    it('[UTC-130] sortBy="stage" harus dipetakan ke "stageTemplate.name"', () => {
+      expect((service as any).getSortField('stage')).toBe('stageTemplate.name');
     });
 
-    it('[UTC-78] sortBy dengan kolom tidak dikenal harus fallback ke "application.appliedAt" (default)', () => {
-      const result = (service as any).getSortField('kolom_tidak_dikenal');
-      expect(result).toBe('application.appliedAt');
+    it('[UTC-131] sortBy dengan kolom tidak dikenal harus fallback ke "application.appliedAt" (default)', () => {
+      expect((service as any).getSortField('kolom_tidak_dikenal')).toBe('application.appliedAt');
     });
 
-    it('[UTC-79] harus mengembalikan null untuk sortBy=maxExperienceScore (ditangani khusus via LEFT JOIN, bukan kolom biasa)', () => {
-      const result = (service as any).getSortField('maxExperienceScore');
-      expect(result).toBeNull();
+    it('[UTC-132] harus mengembalikan null untuk sortBy=maxExperienceScore (ditangani khusus via LEFT JOIN, bukan kolom biasa)', () => {
+      expect((service as any).getSortField('maxExperienceScore')).toBeNull();
     });
   });
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // isTopMatch: entri pengalaman mana yang jadi dasar Skor Shortlist (UTC-80 s.d. UTC-82, UTC-84 s.d. UTC-86)
-  // ───────────────────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // getCandidateDetail — parseEvaluateDetail & isTopMatch (REQ-FR-06/06-01/06-02)
+  // ═══════════════════════════════════════════════════════════════════════════
   describe('getCandidateDetail — isTopMatch pada breakdown pengalaman', () => {
     const baseApplication = {
-      id: 'app-20',
-      applicationNumber: 'TECH-BE-001',
-      status: 'applied',
-      appliedAt: new Date(),
-      currentScore: null,
-      coverLetter: null,
-      expectedStartDate: null,
-      source: null,
-      isTalentPool: false,
-      currentStage: null,
-      vacancy: null,
+      id: 'app-20', applicationNumber: 'TECH-BE-001', status: 'applied', appliedAt: new Date(),
+      currentScore: null, coverLetter: null, expectedStartDate: null, source: null,
+      isTalentPool: false, currentStage: null, vacancy: null,
       applicant: {
-        id: 'cand-20',
-        fullName: 'Budi Santoso',
-        email: 'budi@mail.com',
-        phone: '0800',
-        gender: null,
-        placeOfBirth: null,
-        dateOfBirth: null,
-        availability: null,
-        linkedinUrl: null,
-        portfolioUrl: null,
-        socialMediaUrl: null,
-        photoUrl: null,
-        educations: [],
-        jobHistories: [],
-        addresses: [],
+        id: 'cand-20', fullName: 'Budi Santoso', email: 'budi@mail.com', phone: '0800',
+        gender: null, placeOfBirth: null, dateOfBirth: null, availability: null,
+        linkedinUrl: null, portfolioUrl: null, socialMediaUrl: null, photoUrl: null,
+        educations: [], jobHistories: [], addresses: [],
       },
     };
 
     beforeEach(() => {
-      fileRepository.findOne.mockResolvedValue(null); // tidak ada file CV → skip pemanggilan MinIO
+      fileRepository.findOne.mockResolvedValue(null);
     });
 
-    it('[UTC-80] hanya entri dengan similarity == maxExperienceScore yang ditandai isTopMatch=true', async () => {
+    it('[UTC-133] hanya entri dengan similarity == maxExperienceScore yang ditandai isTopMatch=true', async () => {
       applicationRepository.findOne.mockResolvedValue(baseApplication);
       evaluationResultRepository.findOne.mockResolvedValue({
-        maxExperienceScore: 0.91,
-        decision: null,
-        evaluatedAt: new Date(),
+        maxExperienceScore: 0.91, decision: null, evaluatedAt: new Date(),
         evaluateDetail: {
           experience: [
             { role: 'Staff Gudang', similarity: 0.12, description: '', start: '', end: '', duration_years: 1 },
@@ -280,16 +212,12 @@ describe('CandidatesService', () => {
       expect(breakdown.experiences.find((e) => e.role === 'Staff Gudang')!.isTopMatch).toBe(false);
     });
 
-    it('[UTC-81] isTopMatch tetap valid walau ada selisih floating point kecil (toleransi < 0.0001)', async () => {
+    it('[UTC-134] isTopMatch tetap valid walau ada selisih floating point kecil (toleransi < 0.0001)', async () => {
       applicationRepository.findOne.mockResolvedValue(baseApplication);
       evaluationResultRepository.findOne.mockResolvedValue({
-        maxExperienceScore: 0.91,
-        decision: null,
-        evaluatedAt: new Date(),
+        maxExperienceScore: 0.91, decision: null, evaluatedAt: new Date(),
         evaluateDetail: {
-          experience: [
-            { role: 'Backend Developer', similarity: 0.9100001, description: '', start: '', end: '', duration_years: 1 },
-          ],
+          experience: [{ role: 'Backend Developer', similarity: 0.9100001, description: '', start: '', end: '', duration_years: 1 }],
           educations: [],
         },
       });
@@ -298,29 +226,28 @@ describe('CandidatesService', () => {
       expect(result.evaluationResult!.scoringBreakdown!.experiences[0].isTopMatch).toBe(true);
     });
 
-    it('[UTC-82] jika belum ada hasil evaluasi, scoringBreakdown harus null tanpa error', async () => {
+    it('[UTC-135] KOREKSI dari test lama: jika belum ada hasil evaluasi, evaluationResult TETAP berupa objek (bukan null) dengan maxExperienceScore null dan scoringBreakdown array kosong — sesuai jaminan "GUARANTEED to exist" pada source', async () => {
       applicationRepository.findOne.mockResolvedValue(baseApplication);
       evaluationResultRepository.findOne.mockResolvedValue(null);
 
       const result = await service.getCandidateDetail('app-20');
-      expect(result.evaluationResult).toBeNull();
+
+      expect(result.evaluationResult).not.toBeNull();
+      expect(result.evaluationResult!.maxExperienceScore).toBeNull();
+      expect(result.evaluationResult!.scoringBreakdown).toEqual({ experiences: [], educations: [] });
     });
 
-    it('[UTC-84] harus melempar NotFoundException jika application tidak ditemukan', async () => {
+    it('[UTC-136] harus melempar NotFoundException jika application tidak ditemukan', async () => {
       applicationRepository.findOne.mockResolvedValue(null);
       await expect(service.getCandidateDetail('app-tidak-ada')).rejects.toThrow(NotFoundException);
     });
 
-    it('[UTC-85] evaluateDetail yang tersimpan sebagai JSON string (bukan object) harus tetap berhasil di-parse dan breakdown tetap benar', async () => {
+    it('[UTC-137] evaluateDetail yang tersimpan sebagai JSON string (bukan object) harus tetap berhasil di-parse dan breakdown tetap benar', async () => {
       applicationRepository.findOne.mockResolvedValue(baseApplication);
       evaluationResultRepository.findOne.mockResolvedValue({
-        maxExperienceScore: 0.7,
-        decision: null,
-        evaluatedAt: new Date(),
+        maxExperienceScore: 0.7, decision: null, evaluatedAt: new Date(),
         evaluateDetail: JSON.stringify({
-          experience: [
-            { role: 'Backend Developer', similarity: 0.7, description: '', start: '', end: '', duration_years: 1 },
-          ],
+          experience: [{ role: 'Backend Developer', similarity: 0.7, description: '', start: '', end: '', duration_years: 1 }],
           educations: [],
         }),
       });
@@ -332,17 +259,26 @@ describe('CandidatesService', () => {
       expect(breakdown.experiences[0].isTopMatch).toBe(true);
     });
 
-    it('[UTC-86] scoringBreakdown.experiences harus berupa array kosong (bukan error) jika evaluateDetail.experience tidak ada', async () => {
+    it('[UTC-138] scoringBreakdown.experiences harus berupa array kosong (bukan error) jika evaluateDetail.experience tidak ada', async () => {
       applicationRepository.findOne.mockResolvedValue(baseApplication);
       evaluationResultRepository.findOne.mockResolvedValue({
-        maxExperienceScore: 0,
-        decision: null,
-        evaluatedAt: new Date(),
-        evaluateDetail: { educations: [] }, // tidak ada key 'experience' sama sekali
+        maxExperienceScore: 0, decision: null, evaluatedAt: new Date(),
+        evaluateDetail: { educations: [] },
       });
 
       const result = await service.getCandidateDetail('app-20');
       expect(result.evaluationResult!.scoringBreakdown!.experiences).toEqual([]);
+    });
+
+    it('[UTC-139] evaluateDetail yang corrupt/tidak bisa di-parse harus mengembalikan breakdown kosong tanpa melempar error ke pemanggil', async () => {
+      applicationRepository.findOne.mockResolvedValue(baseApplication);
+      evaluationResultRepository.findOne.mockResolvedValue({
+        maxExperienceScore: 0, decision: null, evaluatedAt: new Date(),
+        evaluateDetail: '{ ini bukan json valid',
+      });
+
+      const result = await service.getCandidateDetail('app-20');
+      expect(result.evaluationResult!.scoringBreakdown).toEqual({ experiences: [], educations: [] });
     });
   });
 });
