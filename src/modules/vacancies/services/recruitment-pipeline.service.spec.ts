@@ -89,14 +89,11 @@ describe("RecruitmentPipelineService", () => {
     };
 
     it("should create a new recruitment pipeline successfully", async () => {
-      // Arrange
       recruitmentPipelineRepository.create.mockReturnValue(mockPipeline as any);
       recruitmentPipelineRepository.save.mockResolvedValue(mockPipeline as any);
 
-      // Act
       const result = await service.create(createDto);
 
-      // Assert
       expect(recruitmentPipelineRepository.create).toHaveBeenCalledWith({
         ...createDto,
         version: "1.0",
@@ -111,7 +108,6 @@ describe("RecruitmentPipelineService", () => {
     });
 
     it("should create pipeline with custom values", async () => {
-      // Arrange
       const customDto = {
         ...createDto,
         version: "2.0",
@@ -128,10 +124,8 @@ describe("RecruitmentPipelineService", () => {
         customPipeline as any
       );
 
-      // Act
       const result = await service.create(customDto);
 
-      // Assert
       expect(recruitmentPipelineRepository.create).toHaveBeenCalledWith(
         customDto
       );
@@ -141,13 +135,11 @@ describe("RecruitmentPipelineService", () => {
     });
 
     it("should throw BadRequestException when creation fails", async () => {
-      // Arrange
       recruitmentPipelineRepository.create.mockReturnValue(mockPipeline as any);
       recruitmentPipelineRepository.save.mockRejectedValue(
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.create(createDto)).rejects.toThrow(
         BadRequestException
       );
@@ -161,7 +153,6 @@ describe("RecruitmentPipelineService", () => {
     };
 
     it("should return paginated pipelines without filters", async () => {
-      // Arrange
       const mockQueryBuilder = {
         leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
@@ -176,10 +167,8 @@ describe("RecruitmentPipelineService", () => {
         mockQueryBuilder as any
       );
 
-      // Act
       const result = await service.findAll(paginationDto);
 
-      // Assert
       expect(mockQueryBuilder.where).toHaveBeenCalledWith(
         "pipeline.deletedAt IS NULL"
       );
@@ -191,7 +180,6 @@ describe("RecruitmentPipelineService", () => {
     });
 
     it("should apply filters correctly", async () => {
-      // Arrange
       const filters = {
         category: "TECHNICAL",
         isActive: true,
@@ -213,10 +201,8 @@ describe("RecruitmentPipelineService", () => {
         mockQueryBuilder as any
       );
 
-      // Act
       const result = await service.findAll(paginationDto, filters);
 
-      // Assert
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         "pipeline.category = :category",
         { category: "TECHNICAL" }
@@ -243,15 +229,12 @@ describe("RecruitmentPipelineService", () => {
 
   describe("findOne", () => {
     it("should return pipeline when found", async () => {
-      // Arrange
       recruitmentPipelineRepository.findOne.mockResolvedValue(
         mockPipeline as any
       );
 
-      // Act
       const result = await service.findOne("pipeline-1");
 
-      // Assert
       expect(recruitmentPipelineRepository.findOne).toHaveBeenCalledWith({
         where: { id: "pipeline-1", deletedAt: IsNull() },
         relations: ["stages"]
@@ -261,10 +244,8 @@ describe("RecruitmentPipelineService", () => {
     });
 
     it("should throw NotFoundException when pipeline not found", async () => {
-      // Arrange
       recruitmentPipelineRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.findOne("nonexistent-id")).rejects.toThrow(
         NotFoundException
       );
@@ -278,7 +259,6 @@ describe("RecruitmentPipelineService", () => {
     };
 
     it("should update pipeline successfully", async () => {
-      // Arrange
       const updatedPipeline = { ...mockPipeline, ...updateDto };
       recruitmentPipelineRepository.findOne
         .mockResolvedValueOnce(mockPipeline as any) // First call for finding existing pipeline
@@ -287,10 +267,8 @@ describe("RecruitmentPipelineService", () => {
         affected: 1
       } as any);
 
-      // Act
       const result = await service.update("pipeline-1", updateDto);
 
-      // Assert
       expect(recruitmentPipelineRepository.findOne).toHaveBeenCalledWith({
         where: { id: "pipeline-1", deletedAt: IsNull() }
       });
@@ -303,17 +281,14 @@ describe("RecruitmentPipelineService", () => {
     });
 
     it("should throw NotFoundException when pipeline not found", async () => {
-      // Arrange
       recruitmentPipelineRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.update("nonexistent-id", updateDto)).rejects.toThrow(
         NotFoundException
       );
     });
 
     it("should throw BadRequestException when update fails", async () => {
-      // Arrange
       recruitmentPipelineRepository.findOne.mockResolvedValue(
         mockPipeline as any
       );
@@ -321,7 +296,6 @@ describe("RecruitmentPipelineService", () => {
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.update("pipeline-1", updateDto)).rejects.toThrow(
         BadRequestException
       );
@@ -330,7 +304,6 @@ describe("RecruitmentPipelineService", () => {
 
   describe("remove", () => {
     it("should soft delete pipeline successfully", async () => {
-      // Arrange
       recruitmentPipelineRepository.findOne.mockResolvedValue(
         mockPipeline as any
       );
@@ -341,10 +314,8 @@ describe("RecruitmentPipelineService", () => {
         affected: 1
       } as any);
 
-      // Act
       await service.remove("pipeline-1", "user-1");
 
-      // Assert
       expect(recruitmentPipelineRepository.findOne).toHaveBeenCalledWith({
         where: { id: "pipeline-1", deletedAt: IsNull() }
       });
@@ -358,10 +329,8 @@ describe("RecruitmentPipelineService", () => {
     });
 
     it("should throw NotFoundException when pipeline not found", async () => {
-      // Arrange
       recruitmentPipelineRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.remove("nonexistent-id", "user-1")).rejects.toThrow(
         NotFoundException
       );
@@ -370,15 +339,12 @@ describe("RecruitmentPipelineService", () => {
 
   describe("getDefaultTemplate", () => {
     it("should return default template when found", async () => {
-      // Arrange
       recruitmentPipelineRepository.findOne.mockResolvedValue(
         mockDefaultTemplate as any
       );
 
-      // Act
       const result = await service.getDefaultTemplate();
 
-      // Assert
       expect(recruitmentPipelineRepository.findOne).toHaveBeenCalledWith({
         where: { isDefault: true, isTemplate: true, deletedAt: IsNull() }
       });
@@ -388,20 +354,16 @@ describe("RecruitmentPipelineService", () => {
     });
 
     it("should return null when no default template found", async () => {
-      // Arrange
       recruitmentPipelineRepository.findOne.mockResolvedValue(null);
 
-      // Act
       const result = await service.getDefaultTemplate();
 
-      // Assert
       expect(result).toBeNull();
     });
   });
 
   describe("createFromTemplate", () => {
     it("should create pipeline instance from template successfully", async () => {
-      // Arrange
       const templateId = "template-1";
       const createdById = "user-1";
       const instanceName = "New Pipeline Instance";
@@ -423,14 +385,12 @@ describe("RecruitmentPipelineService", () => {
         pipelineInstance as any
       );
 
-      // Act
       const result = await service.createFromTemplate(
         templateId,
         createdById,
         instanceName
       );
 
-      // Assert
       expect(recruitmentPipelineRepository.findOne).toHaveBeenCalledWith({
         where: { id: templateId, isTemplate: true, deletedAt: IsNull() }
       });
@@ -451,17 +411,14 @@ describe("RecruitmentPipelineService", () => {
     });
 
     it("should throw NotFoundException when template not found", async () => {
-      // Arrange
       recruitmentPipelineRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(
         service.createFromTemplate("nonexistent-template", "user-1", "Instance")
       ).rejects.toThrow(NotFoundException);
     });
 
     it("should throw BadRequestException when creation fails", async () => {
-      // Arrange
       recruitmentPipelineRepository.findOne.mockResolvedValue(
         mockDefaultTemplate as any
       );
@@ -470,7 +427,6 @@ describe("RecruitmentPipelineService", () => {
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(
         service.createFromTemplate("template-1", "user-1", "Instance")
       ).rejects.toThrow(BadRequestException);
@@ -479,14 +435,11 @@ describe("RecruitmentPipelineService", () => {
 
   describe("findTemplates", () => {
     it("should return all template pipelines", async () => {
-      // Arrange
       const templates = [mockDefaultTemplate];
       recruitmentPipelineRepository.find.mockResolvedValue(templates as any);
 
-      // Act
       const result = await service.findTemplates();
 
-      // Assert
       expect(recruitmentPipelineRepository.find).toHaveBeenCalledWith({
         where: { isTemplate: true, deletedAt: IsNull() },
         order: { createdAt: "DESC" }
@@ -497,13 +450,10 @@ describe("RecruitmentPipelineService", () => {
     });
 
     it("should return empty array when no templates found", async () => {
-      // Arrange
       recruitmentPipelineRepository.find.mockResolvedValue([]);
 
-      // Act
       const result = await service.findTemplates();
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });
@@ -511,7 +461,6 @@ describe("RecruitmentPipelineService", () => {
 
   describe("incrementUsageCount", () => {
     it("should increment usage count successfully", async () => {
-      // Arrange
       recruitmentPipelineRepository.findOne.mockResolvedValue(
         mockPipeline as any
       );
@@ -519,10 +468,8 @@ describe("RecruitmentPipelineService", () => {
         affected: 1
       } as any);
 
-      // Act
       await service.incrementUsageCount("pipeline-1");
 
-      // Assert
       expect(recruitmentPipelineRepository.findOne).toHaveBeenCalledWith({
         where: { id: "pipeline-1", deletedAt: IsNull() }
       });
@@ -535,10 +482,8 @@ describe("RecruitmentPipelineService", () => {
     });
 
     it("should throw NotFoundException when pipeline not found", async () => {
-      // Arrange
       recruitmentPipelineRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(
         service.incrementUsageCount("nonexistent-id")
       ).rejects.toThrow(NotFoundException);

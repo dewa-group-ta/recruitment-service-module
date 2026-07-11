@@ -38,14 +38,16 @@ export class VacancyResponseDto {
 
   @ApiProperty({
     description: "Job responsibilities",
-    example: "Develop and maintain web applications, collaborate with cross-functional teams...",
+    example:
+      "Develop and maintain web applications, collaborate with cross-functional teams...",
     nullable: true
   })
   responsibilities!: string;
 
   @ApiProperty({
     description: "Job requirements",
-    example: "Bachelor degree in Computer Science, 3+ years experience with React and Node.js...",
+    example:
+      "Bachelor degree in Computer Science, 3+ years experience with React and Node.js...",
     nullable: true
   })
   requirements!: string;
@@ -243,7 +245,8 @@ export class VacancyResponseDto {
   generatedPosterUrl!: string;
 
   @ApiProperty({
-    description: "Poster configuration - defines which fields to include in job poster",
+    description:
+      "Poster configuration - defines which fields to include in job poster",
     example: {
       jobDetails: {
         dueDate: true,

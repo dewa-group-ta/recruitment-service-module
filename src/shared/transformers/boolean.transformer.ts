@@ -1,8 +1,7 @@
 import { Transform } from "class-transformer";
 
 /**
- * Transform string to boolean for query parameters
- * Handles common boolean string representations
+ * transform string ke boolean untuk query parameter, menerima berbagai representasi umum (true/false, 1/0, yes/no, on/off).
  */
 export const TransformToBoolean = Transform(({ value }) => {
   if (value === "true" || value === true) return true;
@@ -17,8 +16,7 @@ export const TransformToBoolean = Transform(({ value }) => {
 });
 
 /**
- * Transform string to boolean with strict validation
- * Only accepts 'true' and 'false' strings
+ * transform string ke boolean secara ketat, hanya menerima string 'true'/'false'.
  */
 export const TransformToBooleanStrict = Transform(({ value }) => {
   if (value === "true") return true;
@@ -27,8 +25,7 @@ export const TransformToBooleanStrict = Transform(({ value }) => {
 });
 
 /**
- * Transform string to boolean with default value
- * Returns default value if transformation fails
+ * transform string ke boolean dengan fallback ke defaultValue kalau tidak cocok.
  */
 export const TransformToBooleanWithDefault = (defaultValue: boolean) =>
   Transform(({ value }) => {

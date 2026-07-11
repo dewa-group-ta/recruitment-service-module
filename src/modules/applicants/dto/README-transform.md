@@ -1,10 +1,15 @@
 # Transformasi Otomatis String ke Number/Boolean
 
 > ⚠️ **DEPRECATED**: Utility functions telah dipindahkan ke `/src/shared/transformers/`
-> 
+>
 > Silakan gunakan import dari shared transformers:
+>
 > ```typescript
-> import { transformToNumber, transformToInteger, transformToBoolean } from '@/shared/transformers';
+> import {
+>   transformToNumber,
+>   transformToInteger,
+>   transformToBoolean
+> } from "@/shared/transformers";
 > ```
 
 File ini menjelaskan cara menggunakan transformasi otomatis dari string ke tipe data lain dalam DTO.
@@ -14,6 +19,7 @@ File ini menjelaskan cara menggunakan transformasi otomatis dari string ke tipe 
 > 📝 **Note**: Semua utility functions sekarang tersedia di `/src/shared/transformers/`
 
 ### 1. `transformToNumber`
+
 Mengubah string menjadi number (float) dengan validasi.
 
 ```typescript
@@ -23,6 +29,7 @@ gpa?: number;
 ```
 
 **Contoh Input/Output:**
+
 - `"3.56"` → `3.56`
 - `"3"` → `3`
 - `""` → `undefined`
@@ -30,6 +37,7 @@ gpa?: number;
 - `"invalid"` → `undefined`
 
 ### 2. `transformToInteger`
+
 Mengubah string menjadi integer dengan validasi.
 
 ```typescript
@@ -39,6 +47,7 @@ year: number;
 ```
 
 **Contoh Input/Output:**
+
 - `"2024"` → `2024`
 - `"3.56"` → `3` (dibulatkan ke bawah)
 - `""` → `undefined`
@@ -46,6 +55,7 @@ year: number;
 - `"invalid"` → `undefined`
 
 ### 3. `transformToBoolean`
+
 Mengubah string menjadi boolean dengan validasi.
 
 ```typescript
@@ -55,6 +65,7 @@ isActive?: boolean;
 ```
 
 **Contoh Input/Output:**
+
 - `"true"` → `true`
 - `"false"` → `false`
 - `"1"` → `true`
@@ -67,6 +78,7 @@ isActive?: boolean;
 ## Cara Penggunaan
 
 ### Untuk Field Number (Float)
+
 ```typescript
 @ApiProperty({
   description: "GPA",
@@ -80,6 +92,7 @@ gpa?: number;
 ```
 
 ### Untuk Field Integer
+
 ```typescript
 @ApiProperty({
   description: "Year",
@@ -91,6 +104,7 @@ year: number;
 ```
 
 ### Untuk Field Boolean
+
 ```typescript
 @ApiProperty({
   description: "Is Active",
@@ -114,10 +128,10 @@ isActive?: boolean;
 ```typescript
 // Frontend bisa mengirim string
 const formData = {
-  gpa: "3.56",        // String
-  year: "2024",       // String
-  isActive: "true"    // String
-}
+  gpa: "3.56", // String
+  year: "2024", // String
+  isActive: "true" // String
+};
 
 // Backend akan otomatis convert ke:
 // {

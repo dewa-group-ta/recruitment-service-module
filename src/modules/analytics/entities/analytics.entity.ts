@@ -1,7 +1,5 @@
 /**
- * Analytics Entity
- * This is a virtual entity for analytics data aggregation
- * No actual database table is created for this entity
+ * entity virtual untuk agregasi data analytics — tidak ada tabel database sungguhan untuk ini.
  */
 
 export interface RecruitmentTrendData {

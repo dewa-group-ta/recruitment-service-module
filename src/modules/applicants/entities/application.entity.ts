@@ -10,7 +10,7 @@ import {
   OneToMany,
   Index,
   OneToOne,
-  Unique,
+  Unique
 } from "typeorm";
 import { Vacancy } from "../../vacancies/entities/vacancy.entity";
 import { Applicant } from "./applicant.entity";
@@ -41,7 +41,10 @@ export class Application {
   @Column({ name: "applicant_id" })
   applicantId!: string;
 
-  @OneToOne(() => EvaluationResult, (evaluationResult) => evaluationResult.application)
+  @OneToOne(
+    () => EvaluationResult,
+    (evaluationResult) => evaluationResult.application
+  )
   evaluationResult?: EvaluationResult;
 
   @ManyToOne(() => Vacancy)
@@ -94,7 +97,6 @@ export class Application {
   @Column({ name: "completed_at", type: "timestamp", nullable: true })
   completedAt!: Date;
 
-  // Tracking fields
   @Column({ type: "int", nullable: true })
   currentScore!: number; // score terakhir di stage saat ini
 
@@ -124,7 +126,6 @@ export class Application {
   })
   notes!: ApplicationNotes[];
 
-  // Audit fields
   @CreateDateColumn({ name: "created_at" })
   createdAt!: Date;
 

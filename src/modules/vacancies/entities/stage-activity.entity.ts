@@ -38,7 +38,12 @@ export class StageActivity {
   @Column({ name: "performed_by", nullable: true })
   performedBy: string;
 
-  @Column({ type: "enum", enum: StageActivityStatus, default: StageActivityStatus.PENDING, name: "status" })
+  @Column({
+    type: "enum",
+    enum: StageActivityStatus,
+    default: StageActivityStatus.PENDING,
+    name: "status"
+  })
   status: StageActivityStatus;
 
   @CreateDateColumn({ name: "created_at", default: () => "CURRENT_TIMESTAMP" })

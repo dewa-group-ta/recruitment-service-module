@@ -49,8 +49,7 @@ import { File } from "src/shared/entities/file.entity";
       File
     ]),
     EmailModule,
-    ApplicantResultsModule,
-    
+    ApplicantResultsModule
   ],
   controllers: [
     ApplicationController,

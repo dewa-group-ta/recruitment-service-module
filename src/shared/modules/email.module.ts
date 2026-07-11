@@ -6,10 +6,6 @@ import { NotificationService } from "../services/notification.service";
 import { EMAIL_TEMPLATE_PROVIDER } from "../interface/email.interface";
 import { SystemConfigurationModule } from "../../modules/system-configurations/system-configuration.module";
 
-/**
- * Email module
- * Provides email functionality for the application
- */
 @Module({
   imports: [SystemConfigurationModule],
   providers: [

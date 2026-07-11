@@ -29,7 +29,6 @@ export class ApplicantIdentity {
   @Column({ type: "varchar", length: 50, nullable: true })
   identityNumber!: string;
 
-  // Audit fields
   @CreateDateColumn({ name: "created_at" })
   createdAt!: Date;
 

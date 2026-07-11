@@ -26,11 +26,9 @@ export class ApplicantSource {
   @Column({ type: "int", default: 0 })
   sortOrder: number;
 
-  // Many-to-many relationship with applicants
   @ManyToMany(() => Applicant, (applicant) => applicant.applicantSources)
   applicants: Applicant[];
 
-  // Audit fields
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 

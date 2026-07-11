@@ -36,11 +36,25 @@ export class CreateApplicationNotesDto {
   @ApiPropertyOptional({
     description: "Category of the notes",
     example: "interview",
-    enum: ["interview", "assessment", "general", "follow_up", "rejection", "offer"]
+    enum: [
+      "interview",
+      "assessment",
+      "general",
+      "follow_up",
+      "rejection",
+      "offer"
+    ]
   })
   @IsString()
   @IsOptional()
-  @IsIn(["interview", "assessment", "general", "follow_up", "rejection", "offer"])
+  @IsIn([
+    "interview",
+    "assessment",
+    "general",
+    "follow_up",
+    "rejection",
+    "offer"
+  ])
   category?: string;
 
   @ApiPropertyOptional({

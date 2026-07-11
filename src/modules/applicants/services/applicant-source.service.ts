@@ -14,9 +14,6 @@ export class ApplicantSourceService {
     private readonly applicantSourceRepository: Repository<ApplicantSource>
   ) {}
 
-  /**
-   * Create a new applicant source
-   */
   async create(
     createApplicantSourceDto: CreateApplicantSourceDto
   ): Promise<ApplicantSource> {
@@ -26,18 +23,12 @@ export class ApplicantSourceService {
     return await this.applicantSourceRepository.save(applicantSource);
   }
 
-  /**
-   * Get all applicant sources
-   */
   async findAll(): Promise<ApplicantSource[]> {
     return await this.applicantSourceRepository.find({
       order: { sortOrder: "ASC", name: "ASC" }
     });
   }
 
-  /**
-   * Get all active applicant sources
-   */
   async findActive(): Promise<ApplicantSource[]> {
     return await this.applicantSourceRepository.find({
       where: { isActive: true },
@@ -45,9 +36,6 @@ export class ApplicantSourceService {
     });
   }
 
-  /**
-   * Get applicant source by ID
-   */
   async findOne(id: string): Promise<ApplicantSource> {
     const applicantSource = await this.applicantSourceRepository.findOne({
       where: { id }
@@ -60,9 +48,6 @@ export class ApplicantSourceService {
     return applicantSource;
   }
 
-  /**
-   * Update applicant source
-   */
   async update(
     id: string,
     updateApplicantSourceDto: UpdateApplicantSourceDto
@@ -73,26 +58,17 @@ export class ApplicantSourceService {
     return await this.applicantSourceRepository.save(applicantSource);
   }
 
-  /**
-   * Soft delete applicant source
-   */
   async remove(id: string): Promise<void> {
-    await this.findOne(id); // Check if exists before deleting
+    await this.findOne(id);
     await this.applicantSourceRepository.softDelete(id);
   }
 
-  /**
-   * Toggle active status
-   */
   async toggleActive(id: string): Promise<ApplicantSource> {
     const applicantSource = await this.findOne(id);
     applicantSource.isActive = !applicantSource.isActive;
     return await this.applicantSourceRepository.save(applicantSource);
   }
 
-  /**
-   * Find applicant sources with pagination and filtering
-   */
   async findWithPagination(
     queryDto: QueryApplicantSourceDto
   ): Promise<Pagination<ApplicantSource>> {
@@ -138,9 +114,6 @@ export class ApplicantSourceService {
     };
   }
 
-  /**
-   * Get applicant source statistics
-   */
   async getStatistics(): Promise<{
     total: number;
     active: number;
@@ -159,56 +132,47 @@ export class ApplicantSourceService {
   }
 
   /**
-   * Validates if custom source is required based on selected applicant sources
-   * @param customSource The custom source value
-   * @param applicantSourceIds Array of selected applicant source IDs
-   * @returns Promise<boolean> True if validation passes, false otherwise
+   * validasi customSource wajib diisi hanya kalau applicant source "others" dipilih.
    */
   async validateCustomSource(
     customSource: string,
     applicantSourceIds: string[]
   ): Promise<boolean> {
-    // If no applicant sources selected, custom source is not required
     if (!applicantSourceIds || applicantSourceIds.length === 0) {
       return true;
     }
 
     try {
-      // Check if "Others" is selected
       const othersSource = await this.applicantSourceRepository.findOneBy({
         name: "Others"
       });
 
       if (!othersSource) {
-        return true; // If Others source doesn't exist, validation passes
+        return true; // source "others" belum ada di data, anggap validasi lolos
       }
 
       const isOthersSelected = applicantSourceIds.includes(othersSource.id);
 
-      // If Others is selected, customSource is required
       if (isOthersSelected) {
         return Boolean(customSource && customSource.trim().length > 0);
       }
 
-      // If Others is not selected, customSource should not be provided
       return Boolean(!customSource || customSource.trim().length === 0);
     } catch (error) {
       console.error("Error in custom source validation:", error);
-      return true; // Allow validation to pass on error
+      return true; // gagal validasi dianggap lolos (fail-open), bukan block applicant
     }
   }
 
   /**
-   * Gets the appropriate error message for custom source validation
-   * @param applicantSourceIds Array of selected applicant source IDs
-   * @returns string Error message
+   * pesan error untuk validasi customSource.
    */
   getErrorMessage(applicantSourceIds: string[]): string {
     if (!applicantSourceIds || applicantSourceIds.length === 0) {
       return "Custom source is not required when no applicant sources are selected";
     }
 
-    // Check if Others is selected (simplified check for error message)
+    // cek "others" secara sederhana (beda dengan pengecekan di validateCustomSource) karena di sini belum ada akses ke id sumber yang sebenarnya
     const hasOthers = applicantSourceIds.some(
       (id: string) =>
         typeof id === "string" &&

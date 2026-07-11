@@ -26,13 +26,11 @@ export class FileUploadService {
     uploadedById?: string
   ): Promise<FileResponseDto> {
     try {
-      // Upload file to MinIO
       const uploadResult = await this.minioService.uploadFile(
         file,
         uploadDto.folder || "uploads"
       );
 
-      // Save file metadata to database
       const fileEntity = this.fileRepository.create({
         fileName: uploadResult.fileName,
         originalName: uploadResult.originalName,
@@ -102,10 +100,8 @@ export class FileUploadService {
     }
 
     try {
-      // Delete from MinIO
       await this.minioService.deleteFile(file.filePath);
 
-      // Soft delete from database
       await this.fileRepository.update(id, { isActive: false });
 
       this.logger.log(`File ${id} deleted successfully`);
@@ -172,9 +168,7 @@ export class FileUploadService {
   }
 
   /**
-   * Get file with public URL that can be accessed without authentication
-   * This method is specifically for files uploaded through uploadFile
-   * Uses the same logic as getFileById but with public URL
+   * alias untuk getFileById (saat ini belum ada logika publik yang berbeda).
    */
   async getPublicFileById(id: string): Promise<FileResponseDto> {
     return this.getFileById(id);

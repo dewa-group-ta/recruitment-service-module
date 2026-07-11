@@ -28,13 +28,9 @@ export class SystemConfigurationService {
     private readonly fileUploadService: FileUploadService
   ) {}
 
-  /**
-   * Create a new system configuration
-   */
   async create(
     createDto: CreateSystemConfigurationDto
   ): Promise<SystemConfigurationResponseDto> {
-    // Check if config key already exists
     const existingConfig = await this.systemConfigurationRepository.findOne({
       where: { configKey: createDto.configKey }
     });
@@ -51,9 +47,6 @@ export class SystemConfigurationService {
     return new SystemConfigurationResponseDto(savedConfig);
   }
 
-  /**
-   * Find all configurations with optional filtering
-   */
   async findAll(
     queryDto: QuerySystemConfigurationDto
   ): Promise<SystemConfigurationResponseDto[]> {
@@ -83,9 +76,6 @@ export class SystemConfigurationService {
     return configs.map((config) => new SystemConfigurationResponseDto(config));
   }
 
-  /**
-   * Find configurations by group name
-   */
   async findByGroup(
     groupName: string
   ): Promise<SystemConfigurationResponseDto[]> {
@@ -97,9 +87,6 @@ export class SystemConfigurationService {
     return configs.map((config) => new SystemConfigurationResponseDto(config));
   }
 
-  /**
-   * Find public configurations only
-   */
   async findPublic(): Promise<SystemConfigurationResponseDto[]> {
     const configs = await this.systemConfigurationRepository.find({
       where: { isPublic: true },
@@ -109,9 +96,6 @@ export class SystemConfigurationService {
     return configs.map((config) => new SystemConfigurationResponseDto(config));
   }
 
-  /**
-   * Find configuration by ID
-   */
   async findOne(id: string): Promise<SystemConfigurationResponseDto> {
     const config = await this.systemConfigurationRepository.findOne({
       where: { id }
@@ -124,9 +108,6 @@ export class SystemConfigurationService {
     return new SystemConfigurationResponseDto(config);
   }
 
-  /**
-   * Find configuration by key
-   */
   async findByKey(configKey: string): Promise<SystemConfigurationResponseDto> {
     const config = await this.systemConfigurationRepository.findOne({
       where: { configKey }
@@ -141,9 +122,6 @@ export class SystemConfigurationService {
     return new SystemConfigurationResponseDto(config);
   }
 
-  /**
-   * Update configuration by ID
-   */
   async update(
     id: string,
     updateDto: UpdateSystemConfigurationDto
@@ -156,7 +134,6 @@ export class SystemConfigurationService {
       throw new NotFoundException(`Configuration with ID '${id}' not found`);
     }
 
-    // Check if new config key conflicts with existing one
     if (updateDto.configKey && updateDto.configKey !== config.configKey) {
       const existingConfig = await this.systemConfigurationRepository.findOne({
         where: { configKey: updateDto.configKey }
@@ -175,9 +152,6 @@ export class SystemConfigurationService {
     return new SystemConfigurationResponseDto(savedConfig);
   }
 
-  /**
-   * Update configuration by key
-   */
   async updateByKey(
     configKey: string,
     updateDto: UpdateSystemConfigurationDto
@@ -192,7 +166,6 @@ export class SystemConfigurationService {
       );
     }
 
-    // Check if new config key conflicts with existing one
     if (updateDto.configKey && updateDto.configKey !== config.configKey) {
       const existingConfig = await this.systemConfigurationRepository.findOne({
         where: { configKey: updateDto.configKey }
@@ -211,9 +184,6 @@ export class SystemConfigurationService {
     return new SystemConfigurationResponseDto(savedConfig);
   }
 
-  /**
-   * Delete configuration by ID (soft delete)
-   */
   async remove(id: string): Promise<void> {
     const config = await this.systemConfigurationRepository.findOne({
       where: { id }
@@ -226,9 +196,6 @@ export class SystemConfigurationService {
     await this.systemConfigurationRepository.softDelete(id);
   }
 
-  /**
-   * Get configuration value by key (for internal use)
-   */
   async getValue(configKey: string): Promise<string | null> {
     const config = await this.systemConfigurationRepository.findOne({
       where: { configKey }
@@ -237,9 +204,6 @@ export class SystemConfigurationService {
     return config?.configValue || null;
   }
 
-  /**
-   * Get configuration value by key with default fallback
-   */
   async getValueOrDefault(
     configKey: string,
     defaultValue: string
@@ -248,9 +212,6 @@ export class SystemConfigurationService {
     return value || defaultValue;
   }
 
-  /**
-   * Get configuration JSON value by key
-   */
   async getJsonValue(configKey: string): Promise<Record<string, any> | null> {
     const config = await this.systemConfigurationRepository.findOne({
       where: { configKey }
@@ -259,9 +220,6 @@ export class SystemConfigurationService {
     return config?.configValueJson || null;
   }
 
-  /**
-   * Get configuration JSON value by key with default fallback
-   */
   async getJsonValueOrDefault(
     configKey: string,
     defaultValue: Record<string, any>
@@ -270,9 +228,6 @@ export class SystemConfigurationService {
     return value || defaultValue;
   }
 
-  /**
-   * Update configuration JSON value by key
-   */
   async updateJsonValue(
     configKey: string,
     jsonValue: Record<string, any>
@@ -293,9 +248,6 @@ export class SystemConfigurationService {
     return new SystemConfigurationResponseDto(savedConfig);
   }
 
-  /**
-   * Update configuration JSON value by ID
-   */
   async updateJsonValueById(
     id: string,
     jsonValue: Record<string, any>
@@ -314,14 +266,10 @@ export class SystemConfigurationService {
     return new SystemConfigurationResponseDto(savedConfig);
   }
 
-  /**
-   * Upload file for system configuration by key
-   */
   async uploadFileByKey(
     configKey: string,
     file: Express.Multer.File
   ): Promise<SystemConfigurationResponseDto> {
-    // Find the configuration by key
     const config = await this.systemConfigurationRepository.findOne({
       where: { configKey }
     });
@@ -332,7 +280,6 @@ export class SystemConfigurationService {
       );
     }
 
-    // Validate that the configuration type supports file upload
     if (config.configType !== ConfigType.IMAGE) {
       throw new BadRequestException(
         `Configuration type '${config.configType}' does not support file upload. Only 'image' type is supported.`
@@ -340,7 +287,6 @@ export class SystemConfigurationService {
     }
 
     try {
-      // Prepare file upload data
       const fileUploadData: FileUploadDto = {
         fileType: FileType.COMPANY_LOGO,
         description: `System configuration file for ${configKey}`,
@@ -349,7 +295,6 @@ export class SystemConfigurationService {
         relatedEntityId: config.id
       };
 
-      // Delete old file if exists
       if (config.configValue) {
         try {
           await this.fileUploadService.deleteFileByPath(config.configValue);
@@ -358,13 +303,11 @@ export class SystemConfigurationService {
         }
       }
 
-      // Upload the new file
       const uploadResult = await this.fileUploadService.uploadFile(
         file,
         fileUploadData
       );
 
-      // Update configuration with new file path
       config.configValue = uploadResult.filePath;
       const savedConfig = await this.systemConfigurationRepository.save(config);
 

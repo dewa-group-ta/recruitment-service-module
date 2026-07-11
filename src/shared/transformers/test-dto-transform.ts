@@ -1,15 +1,14 @@
 /**
- * Test DTO transformation with actual ApplyApplicantDto structure
+ * script manual untuk mengetes transform ApplyApplicantDto (tidak dipakai oleh aplikasi).
  */
 
-import { plainToClass } from 'class-transformer';
-import { validate } from 'class-validator';
-import { ApplyApplicantDto } from '../../modules/applicants/dto/apply-applicant.dto';
+import { plainToClass } from "class-transformer";
+import { validate } from "class-validator";
+import { ApplyApplicantDto } from "../../modules/applicants/dto/apply-applicant.dto";
 
 async function testDtoTransformation() {
-  console.log('=== Testing ApplyApplicantDto Transformation ===');
-  
-  // Simulate frontend data
+  console.log("=== Testing ApplyApplicantDto Transformation ===");
+
   const frontendData = {
     fullName: "John Doe",
     phone: "08123456789",
@@ -39,7 +38,7 @@ async function testDtoTransformation() {
         schoolName: "Universitas Indonesia",
         major: "Computer Science",
         degree: "Bachelor",
-        gpa: "3.63",  // This should be transformed to number
+        gpa: "3.63", // seharusnya ditransformasi jadi number
         startMonth: "2020-08",
         endMonth: "2024-08",
         diplomaFileName: "diploma.pdf"
@@ -62,7 +61,7 @@ async function testDtoTransformation() {
         projectName: "E-commerce Platform",
         position: "Full Stack Developer",
         projectUrl: "https://example.com",
-        year: "2023"  // This should be transformed to number
+        year: "2023" // seharusnya ditransformasi jadi number
       }
     ],
     identities: [
@@ -73,32 +72,47 @@ async function testDtoTransformation() {
     ]
   };
 
-  console.log('Frontend data (before transformation):');
-  console.log('gpa:', frontendData.educations[0].gpa, typeof frontendData.educations[0].gpa);
-  console.log('year:', frontendData.projectHistories[0].year, typeof frontendData.projectHistories[0].year);
+  console.log("Frontend data (before transformation):");
+  console.log(
+    "gpa:",
+    frontendData.educations[0].gpa,
+    typeof frontendData.educations[0].gpa
+  );
+  console.log(
+    "year:",
+    frontendData.projectHistories[0].year,
+    typeof frontendData.projectHistories[0].year
+  );
 
   try {
-    // Transform using plainToClass
     const transformedDto = plainToClass(ApplyApplicantDto, frontendData);
-    
-    console.log('\nAfter transformation:');
-    console.log('gpa:', transformedDto.educations[0].gpa, typeof transformedDto.educations[0].gpa);
-    console.log('year:', transformedDto.projectHistories[0].year, typeof transformedDto.projectHistories[0].year);
 
-    // Validate
+    console.log("\nAfter transformation:");
+    console.log(
+      "gpa:",
+      transformedDto.educations[0].gpa,
+      typeof transformedDto.educations[0].gpa
+    );
+    console.log(
+      "year:",
+      transformedDto.projectHistories[0].year,
+      typeof transformedDto.projectHistories[0].year
+    );
+
     const errors = await validate(transformedDto);
-    
+
     if (errors.length > 0) {
-      console.log('\n❌ Validation errors:');
-      errors.forEach(error => {
-        console.log(`- ${error.property}: ${Object.values(error.constraints || {}).join(', ')}`);
+      console.log("\nValidation errors:");
+      errors.forEach((error) => {
+        console.log(
+          `- ${error.property}: ${Object.values(error.constraints || {}).join(", ")}`
+        );
       });
     } else {
-      console.log('\n✅ Validation passed!');
+      console.log("\nValidation passed!");
     }
-
   } catch (error) {
-    console.error('❌ Error during transformation:', error);
+    console.error("Error during transformation:", error);
   }
 }
 

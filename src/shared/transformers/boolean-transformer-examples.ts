@@ -8,8 +8,6 @@ import { validate } from "class-validator";
 import { QueryJobCategoryDto } from "../../modules/vacancies/dto/query-job-category.dto";
 import { QueryDepartmentDto } from "../../modules/departments/dto/query-department.dto";
 import { QueryStageTemplateDto } from "../../modules/vacancies/dto/query-stage-template.dto";
-// import { QueryApplicantSourceDto } from "../../modules/applicants/dto/query-applicant-source.dto";
-// import { QuerySystemConfigurationDto } from "../../modules/system-configurations/dto/query-system-configuration.dto";
 
 /**
  * Contoh penggunaan di Controller
@@ -19,10 +17,8 @@ export class ExampleController {
    * Contoh 1: Job Category Query
    */
   async getJobCategories(query: any) {
-    // Transform query parameters
     const dto = plainToClass(QueryJobCategoryDto, query);
 
-    // Validate
     const errors = await validate(dto);
     if (errors.length > 0) {
       throw new Error("Validation failed");
@@ -107,9 +103,9 @@ export class BooleanTransformerTests {
       );
 
       if (dto.isActive !== testCase.expected) {
-        console.error(`❌ Test failed for input: ${testCase.input}`);
+        console.error(`Test failed for input: ${testCase.input}`);
       } else {
-        console.log(`✅ Test passed for input: ${testCase.input}`);
+        console.log(`Test passed for input: ${testCase.input}`);
       }
     }
   }
@@ -174,11 +170,11 @@ export class BooleanTransformerTests {
 
       if (errors.length === 0) {
         console.log(
-          `✅ Valid: ${JSON.stringify(testCase)} -> isActive: ${dto.isActive}`
+          `Valid: ${JSON.stringify(testCase)} -> isActive: ${dto.isActive}`
         );
       } else {
         console.log(
-          `❌ Invalid: ${JSON.stringify(testCase)} -> Errors:`,
+          `Invalid: ${JSON.stringify(testCase)} -> Errors:`,
           errors
         );
       }
@@ -191,12 +187,12 @@ export class BooleanTransformerTests {
 
       if (errors.length > 0) {
         console.log(
-          `✅ Correctly rejected: ${JSON.stringify(testCase)} -> Errors:`,
+          `Correctly rejected: ${JSON.stringify(testCase)} -> Errors:`,
           errors
         );
       } else {
         console.log(
-          `❌ Should be rejected: ${JSON.stringify(testCase)} -> isActive: ${dto.isActive}`
+          `Should be rejected: ${JSON.stringify(testCase)} -> isActive: ${dto.isActive}`
         );
       }
     }
@@ -243,12 +239,10 @@ export class ExampleService {
   async findStageTemplates(query: QueryStageTemplateDto) {
     const filters: any = {};
 
-    // Boolean filters
     if (query.isActive !== undefined) {
       filters.isActive = query.isActive;
     }
 
-    // String filters
     if (query.category) {
       filters.category = query.category;
     }
@@ -287,7 +281,6 @@ export class ErrorHandlingExamples {
       const errors = await validate(dto);
 
       if (errors.length > 0) {
-        // Handle validation errors
         const errorMessages = errors.map((error) =>
           Object.values(error.constraints || {}).join(", ")
         );
@@ -308,7 +301,6 @@ export class ErrorHandlingExamples {
   async handleBooleanTransformationError(query: any) {
     const dto = plainToClass(QueryJobCategoryDto, query);
 
-    // Check if isActive is valid boolean or undefined
     if (query.isActive !== undefined && typeof query.isActive !== "boolean") {
       throw new Error(`Invalid boolean value for isActive: ${query.isActive}`);
     }
@@ -334,13 +326,12 @@ export class TestExamples {
 
     const dto = plainToClass(QueryJobCategoryDto, testData);
 
-    // Assertions
     console.assert(dto.isActive === true, "isActive should be true");
     console.assert(dto.page === 1, "page should be 1");
     console.assert(dto.limit === 10, "limit should be 10");
     console.assert(dto.keyword === "test", "keyword should be test");
 
-    console.log("✅ All assertions passed");
+    console.log("All assertions passed");
   }
 
   /**

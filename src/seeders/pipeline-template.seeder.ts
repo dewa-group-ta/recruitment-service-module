@@ -5,28 +5,28 @@ import { StageTemplate } from "../modules/vacancies/entities/stage-template.enti
 
 export class PipelineTemplateSeeder extends BaseSeeder {
   async run(): Promise<void> {
-    console.log("🌱 Seeding pipeline templates...");
+    console.log("Seeding pipeline templates...");
 
-    // Get stage templates
     const stageTemplateRepository = await this.getRepository(StageTemplate);
     const stageTemplates = await stageTemplateRepository.find();
 
     if (stageTemplates.length === 0) {
       console.log(
-        "⚠️  No stage templates found. Please run stage template seeder first."
+        "No stage templates found. Please run stage template seeder first."
       );
       return;
     }
 
-    // Create pipeline templates
     const pipelineTemplates = await this.createPipelineTemplates();
 
-    // Create stages for each pipeline template using stage templates
     for (const pipelineTemplate of pipelineTemplates as any[]) {
-      await this.createStagesForPipelineTemplate(pipelineTemplate, stageTemplates);
+      await this.createStagesForPipelineTemplate(
+        pipelineTemplate,
+        stageTemplates
+      );
     }
 
-    console.log("✅ Pipeline templates seeded successfully");
+    console.log("Pipeline templates seeded successfully");
   }
 
   private async createPipelineTemplates() {
@@ -34,7 +34,8 @@ export class PipelineTemplateSeeder extends BaseSeeder {
       {
         id: this.generateId(),
         name: "Default",
-        description: "Default recruitment pipeline template for general positions",
+        description:
+          "Default recruitment pipeline template for general positions",
         version: "1.0",
         isDefault: true,
         isActive: true,
@@ -96,11 +97,13 @@ export class PipelineTemplateSeeder extends BaseSeeder {
     return await this.saveEntities(RecruitmentPipeline, pipelineTemplateData);
   }
 
-  private async createStagesForPipelineTemplate(pipelineTemplate: any, stageTemplates: any[]) {
+  private async createStagesForPipelineTemplate(
+    pipelineTemplate: any,
+    stageTemplates: any[]
+  ) {
     const stagesData: any[] = [];
     let stageOrder = 1;
 
-    // Define stage order based on pipeline template category
     const stageOrderMap = {
       engineering: [
         "Application Review",

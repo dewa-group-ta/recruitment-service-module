@@ -5,7 +5,7 @@ import { RecruitmentPipelineSeeder } from "./recruitment-pipeline.seeder";
 import { VacancySeeder } from "./vacancy.seeder";
 import { ApplicantSourceSeeder } from "./applicant-source.seeder";
 import { ApplicationSeeder } from "./application.seeder";
-// import { ApplicantsSeeder } from "./applicant.seeder"; // run manually: npm run seed -- --seeder applicant
+// import { ApplicantsSeeder } from "./applicant.seeder"; // dijalankan manual: npm run seed -- --seeder applicant
 import { SystemConfigurationSeeder } from "./system-configuration.seeder";
 import { JobCategorySeeder } from "./job-category.seeder";
 import { DepartmentSeeder } from "./department.seeder";
@@ -38,42 +38,42 @@ export class MainSeeder extends BaseSeeder {
       new ApplicantSourceSeeder(this.dataSource),
       new RecruitmentPipelineSeeder(this.dataSource),
       new VacancySeeder(this.dataSource),
-      // ApplicantsSeeder intentionally excluded from default seed run.
-      // Applicants enter the system via self-registration (applicant portal).
-      // Run manually: npm run seed -- --seeder applicant
-      new ApplicationSeeder(this.dataSource),
+      // ApplicantsSeeder sengaja tidak diikutkan di seed run default —
+      // applicant masuk ke sistem lewat self-registration (applicant portal).
+      // jalankan manual: npm run seed -- --seeder applicant
+      new ApplicationSeeder(this.dataSource)
     ];
   }
 
   async run(): Promise<void> {
-    console.log("🚀 Starting database seeding...");
+    console.log("Starting database seeding...");
     console.log("=====================================");
 
     try {
       for (const seeder of this.seeders) {
         await seeder.run();
-        console.log(""); // Empty line for better readability
+        console.log("");
       }
 
       console.log("=====================================");
-      console.log("✅ Database seeding completed successfully!");
+      console.log("Database seeding completed successfully!");
       console.log("");
-      console.log("📊 Seeded data summary:");
-      console.log("   • System Configurations: 16 company settings");
-      console.log("   • Job Categories: 8 job categories");
-      console.log("   • Departments: 15 departments");
-      console.log("   • Stage Templates: 8 reusable stage templates");
-      console.log("   • Pipeline Templates: 5 pipeline templates");
-      console.log("   • Applicant Sources: 5 source types");
-      console.log("   • Recruitment Pipelines: 4 pipelines with stages");
-      console.log("   • Vacancy Forms: 5 template forms with fields");
-      console.log("   • Vacancies: 10 sample vacancies");
-      console.log("   • Applicants: 50 sample applicants");
-      console.log("   • Applications: 50 sample applications");
+      console.log("Seeded data summary:");
+      console.log("• System Configurations: 16 company settings");
+      console.log("• Job Categories: 8 job categories");
+      console.log("• Departments: 15 departments");
+      console.log("• Stage Templates: 8 reusable stage templates");
+      console.log("• Pipeline Templates: 5 pipeline templates");
+      console.log("• Applicant Sources: 5 source types");
+      console.log("• Recruitment Pipelines: 4 pipelines with stages");
+      console.log("• Vacancy Forms: 5 template forms with fields");
+      console.log("• Vacancies: 10 sample vacancies");
+      console.log("• Applicants: 50 sample applicants");
+      console.log("• Applications: 50 sample applications");
       console.log("");
-      console.log("🎉 You can now start using the recruitment system!");
+      console.log("You can now start using the recruitment system!");
     } catch (error) {
-      console.error("❌ Error during seeding:", error);
+      console.error("Error during seeding:", error);
       throw error;
     }
   }
@@ -89,25 +89,25 @@ export class MainSeeder extends BaseSeeder {
     });
 
     if (!seeder) {
-      console.error(`❌ Seeder '${seederName}' not found.`);
+      console.error(`Seeder '${seederName}' not found.`);
       console.log("Available seeders:");
       this.seeders.forEach((s) => {
         const name = s.constructor.name.replace("Seeder", "").toLowerCase();
-        console.log(`   • ${name}`);
+        console.log(`• ${name}`);
       });
       return;
     }
 
-    console.log(`🌱 Running ${seeder.constructor.name}...`);
+    console.log(`Running ${seeder.constructor.name}...`);
     await seeder.run();
-    console.log(`✅ ${seeder.constructor.name} completed successfully!`);
+    console.log(`${seeder.constructor.name} completed successfully!`);
   }
 
   async clearAll(): Promise<void> {
-    console.log("🧹 Clearing all seeded data...");
+    console.log("Clearing all seeded data...");
 
     try {
-      // Clear in reverse order to respect foreign key constraints
+      // dihapus dalam urutan terbalik supaya tidak melanggar foreign key constraint
       const clearOrder = [
         { entity: StageActivity, name: "Stage Activities" },
         { entity: Application, name: "Applications" },
@@ -124,16 +124,19 @@ export class MainSeeder extends BaseSeeder {
 
       for (const { entity, name } of clearOrder) {
         try {
-          console.log(`   Clearing ${name}...`);
+          console.log(`Clearing ${name}...`);
           await this.clearTable(entity as any);
         } catch (error) {
-          console.warn(`   Warning: Could not clear ${name}:`, error instanceof Error ? error.message : String(error));
+          console.warn(
+            `Warning: Could not clear ${name}:`,
+            error instanceof Error ? error.message : String(error)
+          );
         }
       }
 
-      console.log("✅ All seeded data cleared successfully!");
+      console.log("All seeded data cleared successfully!");
     } catch (error) {
-      console.error("❌ Error during clearing:", error);
+      console.error("Error during clearing:", error);
       throw error;
     }
   }

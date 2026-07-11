@@ -21,16 +21,16 @@ export class JobCategory {
   description: string;
 
   @Column({ type: "varchar", length: 50, nullable: true })
-  code: string; // Short code for the category (e.g., 'ENG', 'MKT', 'SALES')
+  code: string; // kode singkat kategori (mis. 'ENG', 'MKT', 'SALES')
 
   @Column({ type: "varchar", length: 7, nullable: true })
-  color: string; // Hex color code for UI display
+  color: string; // kode warna hex untuk tampilan ui
 
   @Column({ type: "varchar", length: 255, nullable: true })
-  icon: string; // Icon name or path for UI display
+  icon: string; // nama atau path icon untuk tampilan ui
 
   @Column({ type: "int", default: 0 })
-  sortOrder: number; // For ordering categories in UI
+  sortOrder: number;
 
   @Column({ type: "boolean", default: true })
   isActive: boolean;
@@ -41,11 +41,9 @@ export class JobCategory {
   @Column({ name: "updated_by", nullable: true })
   updatedById: string;
 
-  // Relations
   @OneToMany(() => Vacancy, (vacancy) => vacancy.jobCategory)
   vacancies: Vacancy[];
 
-  // Audit fields
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 

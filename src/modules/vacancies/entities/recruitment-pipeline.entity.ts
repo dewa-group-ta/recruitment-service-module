@@ -42,7 +42,6 @@ export class RecruitmentPipeline {
   @Column({ name: "created_by" })
   createdById: string;
 
-  // Relations
   @OneToMany(() => PipelineStage, (stage) => stage.pipeline, {
     cascade: true,
     eager: true
@@ -52,7 +51,6 @@ export class RecruitmentPipeline {
   @OneToMany(() => Vacancy, (vacancy) => vacancy.pipeline)
   vacancies: Vacancy[];
 
-  // Audit fields
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 
@@ -62,4 +60,3 @@ export class RecruitmentPipeline {
   @DeleteDateColumn({ name: "deleted_at" })
   deletedAt: Date;
 }
-  

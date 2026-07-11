@@ -20,13 +20,9 @@ export class JobCategoryService {
     private readonly jobCategoryRepository: Repository<JobCategory>
   ) {}
 
-  /**
-   * Create a new job category
-   */
   async create(
     createJobCategoryDto: CreateJobCategoryDto
   ): Promise<JobCategoryResponseDto> {
-    // Check if category with same name already exists
     const existingCategory = await this.jobCategoryRepository.findOne({
       where: { name: createJobCategoryDto.name },
       withDeleted: false
@@ -36,7 +32,6 @@ export class JobCategoryService {
       throw new ConflictException("Job category with this name already exists");
     }
 
-    // Check if code is unique (if provided)
     if (createJobCategoryDto.code) {
       const existingCode = await this.jobCategoryRepository.findOne({
         where: { code: createJobCategoryDto.code },
@@ -60,9 +55,6 @@ export class JobCategoryService {
     return this.mapToResponseDto(savedCategory);
   }
 
-  /**
-   * Find all job categories with pagination
-   */
   async findAll(
     paginationDto: QueryJobCategoryDto
   ): Promise<Pagination<JobCategoryResponseDto>> {
@@ -85,7 +77,6 @@ export class JobCategoryService {
       queryBuilder.andWhere("jobCategory.isActive = :isActive", { isActive });
     }
 
-    // Add search functionality
     if (search) {
       queryBuilder.andWhere(
         "(jobCategory.name ILIKE :search OR jobCategory.description ILIKE :search OR jobCategory.code ILIKE :search)",
@@ -93,10 +84,8 @@ export class JobCategoryService {
       );
     }
 
-    // Add sorting
     queryBuilder.orderBy(`jobCategory.${sortBy}`, sortOrder);
 
-    // Add pagination
     queryBuilder.skip(skip).take(limit);
 
     const [categories, total] = await queryBuilder.getManyAndCount();
@@ -114,9 +103,6 @@ export class JobCategoryService {
     });
   }
 
-  /**
-   * Find all active job categories (for dropdowns, etc.)
-   */
   async findAllActive(): Promise<JobCategoryResponseDto[]> {
     const categories = await this.jobCategoryRepository.find({
       where: {
@@ -132,9 +118,6 @@ export class JobCategoryService {
     return categories.map((category) => this.mapToResponseDto(category));
   }
 
-  /**
-   * Find one job category by ID
-   */
   async findOne(id: string): Promise<JobCategoryResponseDto> {
     const category = await this.jobCategoryRepository.findOne({
       where: { id },
@@ -148,9 +131,6 @@ export class JobCategoryService {
     return this.mapToResponseDto(category);
   }
 
-  /**
-   * Update a job category
-   */
   async update(
     id: string,
     updateJobCategoryDto: UpdateJobCategoryDto
@@ -164,7 +144,6 @@ export class JobCategoryService {
       throw new NotFoundException("Job category not found");
     }
 
-    // Check if name is unique (if being updated)
     if (
       updateJobCategoryDto.name &&
       updateJobCategoryDto.name !== category.name
@@ -181,7 +160,6 @@ export class JobCategoryService {
       }
     }
 
-    // Check if code is unique (if being updated)
     if (
       updateJobCategoryDto.code &&
       updateJobCategoryDto.code !== category.code
@@ -204,9 +182,6 @@ export class JobCategoryService {
     return this.mapToResponseDto(updatedCategory);
   }
 
-  /**
-   * Soft delete a job category
-   */
   async remove(id: string): Promise<void> {
     const category = await this.jobCategoryRepository.findOne({
       where: { id },
@@ -217,7 +192,6 @@ export class JobCategoryService {
       throw new NotFoundException("Job category not found");
     }
 
-    // Check if category has active vacancies
     const activeVacancies = await this.jobCategoryRepository
       .createQueryBuilder("jobCategory")
       .leftJoin("jobCategory.vacancies", "vacancy")
@@ -237,9 +211,6 @@ export class JobCategoryService {
     await this.jobCategoryRepository.softDelete(id);
   }
 
-  /**
-   * Restore a soft-deleted job category
-   */
   async restore(id: string): Promise<JobCategoryResponseDto> {
     const category = await this.jobCategoryRepository.findOne({
       where: { id },
@@ -267,9 +238,6 @@ export class JobCategoryService {
     return this.mapToResponseDto(restoredCategory);
   }
 
-  /**
-   * Map entity to response DTO
-   */
   private mapToResponseDto(category: JobCategory): JobCategoryResponseDto {
     return {
       id: category.id,

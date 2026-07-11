@@ -1,9 +1,3 @@
-/**
- * Transformers Index
- * Centralized export for all type transformation utilities
- * Follows Single Responsibility Principle - focused only on exporting transformers
- */
-
 export {
   transformToNumber,
   transformToInteger,
@@ -12,7 +6,6 @@ export {
   transformToArray,
   transformToLowercase,
   transformToUppercase
-} from './type-transformers';
+} from "./type-transformers";
 
-// Export examples for reference
-export * from './examples';
+export * from "./examples";

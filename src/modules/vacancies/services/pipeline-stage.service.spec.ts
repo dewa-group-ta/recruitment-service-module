@@ -81,15 +81,12 @@ describe("PipelineStageService", () => {
     };
 
     it("should create a new pipeline stage successfully", async () => {
-      // Arrange
       pipelineStageRepository.findOne.mockResolvedValue(null); // No existing stage with same order
       pipelineStageRepository.create.mockReturnValue(mockPipelineStage as any);
       pipelineStageRepository.save.mockResolvedValue(mockPipelineStage as any);
 
-      // Act
       const result = await service.create(createDto);
 
-      // Assert
       expect(pipelineStageRepository.findOne).toHaveBeenCalledWith({
         where: {
           pipelineId: "pipeline-1",
@@ -106,12 +103,10 @@ describe("PipelineStageService", () => {
     });
 
     it("should throw BadRequestException when stage order already exists", async () => {
-      // Arrange
       pipelineStageRepository.findOne.mockResolvedValue(
         mockPipelineStage as any
       );
 
-      // Act & Assert
       await expect(service.create(createDto)).rejects.toThrow(
         BadRequestException
       );
@@ -124,31 +119,26 @@ describe("PipelineStageService", () => {
     });
 
     it("should create stage with custom sendNotification value", async () => {
-      // Arrange
       const customDto = { ...createDto, sendNotification: false };
       const customStage = { ...mockPipelineStage, sendNotification: false };
       pipelineStageRepository.findOne.mockResolvedValue(null);
       pipelineStageRepository.create.mockReturnValue(customStage as any);
       pipelineStageRepository.save.mockResolvedValue(customStage as any);
 
-      // Act
       const result = await service.create(customDto);
 
-      // Assert
       expect(pipelineStageRepository.create).toHaveBeenCalledWith(customDto);
       expect(result).toBeDefined();
       expect(result.sendNotification).toBe(false);
     });
 
     it("should throw BadRequestException when creation fails", async () => {
-      // Arrange
       pipelineStageRepository.findOne.mockResolvedValue(null);
       pipelineStageRepository.create.mockReturnValue(mockPipelineStage as any);
       pipelineStageRepository.save.mockRejectedValue(
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.create(createDto)).rejects.toThrow(
         BadRequestException
       );
@@ -162,7 +152,6 @@ describe("PipelineStageService", () => {
     };
 
     it("should return paginated pipeline stages", async () => {
-      // Arrange
       const mockQueryBuilder = {
         leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
@@ -177,10 +166,8 @@ describe("PipelineStageService", () => {
         mockQueryBuilder as any
       );
 
-      // Act
       const result = await service.findAll(paginationDto);
 
-      // Assert
       expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
         "stage.stageTemplate",
         "stageTemplate"
@@ -196,7 +183,6 @@ describe("PipelineStageService", () => {
     });
 
     it("should apply filters correctly", async () => {
-      // Arrange
       const filters = {
         pipelineId: "pipeline-1",
         isActive: true,
@@ -216,10 +202,8 @@ describe("PipelineStageService", () => {
         mockQueryBuilder as any
       );
 
-      // Act
       const result = await service.findAll(paginationDto, filters);
 
-      // Assert
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         "stage.pipelineId = :pipelineId",
         { pipelineId: "pipeline-1" }
@@ -238,15 +222,12 @@ describe("PipelineStageService", () => {
 
   describe("findOne", () => {
     it("should return pipeline stage when found", async () => {
-      // Arrange
       pipelineStageRepository.findOne.mockResolvedValue(
         mockPipelineStage as any
       );
 
-      // Act
       const result = await service.findOne("stage-1");
 
-      // Assert
       expect(pipelineStageRepository.findOne).toHaveBeenCalledWith({
         where: { id: "stage-1" },
         relations: ["stageTemplate"]
@@ -256,10 +237,8 @@ describe("PipelineStageService", () => {
     });
 
     it("should throw NotFoundException when pipeline stage not found", async () => {
-      // Arrange
       pipelineStageRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.findOne("nonexistent-id")).rejects.toThrow(
         NotFoundException
       );
@@ -273,17 +252,14 @@ describe("PipelineStageService", () => {
     };
 
     it("should update pipeline stage successfully", async () => {
-      // Arrange
       const updatedStage = { ...mockPipelineStage, ...updateDto };
       pipelineStageRepository.findOne
         .mockResolvedValueOnce(mockPipelineStage as any) // First call for finding existing stage
         .mockResolvedValueOnce(updatedStage as any); // Second call for fetching updated stage
       pipelineStageRepository.update.mockResolvedValue({ affected: 1 } as any);
 
-      // Act
       const result = await service.update("stage-1", updateDto);
 
-      // Assert
       expect(pipelineStageRepository.findOne).toHaveBeenCalledWith({
         where: { id: "stage-1" }
       });
@@ -296,17 +272,14 @@ describe("PipelineStageService", () => {
     });
 
     it("should throw NotFoundException when pipeline stage not found", async () => {
-      // Arrange
       pipelineStageRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.update("nonexistent-id", updateDto)).rejects.toThrow(
         NotFoundException
       );
     });
 
     it("should throw BadRequestException when update fails", async () => {
-      // Arrange
       pipelineStageRepository.findOne.mockResolvedValue(
         mockPipelineStage as any
       );
@@ -314,7 +287,6 @@ describe("PipelineStageService", () => {
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.update("stage-1", updateDto)).rejects.toThrow(
         BadRequestException
       );
@@ -323,7 +295,6 @@ describe("PipelineStageService", () => {
 
   describe("remove", () => {
     it("should soft delete pipeline stage successfully", async () => {
-      // Arrange
       pipelineStageRepository.findOne.mockResolvedValue(
         mockPipelineStage as any
       );
@@ -332,10 +303,8 @@ describe("PipelineStageService", () => {
       } as any);
       pipelineStageRepository.update.mockResolvedValue({ affected: 1 } as any);
 
-      // Act
       await service.remove("stage-1", "user-1");
 
-      // Assert
       expect(pipelineStageRepository.findOne).toHaveBeenCalledWith({
         where: { id: "stage-1" }
       });
@@ -348,10 +317,8 @@ describe("PipelineStageService", () => {
     });
 
     it("should throw NotFoundException when pipeline stage not found", async () => {
-      // Arrange
       pipelineStageRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.remove("nonexistent-id", "user-1")).rejects.toThrow(
         NotFoundException
       );
@@ -360,14 +327,11 @@ describe("PipelineStageService", () => {
 
   describe("findByPipelineId", () => {
     it("should return pipeline stages by pipeline ID", async () => {
-      // Arrange
       const stages = [mockPipelineStage];
       pipelineStageRepository.find.mockResolvedValue(stages as any);
 
-      // Act
       const result = await service.findByPipelineId("pipeline-1");
 
-      // Assert
       expect(pipelineStageRepository.find).toHaveBeenCalledWith({
         where: { pipelineId: "pipeline-1", isActive: true },
         relations: ["stageTemplate"],
@@ -379,13 +343,10 @@ describe("PipelineStageService", () => {
     });
 
     it("should return empty array when no stages found", async () => {
-      // Arrange
       pipelineStageRepository.find.mockResolvedValue([]);
 
-      // Act
       const result = await service.findByPipelineId("nonexistent-pipeline");
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });
@@ -393,14 +354,11 @@ describe("PipelineStageService", () => {
 
   describe("findByStageTemplateId", () => {
     it("should return pipeline stages by stage template ID", async () => {
-      // Arrange
       const stages = [mockPipelineStage];
       pipelineStageRepository.find.mockResolvedValue(stages as any);
 
-      // Act
       const result = await service.findByStageTemplateId("template-1");
 
-      // Assert
       expect(pipelineStageRepository.find).toHaveBeenCalledWith({
         where: { stageTemplateId: "template-1", isActive: true },
         relations: ["stageTemplate"]
@@ -411,15 +369,12 @@ describe("PipelineStageService", () => {
     });
 
     it("should return empty array when no stages found", async () => {
-      // Arrange
       pipelineStageRepository.find.mockResolvedValue([]);
 
-      // Act
       const result = await service.findByStageTemplateId(
         "nonexistent-template"
       );
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });
@@ -427,16 +382,13 @@ describe("PipelineStageService", () => {
 
   describe("updateStageOrder", () => {
     it("should update stage order successfully", async () => {
-      // Arrange
       pipelineStageRepository.findOne.mockResolvedValue(
         mockPipelineStage as any
       );
       pipelineStageRepository.update.mockResolvedValue({ affected: 1 } as any);
 
-      // Act
       await service.updateStageOrder("stage-1", 2);
 
-      // Assert
       expect(pipelineStageRepository.findOne).toHaveBeenCalledWith({
         where: { id: "stage-1" }
       });
@@ -446,10 +398,8 @@ describe("PipelineStageService", () => {
     });
 
     it("should throw NotFoundException when stage not found", async () => {
-      // Arrange
       pipelineStageRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(
         service.updateStageOrder("nonexistent-id", 2)
       ).rejects.toThrow(NotFoundException);
@@ -458,14 +408,11 @@ describe("PipelineStageService", () => {
 
   describe("findActive", () => {
     it("should return all active pipeline stages", async () => {
-      // Arrange
       const activeStages = [mockPipelineStage];
       pipelineStageRepository.find.mockResolvedValue(activeStages as any);
 
-      // Act
       const result = await service.findActive();
 
-      // Assert
       expect(pipelineStageRepository.find).toHaveBeenCalledWith({
         where: { isActive: true },
         relations: ["stageTemplate"],
@@ -477,13 +424,10 @@ describe("PipelineStageService", () => {
     });
 
     it("should return empty array when no active stages found", async () => {
-      // Arrange
       pipelineStageRepository.find.mockResolvedValue([]);
 
-      // Act
       const result = await service.findActive();
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });

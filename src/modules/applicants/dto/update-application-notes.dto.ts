@@ -4,7 +4,8 @@ import { IsString, IsOptional, IsBoolean, IsIn } from "class-validator";
 export class UpdateApplicationNotesDto {
   @ApiPropertyOptional({
     description: "Notes content",
-    example: "Updated notes: Candidate shows strong technical skills during interview"
+    example:
+      "Updated notes: Candidate shows strong technical skills during interview"
   })
   @IsString()
   @IsOptional()
@@ -29,11 +30,25 @@ export class UpdateApplicationNotesDto {
   @ApiPropertyOptional({
     description: "Category of the notes",
     example: "interview",
-    enum: ["interview", "assessment", "general", "follow_up", "rejection", "offer"]
+    enum: [
+      "interview",
+      "assessment",
+      "general",
+      "follow_up",
+      "rejection",
+      "offer"
+    ]
   })
   @IsString()
   @IsOptional()
-  @IsIn(["interview", "assessment", "general", "follow_up", "rejection", "offer"])
+  @IsIn([
+    "interview",
+    "assessment",
+    "general",
+    "follow_up",
+    "rejection",
+    "offer"
+  ])
   category?: string;
 
   @ApiPropertyOptional({

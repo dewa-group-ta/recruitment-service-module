@@ -5,28 +5,25 @@ import { StageTemplate } from "../modules/vacancies/entities/stage-template.enti
 
 export class RecruitmentPipelineSeeder extends BaseSeeder {
   async run(): Promise<void> {
-    console.log("🌱 Seeding recruitment pipelines...");
+    console.log("Seeding recruitment pipelines...");
 
-    // Get stage templates
     const stageTemplateRepository = await this.getRepository(StageTemplate);
     const stageTemplates = await stageTemplateRepository.find();
 
     if (stageTemplates.length === 0) {
       console.log(
-        "⚠️  No stage templates found. Please run stage template seeder first."
+        "No stage templates found. Please run stage template seeder first."
       );
       return;
     }
 
-    // Create default pipelines
     const pipelines = await this.createPipelines();
 
-    // Create stages for each pipeline using stage templates
     for (const pipeline of pipelines as any[]) {
       await this.createStagesForPipeline(pipeline, stageTemplates);
     }
 
-    console.log("✅ Recruitment pipelines seeded successfully");
+    console.log("Recruitment pipelines seeded successfully");
   }
 
   private async createPipelines() {
@@ -34,7 +31,8 @@ export class RecruitmentPipelineSeeder extends BaseSeeder {
       {
         id: this.generateId(),
         name: "HCM Neuron",
-        description: "Standard recruitment pipeline for PT Neuronworks Indonesia",
+        description:
+          "Standard recruitment pipeline for PT Neuronworks Indonesia",
         version: "1.0",
         isDefault: true,
         isActive: true,
@@ -100,7 +98,6 @@ export class RecruitmentPipelineSeeder extends BaseSeeder {
     const stagesData: any[] = [];
     let stageOrder = 1;
 
-    // Define stage order based on pipeline category
     const stageOrderMap = {
       "HCM Neuron": [
         "Administration Selection",
@@ -154,7 +151,7 @@ export class RecruitmentPipelineSeeder extends BaseSeeder {
   private getEstimatedDurationForStage(stageName: string): number {
     const durationMap = {
       "Administration Selection": 3,
-      "Psikotes": 5,
+      Psikotes: 5,
       "Skill Test": 7,
       "Interview User": 7,
       "Interview HCM": 7,

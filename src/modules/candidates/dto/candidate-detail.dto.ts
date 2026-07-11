@@ -1,119 +1,125 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNumber, IsDateString, IsBoolean } from 'class-validator';
+import { ApiProperty } from "@nestjs/swagger";
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsDateString,
+  IsBoolean
+} from "class-validator";
 
 export class CandidateDetailDto {
   @ApiProperty({
-    description: 'Candidate ID',
-    example: 'uuid-string'
+    description: "Candidate ID",
+    example: "uuid-string"
   })
   id!: string;
 
   @ApiProperty({
-    description: 'Application ID',
-    example: 'uuid-string'
+    description: "Application ID",
+    example: "uuid-string"
   })
   applicationId!: string;
 
   @ApiProperty({
-    description: 'Application number',
-    example: 'APP-2024-001'
+    description: "Application number",
+    example: "APP-2024-001"
   })
   applicationNumber!: string;
 
   @ApiProperty({
-    description: 'Applicant ID',
-    example: 'uuid-string'
+    description: "Applicant ID",
+    example: "uuid-string"
   })
   applicantId!: string;
 
   @ApiProperty({
-    description: 'Full name',
-    example: 'John Doe'
+    description: "Full name",
+    example: "John Doe"
   })
   fullName!: string;
 
   @ApiProperty({
-    description: 'Email address',
-    example: 'john.doe@example.com'
+    description: "Email address",
+    example: "john.doe@example.com"
   })
   email!: string;
 
   @ApiProperty({
-    description: 'Phone number',
-    example: '+62 812-3456-7890'
+    description: "Phone number",
+    example: "+62 812-3456-7890"
   })
   phone!: string;
 
   @ApiProperty({
-    description: 'Application status',
-    example: 'applied',
-    enum: ['applied', 'hired', 'rejected']
+    description: "Application status",
+    example: "applied",
+    enum: ["applied", "hired", "rejected"]
   })
   status!: string;
 
   @ApiProperty({
-    description: 'Current recruitment stage',
-    example: 'Interview'
+    description: "Current recruitment stage",
+    example: "Interview"
   })
   currentStage!: string;
 
   @ApiProperty({
-    description: 'Current score',
+    description: "Current score",
     example: 85,
     required: false
   })
   score?: number;
 
   @ApiProperty({
-    description: 'Application date',
-    example: '2024-01-15T10:30:00Z'
+    description: "Application date",
+    example: "2024-01-15T10:30:00Z"
   })
   appliedAt!: string;
 
   @ApiProperty({
-    description: 'Avatar URL',
-    example: 'https://example.com/avatar.jpg',
+    description: "Avatar URL",
+    example: "https://example.com/avatar.jpg",
     required: false
   })
   avatar?: string;
 
   @ApiProperty({
-    description: 'Education level',
-    example: 'Bachelor Degree',
+    description: "Education level",
+    example: "Bachelor Degree",
     required: false
   })
   education?: string;
 
   @ApiProperty({
-    description: 'Experience level',
-    example: '3 years',
+    description: "Experience level",
+    example: "3 years",
     required: false
   })
   experience?: string;
 
   @ApiProperty({
-    description: 'Cover letter',
-    example: 'I am interested in this position...',
+    description: "Cover letter",
+    example: "I am interested in this position...",
     required: false
   })
   coverLetter?: string;
 
   @ApiProperty({
-    description: 'Expected start date',
-    example: '2024-02-01',
+    description: "Expected start date",
+    example: "2024-02-01",
     required: false
   })
   expectedStartDate?: string;
 
   @ApiProperty({
-    description: 'Application source',
-    example: 'LinkedIn',
+    description: "Application source",
+    example: "LinkedIn",
     required: false
   })
   source?: string;
 
   @ApiProperty({
-    description: 'Vacancy information',
+    description: "Vacancy information",
     required: false
   })
   vacancy?: {
@@ -125,10 +131,14 @@ export class CandidateDetailDto {
   };
 
   @ApiProperty({
-    description: 'Address information',
+    description: "Address information",
     required: false
   })
-  @ApiProperty({ type: () => EvaluationScoreDetailDto, nullable: true, description: 'Hasil scoring WSM — null jika scoring belum selesai' })
+  @ApiProperty({
+    type: () => EvaluationScoreDetailDto,
+    nullable: true,
+    description: "Hasil scoring WSM — null jika scoring belum selesai"
+  })
   evaluationResult?: EvaluationScoreDetailDto | null;
 
   address?: Array<{
@@ -147,40 +157,45 @@ export class CandidateDetailDto {
   }>;
 }
 
-
 export class EvaluationScoreDetailDto {
   @ApiProperty({ example: 0.729, nullable: true })
   maxExperienceScore!: number | null;
 
   @ApiProperty({
-    enum: ['lolos', 'tidak_lolos'],
+    enum: ["lolos", "tidak_lolos"],
     nullable: true,
-    description: 'Keputusan rekruter — null jika belum ditetapkan'
+    description: "Keputusan rekruter — null jika belum ditetapkan"
   })
   decision!: string | null;
 
-  @ApiProperty({ nullable: true, description: 'Breakdown skor per komponen (JSON)' })
+  @ApiProperty({
+    nullable: true,
+    description: "Breakdown skor per komponen (JSON)"
+  })
   evaluateDetail!: Record<string, any> | null;
 
   @ApiProperty({ nullable: true })
   evaluatedAt!: Date | null;
 
-  @ApiProperty({ nullable: true, description: 'Error message jika scoring gagal' })
+  @ApiProperty({
+    nullable: true,
+    description: "Error message jika scoring gagal"
+  })
   errorMessage!: string | null;
 }
 
 export class UpdateCandidateStatusDto {
   @ApiProperty({
-    description: 'New status',
-    example: 'hired',
-    enum: ['applied', 'hired', 'rejected']
+    description: "New status",
+    example: "hired",
+    enum: ["applied", "hired", "rejected"]
   })
   @IsString()
   status!: string;
 
   @ApiProperty({
-    description: 'Notes about the status change',
-    example: 'Candidate passed all interviews',
+    description: "Notes about the status change",
+    example: "Candidate passed all interviews",
     required: false
   })
   @IsOptional()
@@ -188,7 +203,7 @@ export class UpdateCandidateStatusDto {
   notes?: string;
 
   @ApiProperty({
-    description: 'Score for the current stage (used when rejecting)',
+    description: "Score for the current stage (used when rejecting)",
     example: 45,
     required: false
   })
@@ -199,8 +214,8 @@ export class UpdateCandidateStatusDto {
 
 export class MoveToNextStageDto {
   @ApiProperty({
-    description: 'Notes about the stage change',
-    example: 'Moving to final interview',
+    description: "Notes about the stage change",
+    example: "Moving to final interview",
     required: false
   })
   @IsOptional()
@@ -208,8 +223,8 @@ export class MoveToNextStageDto {
   notes?: string;
 
   @ApiProperty({
-    description: 'Score value',
-    example: 'Moving to final interview',
+    description: "Score value",
+    example: "Moving to final interview",
     required: false
   })
   @IsOptional()
@@ -219,15 +234,15 @@ export class MoveToNextStageDto {
 
 export class UpdateTalentPoolDto {
   @ApiProperty({
-    description: 'Talent pool status',
+    description: "Talent pool status",
     example: true
   })
   @IsBoolean()
   isTalentPool!: boolean;
 
   @ApiProperty({
-    description: 'Notes about the talent pool status change',
-    example: 'Candidate added to talent pool for future opportunities',
+    description: "Notes about the talent pool status change",
+    example: "Candidate added to talent pool for future opportunities",
     required: false
   })
   @IsOptional()

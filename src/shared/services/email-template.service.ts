@@ -8,8 +8,7 @@ import { EmailTemplateName } from "../enums/email.enum";
 import { SystemConfigurationService } from "../../modules/system-configurations/services/system-configuration.service";
 
 /**
- * Email template provider implementation
- * Handles email template management and rendering
+ * penyedia template email default (dipakai kalau tidak ada template custom di system configuration).
  */
 @Injectable()
 export class EmailTemplateService implements IEmailTemplateProvider {
@@ -22,12 +21,7 @@ export class EmailTemplateService implements IEmailTemplateProvider {
     this.initializeTemplates();
   }
 
-  /**
-   * Initialize default email templates
-   * @private
-   */
   private initializeTemplates(): void {
-    // Application received template
     this.templates.set(EmailTemplateName.APPLICATION_RECEIVED, {
       subject: "Application Received - {{jobTitle}}",
       text: `Dear {{applicantName}},
@@ -49,7 +43,6 @@ Recruitment Team`,
       `
     });
 
-    // Quick apply confirmation template
     this.templates.set(EmailTemplateName.QUICK_APPLY_CONFIRMATION, {
       subject: "Application Confirmed - {{jobTitle}}",
       text: `Dear {{applicantName}},
@@ -83,7 +76,6 @@ Recruitment Team`,
       `
     });
 
-    // Application status update template
     this.templates.set(EmailTemplateName.APPLICATION_STATUS_UPDATE, {
       subject: "Application Status Update - {{jobTitle}}",
       text: `Dear {{applicantName}},
@@ -105,7 +97,6 @@ Recruitment Team`,
       `
     });
 
-    // Interview invitation template
     this.templates.set(EmailTemplateName.INTERVIEW_INVITATION, {
       subject: "Interview Invitation - {{jobTitle}}",
       text: `Dear {{applicantName}},
@@ -136,7 +127,6 @@ Recruitment Team`,
       `
     });
 
-    // Application rejected template
     this.templates.set(EmailTemplateName.APPLICATION_REJECTED, {
       subject: "Application Update - {{jobTitle}}",
       text: `Dear {{applicantName}},
@@ -158,7 +148,6 @@ Recruitment Team`,
       `
     });
 
-    // Application accepted template
     this.templates.set(EmailTemplateName.APPLICATION_ACCEPTED, {
       subject: "Congratulations! - {{jobTitle}}",
       text: `Dear {{applicantName}},
@@ -187,12 +176,9 @@ Recruitment Team`,
   }
 
   /**
-   * Get email template by name
-   * @param templateName Template name
-   * @returns EmailTemplate or null if not found
+   * ambil template email, coba dari system configuration dulu baru fallback ke template default.
    */
   async getTemplate(templateName: string): Promise<EmailTemplate | null> {
-    // First try to get from system configuration
     if (this.systemConfigService) {
       try {
         const systemTemplate =
@@ -208,7 +194,6 @@ Recruitment Team`,
       }
     }
 
-    // Fallback to default templates
     const template = this.templates.get(templateName);
 
     if (!template) {
@@ -219,12 +204,6 @@ Recruitment Team`,
     return template;
   }
 
-  /**
-   * Get template from system configuration
-   * @param templateName Template name
-   * @returns EmailTemplate or null if not found
-   * @private
-   */
   private async getTemplateFromSystemConfig(
     templateName: string
   ): Promise<EmailTemplate | null> {
@@ -254,17 +233,10 @@ Recruitment Team`,
     }
   }
 
-  /**
-   * Render template with data
-   * @param template Template content
-   * @param data Template data
-   * @returns Rendered template
-   */
   renderTemplate(template: string, data: EmailTemplateData): string {
     try {
       let rendered = template;
 
-      // Replace template variables with actual data
       Object.keys(data).forEach((key) => {
         const placeholder = `{{${key}}}`;
         const value = data[key] || "";
@@ -287,40 +259,21 @@ Recruitment Team`,
     }
   }
 
-  /**
-   * Add or update a template
-   * @param templateName Template name
-   * @param template Template content
-   */
   addTemplate(templateName: string, template: EmailTemplate): void {
     this.templates.set(templateName, template);
     this.logger.log(`Template added/updated: ${templateName}`);
   }
 
-  /**
-   * Remove a template
-   * @param templateName Template name
-   */
   removeTemplate(templateName: string): void {
     this.templates.delete(templateName);
     this.logger.log(`Template removed: ${templateName}`);
   }
 
-  /**
-   * Get all available template names
-   * @returns Array of template names
-   */
   getAvailableTemplates(): string[] {
     return Array.from(this.templates.keys());
   }
 
-  /**
-   * Check if template exists
-   * @param templateName Template name
-   * @returns True if template exists
-   */
   async hasTemplate(templateName: string): Promise<boolean> {
-    // Check system configuration first
     if (this.systemConfigService) {
       try {
         const systemTemplate =
@@ -336,16 +289,9 @@ Recruitment Team`,
       }
     }
 
-    // Fallback to default templates
     return this.templates.has(templateName);
   }
 
-  /**
-   * Strip HTML tags from text
-   * @param html - HTML string
-   * @returns Plain text
-   * @private
-   */
   private stripHtml(html: string): string {
     return html
       .replace(/<[^>]*>/g, "")

@@ -37,7 +37,10 @@ import { responseMessage, role } from "src/shared/utils/constant";
 import { IsRole } from "src/shared/decorators/roles.decorator";
 import { MeResponseDto } from "../dto/me-response.dto";
 import { UpdateApplicantProfileDto } from "../dto/update-applicant-profile.dto";
-import { FileInterceptor, FileFieldsInterceptor } from "@nestjs/platform-express";
+import {
+  FileInterceptor,
+  FileFieldsInterceptor
+} from "@nestjs/platform-express";
 import { FileUploadService } from "../../../shared/services/file-upload.service";
 import { FileValidationPipe } from "../../../shared/pipes/file-validation.pipe";
 import { FileType } from "../../../shared/entities/file.entity";
@@ -46,7 +49,10 @@ import { FileUploadDto } from "../../../shared/dto/file-upload.dto";
 import { ValidateTokenDto } from "../dto/validate-token.dto";
 import { ApplyApplicantDto } from "../dto/apply-applicant.dto";
 import { ApplicationTrackingResponseDto } from "../dto/application-tracking-response.dto";
-import { ApplicationTrackingPublicDto, ApplicationTrackingQueryDto } from "../dto/application-tracking-public.dto";
+import {
+  ApplicationTrackingPublicDto,
+  ApplicationTrackingQueryDto
+} from "../dto/application-tracking-public.dto";
 import { ApplyFormBasedDto } from "../dto/apply-form-based.dto";
 
 @ApiTags("Applicants")
@@ -102,56 +108,88 @@ export class ApplicationController {
 
   @Public()
   @Post("quick-apply")
-  @UseInterceptors(FileFieldsInterceptor([
-    { name: "cv",    maxCount: 1 },
-    { name: "photo", maxCount: 1 },
-  ]))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: "cv", maxCount: 1 },
+      { name: "photo", maxCount: 1 }
+    ])
+  )
   @HttpCode(HttpStatus.CREATED)
   @ResponseMessage(responseMessage.SUCCESSFULLY_CREATED)
   @ApiOperation({
     summary: "Quick Apply — single endpoint",
-    description: "Submit a job application in one request: profile data + CV (required) + photo (optional). No authentication required."
+    description:
+      "Submit a job application in one request: profile data + CV (required) + photo (optional). No authentication required."
   })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {
       type: "object",
-      required: ["cv", "vacancyId", "fullName", "email", "phone", "gender", "maritalStatus", "placeOfBirth", "dateOfBirth"],
+      required: [
+        "cv",
+        "vacancyId",
+        "fullName",
+        "email",
+        "phone",
+        "gender",
+        "maritalStatus",
+        "placeOfBirth",
+        "dateOfBirth"
+      ],
       properties: {
-        cv:            { type: "string", format: "binary", description: "CV file (PDF, DOC, DOCX) — max 5 MB" },
-        photo:         { type: "string", format: "binary", description: "Profile photo (JPG, PNG) — max 2 MB, optional" },
-        vacancyId:     { type: "string", format: "uuid" },
-        fullName:      { type: "string" },
-        email:         { type: "string", format: "email" },
-        phone:         { type: "string" },
-        gender:        { type: "string", enum: ["male", "female"] },
-        maritalStatus: { type: "string", enum: ["single", "married", "divorced", "widowed"] },
-        placeOfBirth:  { type: "string" },
-        dateOfBirth:   { type: "string", example: "1998-01-15" },
-        address:       { type: "string" },
+        cv: {
+          type: "string",
+          format: "binary",
+          description: "CV file (PDF, DOC, DOCX) — max 5 MB"
+        },
+        photo: {
+          type: "string",
+          format: "binary",
+          description: "Profile photo (JPG, PNG) — max 2 MB, optional"
+        },
+        vacancyId: { type: "string", format: "uuid" },
+        fullName: { type: "string" },
+        email: { type: "string", format: "email" },
+        phone: { type: "string" },
+        gender: { type: "string", enum: ["male", "female"] },
+        maritalStatus: {
+          type: "string",
+          enum: ["single", "married", "divorced", "widowed"]
+        },
+        placeOfBirth: { type: "string" },
+        dateOfBirth: { type: "string", example: "1998-01-15" },
+        address: { type: "string" }
       }
     }
   })
-  @ApiResponse({ status: 201, description: "Application submitted and scored successfully" })
-  @ApiResponse({ status: 400, description: "Validation error, duplicate application, or scoring failure" })
+  @ApiResponse({
+    status: 201,
+    description: "Application submitted and scored successfully"
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Validation error, duplicate application, or scoring failure"
+  })
   async quickApply(
-    @UploadedFiles() files: { cv?: Express.Multer.File[]; photo?: Express.Multer.File[] },
+    @UploadedFiles()
+    files: { cv?: Express.Multer.File[]; photo?: Express.Multer.File[] },
     @Body() dto: QuickApplyDto
   ) {
-    const cv    = files?.cv?.[0];
+    const cv = files?.cv?.[0];
     const photo = files?.photo?.[0];
 
     if (!cv) throw new BadRequestException("CV file is required");
 
-    // Validate CV
     new FileValidationPipe({
       maxSize: 5 * 1024 * 1024,
-      allowedMimeTypes: ["application/pdf", "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+      allowedMimeTypes: [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ],
       allowedExtensions: ["pdf", "doc", "docx"]
     }).transform(cv);
 
-    // Validate photo if provided
     if (photo) {
       new FileValidationPipe({
         maxSize: 2 * 1024 * 1024,
@@ -163,15 +201,27 @@ export class ApplicationController {
     try {
       return await this.applicantService.quickApply(dto, cv, photo);
     } catch (err: any) {
-      if (err?.code === '23505') {
-        if (err?.detail?.includes('applicant_id') || err?.constraint === 'UQ_applications_applicant_vacancy') {
-          throw new BadRequestException('You have already applied to this vacancy.');
+      if (err?.code === "23505") {
+        if (
+          err?.detail?.includes("applicant_id") ||
+          err?.constraint === "UQ_applications_applicant_vacancy"
+        ) {
+          throw new BadRequestException(
+            "You have already applied to this vacancy."
+          );
         }
-        if (err?.constraint?.includes('email') || err?.detail?.includes('email')) {
-          throw new BadRequestException('A submission with this email is already in progress. Please try again.');
+        if (
+          err?.constraint?.includes("email") ||
+          err?.detail?.includes("email")
+        ) {
+          throw new BadRequestException(
+            "A submission with this email is already in progress. Please try again."
+          );
         }
-        // applicationNumber race or any other unique constraint
-        throw new BadRequestException('A submission conflict occurred. Please try again.');
+        // race condition di applicationNumber atau unique constraint lainnya
+        throw new BadRequestException(
+          "A submission conflict occurred. Please try again."
+        );
       }
       throw err;
     }
@@ -183,19 +233,28 @@ export class ApplicationController {
   @ResponseMessage(responseMessage.SUCCESSFULLY_CREATED)
   @ApiOperation({ summary: "Apply via form fields (no LLM/CV parsing)" })
   @ApiBody({ type: ApplyFormBasedDto })
-  @ApiResponse({ status: 201, description: "Application submitted successfully" })
+  @ApiResponse({
+    status: 201,
+    description: "Application submitted successfully"
+  })
   async applyFormBased(@Body() dto: ApplyFormBasedDto) {
     try {
       return await this.applicantService.applyFormBased(dto);
     } catch (err: any) {
       if (err?.code === "23505") {
         if (err?.constraint === "UQ_applications_applicant_vacancy") {
-          throw new BadRequestException("You have already applied to this vacancy.");
+          throw new BadRequestException(
+            "You have already applied to this vacancy."
+          );
         }
         if (err?.detail?.includes("email")) {
-          throw new BadRequestException("A submission with this email is already in progress. Please try again.");
+          throw new BadRequestException(
+            "A submission with this email is already in progress. Please try again."
+          );
         }
-        throw new BadRequestException("A submission conflict occurred. Please try again.");
+        throw new BadRequestException(
+          "A submission conflict occurred. Please try again."
+        );
       }
       throw err;
     }
@@ -387,7 +446,7 @@ export class ApplicationController {
       }
     }
   })
-  // ─── LAMA (membutuhkan JWT auth via @IsRole) ──────────────────────────────
+  // ─── lama (butuh jwt auth via @IsRole) ────────────────────────────────────
   // @Get("me")
   // @HttpCode(HttpStatus.OK)
   // @ResponseMessage(responseMessage.SUCCESS)
@@ -425,9 +484,7 @@ export class ApplicationController {
     status: 404,
     description: "Applicant not found"
   })
-  async getMe(
-    @Query("applicantId") applicantId: string
-  ) {
+  async getMe(@Query("applicantId") applicantId: string) {
     if (!applicantId) {
       throw new BadRequestException("applicantId query param is required");
     }
@@ -496,20 +553,23 @@ export class ApplicationController {
   })
   @ApiResponse({
     status: 404,
-    description: "Application not found — email and/or registration code did not match"
+    description:
+      "Application not found — email and/or registration code did not match"
   })
   async getApplicationTrackingByCode(
-    @Query('email') email: string,
-    @Query('registrationCode') registrationCode: string
+    @Query("email") email: string,
+    @Query("registrationCode") registrationCode: string
   ): Promise<ApplicationTrackingPublicDto> {
     if (!email || !registrationCode) {
-      throw new BadRequestException('email and registrationCode query params are required');
+      throw new BadRequestException(
+        "email and registrationCode query params are required"
+      );
     }
     const query: ApplicationTrackingQueryDto = { email, registrationCode };
     return this.applicantService.getApplicationTrackingByCode(query);
   }
 
-  // ========== PROFILE MANAGEMENT ==========
+  // ========== manajemen profil ==========
 
   @Patch("profile")
   @HttpCode(HttpStatus.OK)
@@ -548,7 +608,7 @@ export class ApplicationController {
     return applicant;
   }
 
-  // ========== FILE UPLOAD ==========
+  // ========== upload file ==========
 
   @Post("upload-photo")
   @UseInterceptors(FileInterceptor("file"))
@@ -640,8 +700,7 @@ export class ApplicationController {
         relatedEntityId: applicantId
       };
 
-      // delete old photo if exists
-      const oldPhoto = await this.applicantService.getMe(applicantId);
+        const oldPhoto = await this.applicantService.getMe(applicantId);
       if (oldPhoto.photoUrl) {
         try {
           await this.fileUploadService.deleteFileByPath(oldPhoto.photoUrl);
@@ -668,179 +727,133 @@ export class ApplicationController {
     }
   }
 
-  // =============================================================================
-// FILE: applicant.controller.ts
-//
-// Satu perubahan di file ini:
-//
-//  1. uploadCV  → tambah pengecekan snapshot sebelum menghapus CV lama dari MinIO
-//
-// Ganti seluruh method uploadCV yang lama dengan versi di bawah ini.
-// Tidak ada perubahan di bagian lain controller.
-// =============================================================================
- 
-// -----------------------------------------------------------------------------
-// PERUBAHAN: uploadCV
-//
-// Yang ditambahkan:
-//   - Sebelum menghapus file CV lama dari MinIO, cek dulu apakah ada
-//     application-level snapshot yang masih mereferensikan path tersebut.
-//   - Jika masih ada snapshot (artinya ada lamaran yang memakai CV itu),
-//     file fisik di MinIO TIDAK dihapus — hanya record di level applicant
-//     yang akan di-replace oleh FileUploadService saat upload baru.
-//   - Jika tidak ada snapshot, aman dihapus seperti sebelumnya.
-//
-// Mengapa penting:
-//   Saat applyForPosition dipanggil, dibuat snapshot File dengan
-//   relatedEntity='application' yang menunjuk ke path MinIO yang sama.
-//   Jika file fisik di-delete, scoring service tidak bisa download CV itu
-//   lagi — dan tampilan "CV yang dipakai saat melamar" di HR dashboard
-//   akan rusak untuk lamaran-lamaran sebelumnya.
-// -----------------------------------------------------------------------------
- 
-// ─── LAMA (membutuhkan JWT auth via @IsRole) ──────────────────────────────
-// @Post("upload-cv")
-// ...
-// @IsRole(role.APPLICANT)
-// async uploadCV(
-//   @Req() request: AuthenticatedRequest,
-//   @UploadedFile(...) file: Express.Multer.File,
-//   @Body() uploadDto: Partial<FileUploadDto>
-// ) {
-//   const applicantId = request.applicantId;
-//   ...
-// }
-// ─────────────────────────────────────────────────────────────────────────
+  // ─── lama (butuh jwt auth via @IsRole) ────────────────────────────────────
+  // @Post("upload-cv")
+  // ...
+  // @IsRole(role.APPLICANT)
+  // async uploadCV(
+  //   @Req() request: AuthenticatedRequest,
+  //   @UploadedFile(...) file: Express.Multer.File,
+  //   @Body() uploadDto: Partial<FileUploadDto>
+  // ) {
+  //   const applicantId = request.applicantId;
+  //   ...
+  // }
+  // ─────────────────────────────────────────────────────────────────────────
 
-// BARU: tidak memerlukan autentikasi — applicantId dikirim bersama
-//       multipart form-data (diperoleh frontend dari hasil validate-token).
-@Public()
-@Post("upload-cv")
-@UseInterceptors(FileInterceptor("file"))
-@HttpCode(HttpStatus.OK)
-@ResponseMessage(responseMessage.SUCCESS)
-@ApiOperation({
-  summary: "Upload CV file",
-  description:
-    "Upload CV file for the applicant. Pass applicantId (obtained from validate-token) in the form body — no JWT required. Maximum file size: 5MB. Supported formats: PDF, DOC, DOCX."
-})
-@ApiConsumes("multipart/form-data")
-@ApiBody({
-  schema: {
-    type: "object",
-    properties: {
-      file: {
-        type: "string",
-        format: "binary",
-        description: "CV file (PDF, DOC, DOCX) - Max 5MB"
+  // BARU: tidak memerlukan autentikasi — applicantId dikirim bersama
+  //       multipart form-data (diperoleh frontend dari hasil validate-token).
+  @Public()
+  @Post("upload-cv")
+  @UseInterceptors(FileInterceptor("file"))
+  @HttpCode(HttpStatus.OK)
+  @ResponseMessage(responseMessage.SUCCESS)
+  @ApiOperation({
+    summary: "Upload CV file",
+    description:
+      "Upload CV file for the applicant. Pass applicantId (obtained from validate-token) in the form body — no JWT required. Maximum file size: 5MB. Supported formats: PDF, DOC, DOCX."
+  })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        file: {
+          type: "string",
+          format: "binary",
+          description: "CV file (PDF, DOC, DOCX) - Max 5MB"
+        },
+        applicantId: {
+          type: "string",
+          format: "uuid",
+          description: "Applicant ID obtained from validate-token"
+        },
+        description: {
+          type: "string",
+          description: "Optional description for the CV"
+        }
       },
-      applicantId: {
-        type: "string",
-        format: "uuid",
-        description: "Applicant ID obtained from validate-token"
-      },
-      description: {
-        type: "string",
-        description: "Optional description for the CV"
-      }
-    },
-    required: ["file", "applicantId"]
-  }
-})
-@ApiResponse({
-  status: 200,
-  description: "CV uploaded successfully"
-})
-@ApiResponse({
-  status: 400,
-  description: "Bad request - Invalid file, missing applicantId, or validation error"
-})
-async uploadCV(
-  @UploadedFile(
-    new FileValidationPipe({
-      maxSize: 5 * 1024 * 1024, // 5MB
-      allowedMimeTypes: [
-        "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      ],
-      allowedExtensions: ["pdf", "doc", "docx"]
-    })
-  )
-  file: Express.Multer.File,
-  @Body() uploadDto: Partial<FileUploadDto> & { applicantId?: string }
-) {
-  try {
-    const applicantId = uploadDto.applicantId;
-    if (!applicantId) {
-      throw new BadRequestException("applicantId is required in the form body");
+      required: ["file", "applicantId"]
     }
+  })
+  @ApiResponse({
+    status: 200,
+    description: "CV uploaded successfully"
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      "Bad request - Invalid file, missing applicantId, or validation error"
+  })
+  async uploadCV(
+    @UploadedFile(
+      new FileValidationPipe({
+        maxSize: 5 * 1024 * 1024, // 5MB
+        allowedMimeTypes: [
+          "application/pdf",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ],
+        allowedExtensions: ["pdf", "doc", "docx"]
+      })
+    )
+    file: Express.Multer.File,
+    @Body() uploadDto: Partial<FileUploadDto> & { applicantId?: string }
+  ) {
+    try {
+      const applicantId = uploadDto.applicantId;
+      if (!applicantId) {
+        throw new BadRequestException(
+          "applicantId is required in the form body"
+        );
+      }
 
-    const fileUploadData: FileUploadDto = {
-      fileType:        FileType.CV,
-      description:     uploadDto.description,
-      folder:          "applicants/cv",
-      relatedEntity:   "applicant",
-      relatedEntityId: applicantId
-    };
+      const fileUploadData: FileUploadDto = {
+        fileType: FileType.CV,
+        description: uploadDto.description,
+        folder: "applicants/cv",
+        relatedEntity: "applicant",
+        relatedEntityId: applicantId
+      };
 
-    // Ambil profil pelamar untuk mendapatkan path CV lama (jika ada)
-    const currentProfile = await this.applicantService.getMe(applicantId);
-    const oldCvPath = currentProfile.cvUrl ?? null;
+      const currentProfile = await this.applicantService.getMe(applicantId);
+      const oldCvPath = currentProfile.cvUrl ?? null;
 
-    if (oldCvPath) {
-      // ── Pengecekan sebelum menghapus file lama dari MinIO ──────────────
-      //
-      // CV lama boleh dihapus dari MinIO HANYA jika tidak ada
-      // application-level snapshot yang masih mereferensikan path ini.
-      //
-      // Snapshot dibuat di applyForPosition saat pelamar submit lamaran —
-      // tujuannya agar CV yang dipakai untuk scoring per lamaran bisa
-      // ditelusuri secara permanen, terlepas dari perubahan CV di masa depan.
-      //
-      // Jika ada snapshot aktif:
-      //   - File fisik di MinIO DIBIARKAN (snapshot masih valid)
-      //   - Record File di level 'applicant' akan di-replace oleh uploadFile()
-      //
-      // Jika tidak ada snapshot:
-      //   - File fisik di MinIO dihapus (tidak ada lamaran yang bergantung)
-      //   - Record File di level 'applicant' akan di-replace oleh uploadFile()
-      const isStillUsed = await this.applicantService.isReferencedByApplication(oldCvPath);
+      if (oldCvPath) {
+        // cv lama cuma boleh dihapus dari minio kalau tidak ada application-level
+        // snapshot yang masih mereferensikan path ini. snapshot dibuat di
+        // applyForPosition saat pelamar submit lamaran, supaya cv yang dipakai
+        // untuk scoring per lamaran bisa ditelusuri permanen meski cv-nya diganti.
+        const isStillUsed =
+          await this.applicantService.isReferencedByApplication(oldCvPath);
 
-      if (!isStillUsed) {
-        // Aman dihapus — tidak ada lamaran yang masih memakai file ini
-        try {
-          await this.fileUploadService.deleteFileByPath(oldCvPath);
-        } catch (error) {
-          // Log saja, jangan gagalkan upload karena masalah hapus file lama
-          console.error("Error deleting old CV from storage:", error);
+        if (!isStillUsed) {
+          try {
+            await this.fileUploadService.deleteFileByPath(oldCvPath);
+          } catch (error) {
+            // log saja, jangan gagalkan upload karena masalah hapus file lama
+            console.error("Error deleting old CV from storage:", error);
+          }
         }
       }
-      // Jika isStillUsed = true, tidak ada yang dilakukan di sini.
-      // File fisik di MinIO tetap ada. Record File di applicant level
-      // akan di-replace oleh fileUploadService.uploadFile() di bawah.
-      // ──────────────────────────────────────────────────────────────────
+
+      const result = await this.fileUploadService.uploadFile(
+        file,
+        fileUploadData,
+        applicantId
+      );
+
+      await this.applicantService.updateProfile(applicantId, {
+        cvUrl: result.filePath
+      });
+
+      return result;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      throw new BadRequestException(`CV upload failed: ${errorMessage}`);
     }
-
-    // Upload file baru ke MinIO dan simpan record File baru di database
-    const result = await this.fileUploadService.uploadFile(
-      file,
-      fileUploadData,
-      applicantId
-    );
-
-    // Update kolom cvUrl di profil pelamar ke path CV terbaru
-    await this.applicantService.updateProfile(applicantId, {
-      cvUrl: result.filePath
-    });
-
-    return result;
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error occurred";
-    throw new BadRequestException(`CV upload failed: ${errorMessage}`);
   }
-}
 
   @Post("upload-diploma")
   @UseInterceptors(FileInterceptor("file"))
@@ -951,7 +964,6 @@ async uploadCV(
   ) {
     const applicantId = request.applicantId;
 
-    // Validate that the file belongs to the authenticated applicant
     await this.fileUploadService.validateFileOwnership(fileId, applicantId);
 
     await this.fileUploadService.deleteFile(fileId);
@@ -959,13 +971,10 @@ async uploadCV(
     return null;
   }
 
-  // ========== APPLICATION MANAGEMENT ==========
+  // ========== manajemen aplikasi ==========
 
-  // ─── LAMA (membutuhkan JWT auth) ─────────────────────────────────────────
-  // @ApiBearerAuth()
-  // @IsRole(role.APPLICANT)
-  // ─────────────────────────────────────────────────────────────────────────
-  // BARU: tidak memerlukan autentikasi — applicationId di URL sudah cukup.
+  // lama (butuh jwt auth): @ApiBearerAuth() + @IsRole(role.APPLICANT)
+  // baru: tidak memerlukan autentikasi — applicationId di url sudah cukup.
   @Public()
   @Post("apply/:applicationId")
   @HttpCode(HttpStatus.OK)

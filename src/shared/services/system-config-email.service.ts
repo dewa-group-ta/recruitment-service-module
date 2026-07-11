@@ -7,8 +7,7 @@ import {
 } from "../interface/email.interface";
 
 /**
- * Email service that uses templates from system configuration
- * Integrates system configuration with email sending functionality
+ * kirim email pakai template dari system configuration.
  */
 @Injectable()
 export class SystemConfigEmailService {
@@ -19,20 +18,12 @@ export class SystemConfigEmailService {
     private readonly emailService: EmailService
   ) {}
 
-  /**
-   * Send email using template from system configuration
-   * @param configKey - System configuration key for the email template
-   * @param to - Email recipients
-   * @param templateData - Data to replace placeholders in template
-   * @returns Promise<boolean> Success status
-   */
   async sendEmailFromConfig(
     configKey: string,
     to: EmailRecipient | EmailRecipient[],
     templateData: EmailTemplateData = {}
   ): Promise<boolean> {
     try {
-      // Get template from system configuration
       const templateConfig =
         await this.systemConfigService.getJsonValue(configKey);
 
@@ -43,17 +34,11 @@ export class SystemConfigEmailService {
         return false;
       }
 
-      // Get company information for template data
       const companyData = await this.getCompanyTemplateData();
-
-      // Merge template data with company data
       const mergedData = { ...companyData, ...templateData };
-
-      // Render subject and body templates
       const subject = this.renderTemplate(templateConfig.subject, mergedData);
       const body = this.renderTemplate(templateConfig.body, mergedData);
 
-      // Send email
       const result = await this.emailService.sendEmail({
         to,
         subject,
@@ -80,13 +65,6 @@ export class SystemConfigEmailService {
     }
   }
 
-  /**
-   * Send applicant registration notification
-   * @param applicantEmail - Applicant email address
-   * @param applicantName - Applicant name
-   * @param applyLink - Link to apply for job
-   * @returns Promise<boolean> Success status
-   */
   async sendApplicantRegistrationNotification(
     applicantEmail: string,
     applicantName: string,
@@ -102,14 +80,6 @@ export class SystemConfigEmailService {
     );
   }
 
-  /**
-   * Send applicant application notification
-   * @param applicantEmail - Applicant email address
-   * @param applicantName - Applicant name
-   * @param vacancyName - Vacancy name
-   * @param applicationLink - Link to application
-   * @returns Promise<boolean> Success status
-   */
   async sendApplicantApplicationNotification(
     applicantEmail: string,
     applicantName: string,
@@ -127,14 +97,6 @@ export class SystemConfigEmailService {
     );
   }
 
-  /**
-   * Send applicant status update notification
-   * @param applicantEmail - Applicant email address
-   * @param applicantName - Applicant name
-   * @param vacancyName - Vacancy name
-   * @param loginUrl - Login URL for tracking
-   * @returns Promise<boolean> Success status
-   */
   async sendApplicantStatusUpdateNotification(
     applicantEmail: string,
     applicantName: string,
@@ -152,10 +114,6 @@ export class SystemConfigEmailService {
     );
   }
 
-  /**
-   * Get company information for template data
-   * @private
-   */
   private async getCompanyTemplateData(): Promise<EmailTemplateData> {
     try {
       const companyName = await this.systemConfigService.getValueOrDefault(
@@ -167,7 +125,6 @@ export class SystemConfigEmailService {
         ""
       );
 
-      // Parse website URL from JSON if it exists
       let websiteUrl = "";
       if (companyWebsite) {
         try {
@@ -194,17 +151,9 @@ export class SystemConfigEmailService {
     }
   }
 
-  /**
-   * Render template with data
-   * @param template - Template string with placeholders
-   * @param data - Data to replace placeholders
-   * @returns Rendered template
-   * @private
-   */
   private renderTemplate(template: string, data: EmailTemplateData): string {
     let rendered = template;
 
-    // Replace placeholders in format {{key}}
     for (const [key, value] of Object.entries(data)) {
       const placeholder = new RegExp(`\\{\\{${key}\\}\\}`, "g");
       rendered = rendered.replace(placeholder, String(value || ""));
@@ -213,12 +162,6 @@ export class SystemConfigEmailService {
     return rendered;
   }
 
-  /**
-   * Strip HTML tags from text
-   * @param html - HTML string
-   * @returns Plain text
-   * @private
-   */
   private stripHtml(html: string): string {
     return html
       .replace(/<[^>]*>/g, "")
@@ -226,10 +169,6 @@ export class SystemConfigEmailService {
       .trim();
   }
 
-  /**
-   * Get available email template configurations
-   * @returns List of available template config keys
-   */
   async getAvailableTemplates(): Promise<string[]> {
     try {
       const templates =
@@ -241,11 +180,6 @@ export class SystemConfigEmailService {
     }
   }
 
-  /**
-   * Validate email template configuration
-   * @param configKey - Configuration key to validate
-   * @returns Promise<boolean> Whether template is valid
-   */
   async validateTemplate(configKey: string): Promise<boolean> {
     try {
       const templateConfig =
@@ -255,7 +189,6 @@ export class SystemConfigEmailService {
         return false;
       }
 
-      // Check if required fields exist
       return !!(templateConfig.subject && templateConfig.body);
     } catch (error) {
       this.logger.error(`Failed to validate template: ${configKey}`, error);

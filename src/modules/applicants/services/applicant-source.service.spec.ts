@@ -64,7 +64,6 @@ describe("ApplicantSourceService", () => {
     };
 
     it("should create a new applicant source successfully", async () => {
-      // Arrange
       applicantSourceRepository.create.mockReturnValue(
         mockApplicantSource as any
       );
@@ -72,10 +71,8 @@ describe("ApplicantSourceService", () => {
         mockApplicantSource as any
       );
 
-      // Act
       const result = await service.create(createDto);
 
-      // Assert
       expect(applicantSourceRepository.create).toHaveBeenCalledWith(createDto);
       expect(applicantSourceRepository.save).toHaveBeenCalled();
       expect(result).toBeDefined();
@@ -83,7 +80,6 @@ describe("ApplicantSourceService", () => {
     });
 
     it("should handle creation errors", async () => {
-      // Arrange
       applicantSourceRepository.create.mockReturnValue(
         mockApplicantSource as any
       );
@@ -91,21 +87,17 @@ describe("ApplicantSourceService", () => {
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.create(createDto)).rejects.toThrow("Database error");
     });
   });
 
   describe("findAll", () => {
     it("should return all applicant sources ordered by sortOrder and name", async () => {
-      // Arrange
       const sources = [mockApplicantSource];
       applicantSourceRepository.find.mockResolvedValue(sources as any);
 
-      // Act
       const result = await service.findAll();
 
-      // Assert
       expect(applicantSourceRepository.find).toHaveBeenCalledWith({
         order: { sortOrder: "ASC", name: "ASC" }
       });
@@ -115,13 +107,10 @@ describe("ApplicantSourceService", () => {
     });
 
     it("should return empty array when no sources found", async () => {
-      // Arrange
       applicantSourceRepository.find.mockResolvedValue([]);
 
-      // Act
       const result = await service.findAll();
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });
@@ -129,14 +118,11 @@ describe("ApplicantSourceService", () => {
 
   describe("findActive", () => {
     it("should return all active applicant sources", async () => {
-      // Arrange
       const activeSources = [mockApplicantSource];
       applicantSourceRepository.find.mockResolvedValue(activeSources as any);
 
-      // Act
       const result = await service.findActive();
 
-      // Assert
       expect(applicantSourceRepository.find).toHaveBeenCalledWith({
         where: { isActive: true },
         order: { sortOrder: "ASC", name: "ASC" }
@@ -147,13 +133,10 @@ describe("ApplicantSourceService", () => {
     });
 
     it("should return empty array when no active sources found", async () => {
-      // Arrange
       applicantSourceRepository.find.mockResolvedValue([]);
 
-      // Act
       const result = await service.findActive();
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });
@@ -161,15 +144,12 @@ describe("ApplicantSourceService", () => {
 
   describe("findOne", () => {
     it("should return applicant source when found", async () => {
-      // Arrange
       applicantSourceRepository.findOne.mockResolvedValue(
         mockApplicantSource as any
       );
 
-      // Act
       const result = await service.findOne("source-1");
 
-      // Assert
       expect(applicantSourceRepository.findOne).toHaveBeenCalledWith({
         where: { id: "source-1" }
       });
@@ -178,10 +158,8 @@ describe("ApplicantSourceService", () => {
     });
 
     it("should throw NotFoundException when applicant source not found", async () => {
-      // Arrange
       applicantSourceRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.findOne("nonexistent-id")).rejects.toThrow(
         NotFoundException
       );
@@ -195,7 +173,6 @@ describe("ApplicantSourceService", () => {
     };
 
     it("should update applicant source successfully", async () => {
-      // Arrange
       const updatedSource = { ...mockApplicantSource, ...updateDto };
       applicantSourceRepository.findOne
         .mockResolvedValueOnce(mockApplicantSource as any) // First call for finding existing source
@@ -204,10 +181,8 @@ describe("ApplicantSourceService", () => {
         affected: 1
       } as any);
 
-      // Act
       const result = await service.update("source-1", updateDto);
 
-      // Assert
       expect(applicantSourceRepository.findOne).toHaveBeenCalledWith({
         where: { id: "source-1" }
       });
@@ -220,17 +195,14 @@ describe("ApplicantSourceService", () => {
     });
 
     it("should throw NotFoundException when applicant source not found", async () => {
-      // Arrange
       applicantSourceRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.update("nonexistent-id", updateDto)).rejects.toThrow(
         NotFoundException
       );
     });
 
     it("should handle update errors", async () => {
-      // Arrange
       applicantSourceRepository.findOne.mockResolvedValue(
         mockApplicantSource as any
       );
@@ -238,7 +210,6 @@ describe("ApplicantSourceService", () => {
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.update("source-1", updateDto)).rejects.toThrow(
         "Database error"
       );
@@ -247,7 +218,6 @@ describe("ApplicantSourceService", () => {
 
   describe("remove", () => {
     it("should soft delete applicant source successfully", async () => {
-      // Arrange
       applicantSourceRepository.findOne.mockResolvedValue(
         mockApplicantSource as any
       );
@@ -258,10 +228,8 @@ describe("ApplicantSourceService", () => {
         affected: 1
       } as any);
 
-      // Act
       await service.remove("source-1", "user-1");
 
-      // Assert
       expect(applicantSourceRepository.findOne).toHaveBeenCalledWith({
         where: { id: "source-1" }
       });
@@ -275,17 +243,14 @@ describe("ApplicantSourceService", () => {
     });
 
     it("should throw NotFoundException when applicant source not found", async () => {
-      // Arrange
       applicantSourceRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.remove("nonexistent-id", "user-1")).rejects.toThrow(
         NotFoundException
       );
     });
 
     it("should handle deletion errors", async () => {
-      // Arrange
       applicantSourceRepository.findOne.mockResolvedValue(
         mockApplicantSource as any
       );
@@ -293,7 +258,6 @@ describe("ApplicantSourceService", () => {
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.remove("source-1", "user-1")).rejects.toThrow(
         "Database error"
       );
@@ -311,16 +275,13 @@ describe("ApplicantSourceService", () => {
     };
 
     it("should return paginated applicant sources with filters", async () => {
-      // Arrange
       applicantSourceRepository.findAndCount.mockResolvedValue([
         [mockApplicantSource],
         1
       ]);
 
-      // Act
       const result = await service.findAllWithPagination(queryDto);
 
-      // Assert
       expect(applicantSourceRepository.findAndCount).toHaveBeenCalledWith({
         where: {
           name: Like("%linkedin%"),
@@ -341,17 +302,14 @@ describe("ApplicantSourceService", () => {
     });
 
     it("should return paginated sources without filters when not provided", async () => {
-      // Arrange
       const simpleQueryDto = { page: 1, limit: 10 };
       applicantSourceRepository.findAndCount.mockResolvedValue([
         [mockApplicantSource],
         1
       ]);
 
-      // Act
       const result = await service.findAllWithPagination(simpleQueryDto);
 
-      // Assert
       expect(applicantSourceRepository.findAndCount).toHaveBeenCalledWith({
         where: {},
         skip: 0,
@@ -364,12 +322,10 @@ describe("ApplicantSourceService", () => {
     });
 
     it("should handle pagination errors", async () => {
-      // Arrange
       applicantSourceRepository.findAndCount.mockRejectedValue(
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.findAllWithPagination(queryDto)).rejects.toThrow(
         "Database error"
       );
@@ -378,15 +334,12 @@ describe("ApplicantSourceService", () => {
 
   describe("findByCode", () => {
     it("should return applicant source by code", async () => {
-      // Arrange
       applicantSourceRepository.findOne.mockResolvedValue(
         mockApplicantSource as any
       );
 
-      // Act
       const result = await service.findByCode("LINKEDIN");
 
-      // Assert
       expect(applicantSourceRepository.findOne).toHaveBeenCalledWith({
         where: { code: "LINKEDIN" }
       });
@@ -395,20 +348,16 @@ describe("ApplicantSourceService", () => {
     });
 
     it("should return null when source not found by code", async () => {
-      // Arrange
       applicantSourceRepository.findOne.mockResolvedValue(null);
 
-      // Act
       const result = await service.findByCode("NONEXISTENT");
 
-      // Assert
       expect(result).toBeNull();
     });
   });
 
   describe("updateSortOrder", () => {
     it("should update sort order successfully", async () => {
-      // Arrange
       applicantSourceRepository.findOne.mockResolvedValue(
         mockApplicantSource as any
       );
@@ -416,10 +365,8 @@ describe("ApplicantSourceService", () => {
         affected: 1
       } as any);
 
-      // Act
       await service.updateSortOrder("source-1", 2);
 
-      // Assert
       expect(applicantSourceRepository.findOne).toHaveBeenCalledWith({
         where: { id: "source-1" }
       });
@@ -430,10 +377,8 @@ describe("ApplicantSourceService", () => {
     });
 
     it("should throw NotFoundException when source not found", async () => {
-      // Arrange
       applicantSourceRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(
         service.updateSortOrder("nonexistent-id", 2)
       ).rejects.toThrow(NotFoundException);

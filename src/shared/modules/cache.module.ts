@@ -3,10 +3,7 @@ import { CacheModule } from "@nestjs/cache-manager";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 
 /**
- * Global cache module for the application
- * Provides caching functionality using Redis or in-memory cache
- *
- * @class CacheModule
+ * cache module global, pakai redis kalau REDIS_URL di-set, kalau tidak fallback in-memory.
  */
 @Global()
 @Module({
@@ -17,17 +14,17 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
         const redisUrl = configService.get<string>("REDIS_URL");
 
         if (redisUrl) {
-          // Use Redis for caching in production
+          // pakai redis untuk caching di production
           return {
-            ttl: 300, // 5 minutes default TTL
-            max: 1000, // Maximum number of items in cache
+            ttl: 300, // ttl default 5 menit
+            max: 1000, // jumlah maksimum item di cache
             isGlobal: true
           };
         } else {
-          // Use in-memory cache for development
+          // pakai in-memory cache untuk development
           return {
-            ttl: 300, // 5 minutes default TTL
-            max: 1000, // Maximum number of items in cache
+            ttl: 300, // ttl default 5 menit
+            max: 1000, // jumlah maksimum item di cache
             isGlobal: true
           };
         }

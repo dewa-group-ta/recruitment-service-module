@@ -12,8 +12,7 @@ import {
 } from "../interface/location.interface";
 
 /**
- * Location service implementation
- * Handles location data retrieval from external location API
+ * client untuk data lokasi (provinsi/kota/kecamatan/kelurahan) dari location api eksternal.
  */
 @Injectable()
 export class LocationService implements ILocationService {
@@ -24,11 +23,6 @@ export class LocationService implements ILocationService {
     private readonly apiClient: ILocationApiClient
   ) {}
 
-  /**
-   * Get all provinces
-   * @param filter Search filter options
-   * @returns Promise<LocationApiResponse<Province[]>> List of provinces
-   */
   async getProvinces(
     filter?: LocationSearchFilter
   ): Promise<LocationApiResponse<Province[]>> {
@@ -50,11 +44,6 @@ export class LocationService implements ILocationService {
     return response;
   }
 
-  /**
-   * Get province by ID
-   * @param id Province ID
-   * @returns Promise<LocationApiResponse<Province>> Province data
-   */
   async getProvinceById(id: string): Promise<LocationApiResponse<Province>> {
     this.logger.debug("Fetching province by ID", { id });
 
@@ -66,12 +55,6 @@ export class LocationService implements ILocationService {
     return response;
   }
 
-  /**
-   * Get cities by province ID
-   * @param provinceId Province ID
-   * @param filter Search filter options
-   * @returns Promise<LocationApiResponse<City[]>> List of cities
-   */
   async getCitiesByProvince(
     provinceId: string,
     filter?: LocationSearchFilter
@@ -95,11 +78,6 @@ export class LocationService implements ILocationService {
     return response;
   }
 
-  /**
-   * Get city by ID
-   * @param id City ID
-   * @returns Promise<LocationApiResponse<City>> City data
-   */
   async getCityById(id: string): Promise<LocationApiResponse<City>> {
     this.logger.debug("Fetching city by ID", { id });
 
@@ -111,12 +89,6 @@ export class LocationService implements ILocationService {
     return response;
   }
 
-  /**
-   * Get districts by city ID
-   * @param cityId City ID
-   * @param filter Search filter options
-   * @returns Promise<LocationApiResponse<District[]>> List of districts
-   */
   async getDistrictsByCity(
     cityId: string,
     filter?: LocationSearchFilter
@@ -140,11 +112,6 @@ export class LocationService implements ILocationService {
     return response;
   }
 
-  /**
-   * Get district by ID
-   * @param id District ID
-   * @returns Promise<LocationApiResponse<District>> District data
-   */
   async getDistrictById(id: string): Promise<LocationApiResponse<District>> {
     this.logger.debug("Fetching district by ID", { id });
 
@@ -156,12 +123,6 @@ export class LocationService implements ILocationService {
     return response;
   }
 
-  /**
-   * Get sub-districts by district ID
-   * @param districtId District ID
-   * @param filter Search filter options
-   * @returns Promise<LocationApiResponse<SubDistrict[]>> List of sub-districts
-   */
   async getSubDistrictsByDistrict(
     districtId: string,
     filter?: LocationSearchFilter
@@ -187,11 +148,6 @@ export class LocationService implements ILocationService {
     return response;
   }
 
-  /**
-   * Get sub-district by ID
-   * @param id Sub-district ID
-   * @returns Promise<LocationApiResponse<SubDistrict>> Sub-district data
-   */
   async getSubDistrictById(
     id: string
   ): Promise<LocationApiResponse<SubDistrict>> {
@@ -205,13 +161,6 @@ export class LocationService implements ILocationService {
     return response;
   }
 
-  /**
-   * Search locations by query
-   * @param query Search query
-   * @param type Location type (province, city, district, sub-district)
-   * @param filter Additional search filter options
-   * @returns Promise<LocationApiResponse<any[]>> Search results
-   */
   async searchLocations(
     query: string,
     type?: "province" | "city" | "district" | "sub-district",
@@ -236,12 +185,6 @@ export class LocationService implements ILocationService {
     return response;
   }
 
-  /**
-   * Build search parameters from filter
-   * @param filter Search filter options
-   * @returns Record<string, any> Query parameters
-   * @private
-   */
   private buildSearchParams(
     filter?: LocationSearchFilter
   ): Record<string, any> {
@@ -288,11 +231,6 @@ export class LocationService implements ILocationService {
     return params;
   }
 
-  /**
-   * Get location hierarchy (province -> city -> district -> sub-district)
-   * @param subDistrictId Sub-district ID
-   * @returns Promise<{province: Province, city: City, district: District, subDistrict: SubDistrict}> Complete location hierarchy
-   */
   async getLocationHierarchy(subDistrictId: string): Promise<{
     province: Province;
     city: City;
@@ -301,19 +239,15 @@ export class LocationService implements ILocationService {
   }> {
     this.logger.debug("Fetching location hierarchy", { subDistrictId });
 
-    // Get sub-district first
     const subDistrictResponse = await this.getSubDistrictById(subDistrictId);
     const subDistrict = subDistrictResponse.data;
 
-    // Get district
     const districtResponse = await this.getDistrictById(subDistrict.districtId);
     const district = districtResponse.data;
 
-    // Get city
     const cityResponse = await this.getCityById(district.cityId);
     const city = cityResponse.data;
 
-    // Get province
     const provinceResponse = await this.getProvinceById(city.provinceId);
     const province = provinceResponse.data;
 
@@ -329,11 +263,6 @@ export class LocationService implements ILocationService {
     };
   }
 
-  /**
-   * Get all locations in a province (cities, districts, sub-districts)
-   * @param provinceId Province ID
-   * @returns Promise<{cities: City[], districts: District[], subDistricts: SubDistrict[]}> All locations in province
-   */
   async getAllLocationsInProvince(provinceId: string): Promise<{
     cities: City[];
     districts: District[];
@@ -341,13 +270,11 @@ export class LocationService implements ILocationService {
   }> {
     this.logger.debug("Fetching all locations in province", { provinceId });
 
-    // Get all cities in province
     const citiesResponse = await this.getCitiesByProvince(provinceId, {
       limit: 1000
     });
     const cities = citiesResponse.data;
 
-    // Get all districts for each city
     const districts: District[] = [];
     const subDistricts: SubDistrict[] = [];
 
@@ -357,7 +284,6 @@ export class LocationService implements ILocationService {
       });
       districts.push(...districtsResponse.data);
 
-      // Get all sub-districts for each district
       for (const district of districtsResponse.data) {
         const subDistrictsResponse = await this.getSubDistrictsByDistrict(
           district.id,

@@ -3,22 +3,19 @@ import { StageTemplate } from "../modules/vacancies/entities/stage-template.enti
 
 export class StageTemplateSeeder extends BaseSeeder {
   async run(): Promise<void> {
-    console.log("🌱 Seeding stage templates...");
+    console.log("Seeding stage templates...");
 
-    // Clear existing data
     await this.clearTable(StageTemplate);
 
-    // Create stage templates
     const stageTemplates = await this.createStageTemplates();
 
     console.log(
-      `✅ ${stageTemplates.length} stage templates seeded successfully`
+      `${stageTemplates.length} stage templates seeded successfully`
     );
   }
 
   private async createStageTemplates() {
     const stageTemplateData = [
-      // Application Review
       {
         id: this.generateId(),
         name: "Application Review",
@@ -32,7 +29,6 @@ export class StageTemplateSeeder extends BaseSeeder {
         category: "general",
         createdById: "system"
       },
-      // Phone Screening
       {
         id: this.generateId(),
         name: "Phone Screening",
@@ -46,7 +42,6 @@ export class StageTemplateSeeder extends BaseSeeder {
         category: "general",
         createdById: "system"
       },
-      // Technical Assessment
       {
         id: this.generateId(),
         name: "Technical Assessment",
@@ -60,7 +55,6 @@ export class StageTemplateSeeder extends BaseSeeder {
         category: "engineering",
         createdById: "system"
       },
-      // Panel Interview
       {
         id: this.generateId(),
         name: "Panel Interview",
@@ -74,7 +68,6 @@ export class StageTemplateSeeder extends BaseSeeder {
         category: "general",
         createdById: "system"
       },
-      // Final Interview
       {
         id: this.generateId(),
         name: "Final Interview",
@@ -88,7 +81,6 @@ export class StageTemplateSeeder extends BaseSeeder {
         category: "general",
         createdById: "system"
       },
-      // Reference Check
       {
         id: this.generateId(),
         name: "Reference Check",
@@ -102,7 +94,6 @@ export class StageTemplateSeeder extends BaseSeeder {
         category: "general",
         createdById: "system"
       },
-      // Offer
       {
         id: this.generateId(),
         name: "Offer",
@@ -115,20 +106,20 @@ export class StageTemplateSeeder extends BaseSeeder {
         category: "general",
         createdById: "system"
       },
-      // Administration Selection
       {
         id: this.generateId(),
         name: "Administration Selection",
-        description: "Initial administrative screening and document verification",
+        description:
+          "Initial administrative screening and document verification",
         maxDurationDays: 5,
         canScore: true,
         canNotify: true,
-        instructions: "Review submitted documents and verify administrative requirements",
+        instructions:
+          "Review submitted documents and verify administrative requirements",
         isActive: true,
         category: "general",
         createdById: "system"
       },
-      // Psikotes
       {
         id: this.generateId(),
         name: "Psikotes",
@@ -136,12 +127,12 @@ export class StageTemplateSeeder extends BaseSeeder {
         maxDurationDays: 7,
         canScore: true,
         canNotify: true,
-        instructions: "Administer psychological assessment to evaluate candidate suitability",
+        instructions:
+          "Administer psychological assessment to evaluate candidate suitability",
         isActive: true,
         category: "general",
         createdById: "system"
       },
-      // Skill Test
       {
         id: this.generateId(),
         name: "Skill Test",
@@ -154,7 +145,6 @@ export class StageTemplateSeeder extends BaseSeeder {
         category: "general",
         createdById: "system"
       },
-      // Interview User
       {
         id: this.generateId(),
         name: "Interview User",
@@ -162,12 +152,12 @@ export class StageTemplateSeeder extends BaseSeeder {
         maxDurationDays: 10,
         canScore: true,
         canNotify: true,
-        instructions: "Conduct interview with the hiring team or direct manager",
+        instructions:
+          "Conduct interview with the hiring team or direct manager",
         isActive: true,
         category: "general",
         createdById: "system"
       },
-      // Interview HCM
       {
         id: this.generateId(),
         name: "Interview HCM",
@@ -175,7 +165,8 @@ export class StageTemplateSeeder extends BaseSeeder {
         maxDurationDays: 10,
         canScore: true,
         canNotify: true,
-        instructions: "Conduct final interview with HCM team for culture fit and offer discussion",
+        instructions:
+          "Conduct final interview with HCM team for culture fit and offer discussion",
         isActive: true,
         category: "general",
         createdById: "system"

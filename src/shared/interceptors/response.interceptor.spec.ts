@@ -42,7 +42,6 @@ describe("ResponseInterceptor", () => {
     interceptor = module.get<ResponseInterceptor<any>>(ResponseInterceptor);
     reflector = module.get(Reflector);
 
-    // Setup default mocks
     mockExecutionContext
       .switchToHttp()
       .getResponse.mockReturnValue(mockExpressResponse);
@@ -54,18 +53,15 @@ describe("ResponseInterceptor", () => {
 
   describe("intercept", () => {
     it("should transform response with default message when no response message decorator", (done) => {
-      // Arrange
       const mockData = { id: "1", name: "Test" };
       reflector.get.mockReturnValue(undefined);
       mockCallHandler.handle.mockReturnValue(of(mockData));
 
-      // Act
       const result$ = interceptor.intercept(
         mockExecutionContext,
         mockCallHandler
       );
 
-      // Assert
       result$.subscribe({
         next: (result) => {
           expect(result).toEqual({
@@ -80,7 +76,6 @@ describe("ResponseInterceptor", () => {
     });
 
     it("should transform response with custom response message", (done) => {
-      // Arrange
       const mockData = { id: "1", name: "Test" };
       const responseMessage = {
         caseCode: "001",
@@ -90,13 +85,11 @@ describe("ResponseInterceptor", () => {
       reflector.get.mockReturnValue(responseMessage);
       mockCallHandler.handle.mockReturnValue(of(mockData));
 
-      // Act
       const result$ = interceptor.intercept(
         mockExecutionContext,
         mockCallHandler
       );
 
-      // Assert
       result$.subscribe({
         next: (result) => {
           expect(result).toEqual({
@@ -111,7 +104,6 @@ describe("ResponseInterceptor", () => {
     });
 
     it("should handle response with pagination data", (done) => {
-      // Arrange
       const mockPaginatedData = {
         data: [{ id: "1", name: "Test" }],
         pagination: {
@@ -129,13 +121,11 @@ describe("ResponseInterceptor", () => {
       reflector.get.mockReturnValue(responseMessage);
       mockCallHandler.handle.mockReturnValue(of(mockPaginatedData));
 
-      // Act
       const result$ = interceptor.intercept(
         mockExecutionContext,
         mockCallHandler
       );
 
-      // Assert
       result$.subscribe({
         next: (result) => {
           expect(result).toEqual({
@@ -156,7 +146,6 @@ describe("ResponseInterceptor", () => {
     });
 
     it("should handle response without pagination data", (done) => {
-      // Arrange
       const mockData = { id: "1", name: "Test" };
       const responseMessage = {
         caseCode: "003",
@@ -166,13 +155,11 @@ describe("ResponseInterceptor", () => {
       reflector.get.mockReturnValue(responseMessage);
       mockCallHandler.handle.mockReturnValue(of(mockData));
 
-      // Act
       const result$ = interceptor.intercept(
         mockExecutionContext,
         mockCallHandler
       );
 
-      // Assert
       result$.subscribe({
         next: (result) => {
           expect(result).toEqual({
@@ -188,7 +175,6 @@ describe("ResponseInterceptor", () => {
     });
 
     it("should handle different HTTP status codes", (done) => {
-      // Arrange
       const mockData = { id: "1", name: "Test" };
       const responseMessage = {
         caseCode: "004",
@@ -202,13 +188,11 @@ describe("ResponseInterceptor", () => {
       reflector.get.mockReturnValue(responseMessage);
       mockCallHandler.handle.mockReturnValue(of(mockData));
 
-      // Act
       const result$ = interceptor.intercept(
         mockExecutionContext,
         mockCallHandler
       );
 
-      // Assert
       result$.subscribe({
         next: (result) => {
           expect(result).toEqual({
@@ -223,7 +207,6 @@ describe("ResponseInterceptor", () => {
     });
 
     it("should handle null data", (done) => {
-      // Arrange
       const mockData = null;
       const responseMessage = {
         caseCode: "005",
@@ -233,13 +216,11 @@ describe("ResponseInterceptor", () => {
       reflector.get.mockReturnValue(responseMessage);
       mockCallHandler.handle.mockReturnValue(of(mockData));
 
-      // Act
       const result$ = interceptor.intercept(
         mockExecutionContext,
         mockCallHandler
       );
 
-      // Assert
       result$.subscribe({
         next: (result) => {
           expect(result).toEqual({
@@ -254,7 +235,6 @@ describe("ResponseInterceptor", () => {
     });
 
     it("should handle undefined data", (done) => {
-      // Arrange
       const mockData = undefined;
       const responseMessage = {
         caseCode: "006",
@@ -264,13 +244,11 @@ describe("ResponseInterceptor", () => {
       reflector.get.mockReturnValue(responseMessage);
       mockCallHandler.handle.mockReturnValue(of(mockData));
 
-      // Act
       const result$ = interceptor.intercept(
         mockExecutionContext,
         mockCallHandler
       );
 
-      // Assert
       result$.subscribe({
         next: (result) => {
           expect(result).toEqual({
@@ -285,7 +263,6 @@ describe("ResponseInterceptor", () => {
     });
 
     it("should handle primitive data types", (done) => {
-      // Arrange
       const mockData = "Simple string response";
       const responseMessage = {
         caseCode: "007",
@@ -295,13 +272,11 @@ describe("ResponseInterceptor", () => {
       reflector.get.mockReturnValue(responseMessage);
       mockCallHandler.handle.mockReturnValue(of(mockData));
 
-      // Act
       const result$ = interceptor.intercept(
         mockExecutionContext,
         mockCallHandler
       );
 
-      // Assert
       result$.subscribe({
         next: (result) => {
           expect(result).toEqual({
@@ -316,7 +291,6 @@ describe("ResponseInterceptor", () => {
     });
 
     it("should handle array data", (done) => {
-      // Arrange
       const mockData = [{ id: "1" }, { id: "2" }];
       const responseMessage = {
         caseCode: "008",
@@ -326,13 +300,11 @@ describe("ResponseInterceptor", () => {
       reflector.get.mockReturnValue(responseMessage);
       mockCallHandler.handle.mockReturnValue(of(mockData));
 
-      // Act
       const result$ = interceptor.intercept(
         mockExecutionContext,
         mockCallHandler
       );
 
-      // Assert
       result$.subscribe({
         next: (result) => {
           expect(result).toEqual({
@@ -347,7 +319,6 @@ describe("ResponseInterceptor", () => {
     });
 
     it("should trim additional message when empty", (done) => {
-      // Arrange
       const mockData = { id: "1", name: "Test" };
       const responseMessage = {
         caseCode: "009",
@@ -357,13 +328,11 @@ describe("ResponseInterceptor", () => {
       reflector.get.mockReturnValue(responseMessage);
       mockCallHandler.handle.mockReturnValue(of(mockData));
 
-      // Act
       const result$ = interceptor.intercept(
         mockExecutionContext,
         mockCallHandler
       );
 
-      // Assert
       result$.subscribe({
         next: (result) => {
           expect(result).toEqual({
@@ -378,7 +347,6 @@ describe("ResponseInterceptor", () => {
     });
 
     it("should handle response message with only additional message", (done) => {
-      // Arrange
       const mockData = { id: "1", name: "Test" };
       const responseMessage = {
         caseCode: "010",
@@ -388,13 +356,11 @@ describe("ResponseInterceptor", () => {
       reflector.get.mockReturnValue(responseMessage);
       mockCallHandler.handle.mockReturnValue(of(mockData));
 
-      // Act
       const result$ = interceptor.intercept(
         mockExecutionContext,
         mockCallHandler
       );
 
-      // Assert
       result$.subscribe({
         next: (result) => {
           expect(result).toEqual({

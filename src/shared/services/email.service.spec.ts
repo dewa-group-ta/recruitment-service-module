@@ -5,7 +5,6 @@ import { EMAIL_TEMPLATE_PROVIDER } from "../interface/email.interface";
 import { EmailTemplateName } from "../enums/email.enum";
 import * as nodemailer from "nodemailer";
 
-// Mock nodemailer
 jest.mock("nodemailer");
 const mockNodemailer = nodemailer as jest.Mocked<typeof nodemailer>;
 
@@ -22,16 +21,13 @@ describe("EmailService", () => {
   };
 
   beforeEach(async () => {
-    // Create mock transporter
     mockTransporter = {
       sendMail: jest.fn(),
       verify: jest.fn()
     };
 
-    // Mock nodemailer.createTransport
     mockNodemailer.createTransport.mockReturnValue(mockTransporter);
 
-    // Create mock config service with proper implementation
     const mockConfigService = {
       get: jest.fn().mockImplementation((key: string, defaultValue?: any) => {
         const config = {
@@ -75,7 +71,6 @@ describe("EmailService", () => {
 
   describe("constructor and initialization", () => {
     it("should initialize email service successfully with valid config", () => {
-      // Act & Assert
       expect(service).toBeDefined();
       expect(mockNodemailer.createTransport).toHaveBeenCalledWith({
         host: "smtp.example.com",
@@ -89,10 +84,8 @@ describe("EmailService", () => {
     });
 
     it("should throw error when required SMTP config is missing", () => {
-      // Arrange
       configService.get.mockReturnValue(undefined);
 
-      // Act & Assert
       expect(() => new EmailService(configService, templateProvider)).toThrow();
     });
   });
@@ -106,15 +99,12 @@ describe("EmailService", () => {
     };
 
     it("should send email successfully", async () => {
-      // Arrange
       mockTransporter.sendMail.mockResolvedValue({
         messageId: "test-message-id"
       });
 
-      // Act
       const result = await service.sendEmail(mockEmailOptions);
 
-      // Assert
       expect(mockTransporter.sendMail).toHaveBeenCalledWith({
         from: "Recruitment System <test@example.com>",
         to: "Test Recipient <recipient@example.com>",
@@ -131,7 +121,6 @@ describe("EmailService", () => {
     });
 
     it("should send email with multiple recipients", async () => {
-      // Arrange
       const multipleRecipients = [
         { email: "recipient1@example.com", name: "Recipient 1" },
         { email: "recipient2@example.com", name: "Recipient 2" }
@@ -144,10 +133,8 @@ describe("EmailService", () => {
         messageId: "test-message-id"
       });
 
-      // Act
       const result = await service.sendEmail(optionsWithMultipleRecipients);
 
-      // Assert
       expect(mockTransporter.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: "Recipient 1 <recipient1@example.com>, Recipient 2 <recipient2@example.com>"
@@ -157,7 +144,6 @@ describe("EmailService", () => {
     });
 
     it("should send email with CC and BCC recipients", async () => {
-      // Arrange
       const optionsWithCCBCC = {
         ...mockEmailOptions,
         cc: { email: "cc@example.com", name: "CC Recipient" },
@@ -167,10 +153,8 @@ describe("EmailService", () => {
         messageId: "test-message-id"
       });
 
-      // Act
       const result = await service.sendEmail(optionsWithCCBCC);
 
-      // Assert
       expect(mockTransporter.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           cc: "CC Recipient <cc@example.com>",
@@ -181,18 +165,14 @@ describe("EmailService", () => {
     });
 
     it("should return false when email sending fails", async () => {
-      // Arrange
       mockTransporter.sendMail.mockRejectedValue(new Error("SMTP Error"));
 
-      // Act
       const result = await service.sendEmail(mockEmailOptions);
 
-      // Assert
       expect(result).toBe(false);
     });
 
     it("should handle recipients without names", async () => {
-      // Arrange
       const optionsWithoutNames = {
         ...mockEmailOptions,
         to: { email: "recipient@example.com" }
@@ -201,10 +181,8 @@ describe("EmailService", () => {
         messageId: "test-message-id"
       });
 
-      // Act
       const result = await service.sendEmail(optionsWithoutNames);
 
-      // Assert
       expect(mockTransporter.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: "recipient@example.com"
@@ -221,7 +199,6 @@ describe("EmailService", () => {
     };
 
     it("should send template email successfully", async () => {
-      // Arrange
       templateProvider.getTemplate.mockReturnValue(mockTemplate);
       templateProvider.renderTemplate
         .mockReturnValueOnce("Test Subject John Doe") // For subject
@@ -231,14 +208,12 @@ describe("EmailService", () => {
         messageId: "test-message-id"
       });
 
-      // Act
       const result = await service.sendTemplateEmail(
         EmailTemplateName.APPLICATION_RECEIVED,
         { email: "recipient@example.com", name: "Test Recipient" },
         templateData
       );
 
-      // Assert
       expect(templateProvider.getTemplate).toHaveBeenCalledWith(
         EmailTemplateName.APPLICATION_RECEIVED
       );
@@ -254,17 +229,14 @@ describe("EmailService", () => {
     });
 
     it("should return false when template is not found", async () => {
-      // Arrange
       templateProvider.getTemplate.mockReturnValue(null);
 
-      // Act
       const result = await service.sendTemplateEmail(
         "nonexistent-template",
         { email: "recipient@example.com" },
         templateData
       );
 
-      // Assert
       expect(templateProvider.getTemplate).toHaveBeenCalledWith(
         "nonexistent-template"
       );
@@ -273,25 +245,21 @@ describe("EmailService", () => {
     });
 
     it("should return false when template rendering fails", async () => {
-      // Arrange
       templateProvider.getTemplate.mockReturnValue(mockTemplate);
       templateProvider.renderTemplate.mockImplementation(() => {
         throw new Error("Template rendering error");
       });
 
-      // Act
       const result = await service.sendTemplateEmail(
         EmailTemplateName.APPLICATION_RECEIVED,
         { email: "recipient@example.com" },
         templateData
       );
 
-      // Assert
       expect(result).toBe(false);
     });
 
     it("should handle template without text content", async () => {
-      // Arrange
       const templateWithoutText = {
         subject: "Test Subject {{applicantName}}",
         html: "<p>Test HTML content {{applicantName}}</p>"
@@ -304,14 +272,12 @@ describe("EmailService", () => {
         messageId: "test-message-id"
       });
 
-      // Act
       const result = await service.sendTemplateEmail(
         EmailTemplateName.APPLICATION_RECEIVED,
         { email: "recipient@example.com" },
         templateData
       );
 
-      // Assert
       expect(mockTransporter.sendMail).toHaveBeenCalledWith(
         expect.objectContaining({
           subject: "Test Subject John Doe",
@@ -325,25 +291,19 @@ describe("EmailService", () => {
 
   describe("verifyConnection", () => {
     it("should verify email connection successfully", async () => {
-      // Arrange
       mockTransporter.verify.mockResolvedValue(true);
 
-      // Act
       const result = await service.verifyConnection();
 
-      // Assert
       expect(mockTransporter.verify).toHaveBeenCalled();
       expect(result).toBe(true);
     });
 
     it("should return false when connection verification fails", async () => {
-      // Arrange
       mockTransporter.verify.mockRejectedValue(new Error("Connection failed"));
 
-      // Act
       const result = await service.verifyConnection();
 
-      // Assert
       expect(mockTransporter.verify).toHaveBeenCalled();
       expect(result).toBe(false);
     });
@@ -351,7 +311,6 @@ describe("EmailService", () => {
 
   describe("sendApplicationReceivedEmail", () => {
     it("should send application received email successfully", async () => {
-      // Arrange
       templateProvider.getTemplate.mockReturnValue(mockTemplate);
       templateProvider.renderTemplate
         .mockReturnValueOnce("Application Received - John Doe")
@@ -365,7 +324,6 @@ describe("EmailService", () => {
         messageId: "test-message-id"
       });
 
-      // Act
       const result = await service.sendApplicationReceivedEmail(
         "john@example.com",
         "John Doe",
@@ -373,7 +331,6 @@ describe("EmailService", () => {
         "https://example.com/application/123"
       );
 
-      // Assert
       expect(templateProvider.getTemplate).toHaveBeenCalledWith(
         EmailTemplateName.APPLICATION_RECEIVED
       );
@@ -391,7 +348,6 @@ describe("EmailService", () => {
 
   describe("sendApplicationStatusUpdateEmail", () => {
     it("should send application status update email successfully", async () => {
-      // Arrange
       templateProvider.getTemplate.mockReturnValue(mockTemplate);
       templateProvider.renderTemplate
         .mockReturnValueOnce("Application Status Update - John Doe")
@@ -405,7 +361,6 @@ describe("EmailService", () => {
         messageId: "test-message-id"
       });
 
-      // Act
       const result = await service.sendApplicationStatusUpdateEmail(
         "john@example.com",
         "John Doe",
@@ -413,7 +368,6 @@ describe("EmailService", () => {
         "HIRED"
       );
 
-      // Assert
       expect(templateProvider.getTemplate).toHaveBeenCalledWith(
         EmailTemplateName.APPLICATION_STATUS_UPDATE
       );
@@ -431,7 +385,6 @@ describe("EmailService", () => {
 
   describe("sendInterviewInvitationEmail", () => {
     it("should send interview invitation email successfully", async () => {
-      // Arrange
       templateProvider.getTemplate.mockReturnValue(mockTemplate);
       templateProvider.renderTemplate
         .mockReturnValueOnce("Interview Invitation - John Doe")
@@ -443,7 +396,6 @@ describe("EmailService", () => {
         messageId: "test-message-id"
       });
 
-      // Act
       const result = await service.sendInterviewInvitationEmail(
         "john@example.com",
         "John Doe",
@@ -452,7 +404,6 @@ describe("EmailService", () => {
         "Office Building A"
       );
 
-      // Assert
       expect(templateProvider.getTemplate).toHaveBeenCalledWith(
         EmailTemplateName.INTERVIEW_INVITATION
       );

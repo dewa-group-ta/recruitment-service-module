@@ -42,7 +42,6 @@ export class ApplicationNotes {
   @Column({ type: "varchar", length: 50, nullable: true })
   priority: string; // priority notes (high, medium, low)
 
-  // Audit fields
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 

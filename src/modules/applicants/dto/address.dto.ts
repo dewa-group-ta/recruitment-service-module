@@ -38,7 +38,10 @@ export class CreateAddressDto {
   @Length(1, 10)
   postalCode?: string;
 
-  @ApiPropertyOptional({ enum: AddressTypeEnum, example: AddressTypeEnum.CURRENT })
+  @ApiPropertyOptional({
+    enum: AddressTypeEnum,
+    example: AddressTypeEnum.CURRENT
+  })
   @IsOptional()
   @IsEnum(AddressTypeEnum)
   addressType?: AddressTypeEnum;

@@ -79,14 +79,11 @@ describe("StageTemplateService", () => {
     };
 
     it("should create a new stage template successfully", async () => {
-      // Arrange
       stageTemplateRepository.create.mockReturnValue(mockStageTemplate as any);
       stageTemplateRepository.save.mockResolvedValue(mockStageTemplate as any);
 
-      // Act
       const result = await service.create(createDto);
 
-      // Assert
       expect(stageTemplateRepository.create).toHaveBeenCalledWith({
         ...createDto,
         isRequired: true,
@@ -106,7 +103,6 @@ describe("StageTemplateService", () => {
     });
 
     it("should create stage template with custom values", async () => {
-      // Arrange
       const customDto = {
         ...createDto,
         isRequired: false,
@@ -124,10 +120,8 @@ describe("StageTemplateService", () => {
       stageTemplateRepository.create.mockReturnValue(customTemplate as any);
       stageTemplateRepository.save.mockResolvedValue(customTemplate as any);
 
-      // Act
       const result = await service.create(customDto);
 
-      // Assert
       expect(stageTemplateRepository.create).toHaveBeenCalledWith(customDto);
       expect(result).toBeDefined();
       expect(result.isRequired).toBe(false);
@@ -135,13 +129,11 @@ describe("StageTemplateService", () => {
     });
 
     it("should throw BadRequestException when creation fails", async () => {
-      // Arrange
       stageTemplateRepository.create.mockReturnValue(mockStageTemplate as any);
       stageTemplateRepository.save.mockRejectedValue(
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.create(createDto)).rejects.toThrow(
         BadRequestException
       );
@@ -155,7 +147,6 @@ describe("StageTemplateService", () => {
     };
 
     it("should return paginated stage templates", async () => {
-      // Arrange
       const mockQueryBuilder = {
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
@@ -169,10 +160,8 @@ describe("StageTemplateService", () => {
         mockQueryBuilder as any
       );
 
-      // Act
       const result = await service.findAll(paginationDto);
 
-      // Assert
       expect(mockQueryBuilder.where).toHaveBeenCalledWith(
         "template.deletedAt IS NULL"
       );
@@ -184,7 +173,6 @@ describe("StageTemplateService", () => {
     });
 
     it("should apply filters correctly", async () => {
-      // Arrange
       const filters = {
         stageType: "SCREENING",
         isActive: true,
@@ -203,10 +191,8 @@ describe("StageTemplateService", () => {
         mockQueryBuilder as any
       );
 
-      // Act
       const result = await service.findAll(paginationDto, filters);
 
-      // Assert
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         "template.stageType = :stageType",
         { stageType: "SCREENING" }
@@ -225,15 +211,12 @@ describe("StageTemplateService", () => {
 
   describe("findOne", () => {
     it("should return stage template when found", async () => {
-      // Arrange
       stageTemplateRepository.findOne.mockResolvedValue(
         mockStageTemplate as any
       );
 
-      // Act
       const result = await service.findOne("template-1");
 
-      // Assert
       expect(stageTemplateRepository.findOne).toHaveBeenCalledWith({
         where: { id: "template-1", deletedAt: IsNull() }
       });
@@ -242,10 +225,8 @@ describe("StageTemplateService", () => {
     });
 
     it("should throw NotFoundException when stage template not found", async () => {
-      // Arrange
       stageTemplateRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.findOne("nonexistent-id")).rejects.toThrow(
         NotFoundException
       );
@@ -259,17 +240,14 @@ describe("StageTemplateService", () => {
     };
 
     it("should update stage template successfully", async () => {
-      // Arrange
       const updatedTemplate = { ...mockStageTemplate, ...updateDto };
       stageTemplateRepository.findOne
         .mockResolvedValueOnce(mockStageTemplate as any) // First call for finding existing template
         .mockResolvedValueOnce(updatedTemplate as any); // Second call for fetching updated template
       stageTemplateRepository.update.mockResolvedValue({ affected: 1 } as any);
 
-      // Act
       const result = await service.update("template-1", updateDto);
 
-      // Assert
       expect(stageTemplateRepository.findOne).toHaveBeenCalledWith({
         where: { id: "template-1", deletedAt: IsNull() }
       });
@@ -282,17 +260,14 @@ describe("StageTemplateService", () => {
     });
 
     it("should throw NotFoundException when stage template not found", async () => {
-      // Arrange
       stageTemplateRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.update("nonexistent-id", updateDto)).rejects.toThrow(
         NotFoundException
       );
     });
 
     it("should throw BadRequestException when update fails", async () => {
-      // Arrange
       stageTemplateRepository.findOne.mockResolvedValue(
         mockStageTemplate as any
       );
@@ -300,7 +275,6 @@ describe("StageTemplateService", () => {
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.update("template-1", updateDto)).rejects.toThrow(
         BadRequestException
       );
@@ -309,7 +283,6 @@ describe("StageTemplateService", () => {
 
   describe("remove", () => {
     it("should soft delete stage template successfully", async () => {
-      // Arrange
       stageTemplateRepository.findOne.mockResolvedValue(
         mockStageTemplate as any
       );
@@ -318,10 +291,8 @@ describe("StageTemplateService", () => {
       } as any);
       stageTemplateRepository.update.mockResolvedValue({ affected: 1 } as any);
 
-      // Act
       await service.remove("template-1", "user-1");
 
-      // Assert
       expect(stageTemplateRepository.findOne).toHaveBeenCalledWith({
         where: { id: "template-1", deletedAt: IsNull() }
       });
@@ -335,10 +306,8 @@ describe("StageTemplateService", () => {
     });
 
     it("should throw NotFoundException when stage template not found", async () => {
-      // Arrange
       stageTemplateRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.remove("nonexistent-id", "user-1")).rejects.toThrow(
         NotFoundException
       );
@@ -347,14 +316,11 @@ describe("StageTemplateService", () => {
 
   describe("findByStageType", () => {
     it("should return stage templates by stage type", async () => {
-      // Arrange
       const templates = [mockStageTemplate];
       stageTemplateRepository.find.mockResolvedValue(templates as any);
 
-      // Act
       const result = await service.findByStageType("SCREENING");
 
-      // Assert
       expect(stageTemplateRepository.find).toHaveBeenCalledWith({
         where: { stageType: "SCREENING", isActive: true, deletedAt: IsNull() },
         order: { createdAt: "ASC" }
@@ -365,13 +331,10 @@ describe("StageTemplateService", () => {
     });
 
     it("should return empty array when no templates found", async () => {
-      // Arrange
       stageTemplateRepository.find.mockResolvedValue([]);
 
-      // Act
       const result = await service.findByStageType("NONEXISTENT");
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });
@@ -379,14 +342,11 @@ describe("StageTemplateService", () => {
 
   describe("findByIds", () => {
     it("should return stage templates by IDs", async () => {
-      // Arrange
       const templates = [mockStageTemplate];
       stageTemplateRepository.find.mockResolvedValue(templates as any);
 
-      // Act
       const result = await service.findByIds(["template-1", "template-2"]);
 
-      // Assert
       expect(stageTemplateRepository.find).toHaveBeenCalledWith({
         where: { id: In(["template-1", "template-2"]), deletedAt: IsNull() }
       });
@@ -395,16 +355,13 @@ describe("StageTemplateService", () => {
     });
 
     it("should return empty array when no templates found", async () => {
-      // Arrange
       stageTemplateRepository.find.mockResolvedValue([]);
 
-      // Act
       const result = await service.findByIds([
         "nonexistent-1",
         "nonexistent-2"
       ]);
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });
@@ -412,14 +369,11 @@ describe("StageTemplateService", () => {
 
   describe("findActive", () => {
     it("should return all active stage templates", async () => {
-      // Arrange
       const activeTemplates = [mockStageTemplate];
       stageTemplateRepository.find.mockResolvedValue(activeTemplates as any);
 
-      // Act
       const result = await service.findActive();
 
-      // Assert
       expect(stageTemplateRepository.find).toHaveBeenCalledWith({
         where: { isActive: true, deletedAt: IsNull() },
         order: { name: "ASC" }
@@ -430,13 +384,10 @@ describe("StageTemplateService", () => {
     });
 
     it("should return empty array when no active templates found", async () => {
-      // Arrange
       stageTemplateRepository.find.mockResolvedValue([]);
 
-      // Act
       const result = await service.findActive();
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });

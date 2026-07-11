@@ -22,16 +22,10 @@ export class DepartmentService {
     private readonly departmentRepository: Repository<Department>
   ) {}
 
-  /**
-   * Create a new department
-   * @param createDepartmentDto - Data for creating department
-   * @returns Created department
-   */
   async create(
     createDepartmentDto: CreateDepartmentDto
   ): Promise<DepartmentResponseDto> {
     try {
-      // Check if department with same name already exists
       const existingDepartment = await this.departmentRepository.findOne({
         where: { name: createDepartmentDto.name, deletedAt: IsNull() }
       });
@@ -42,7 +36,6 @@ export class DepartmentService {
         );
       }
 
-      // Check if department with same code already exists (if code is provided)
       if (createDepartmentDto.code) {
         const existingCode = await this.departmentRepository.findOne({
           where: { code: createDepartmentDto.code, deletedAt: IsNull() }
@@ -69,11 +62,6 @@ export class DepartmentService {
     }
   }
 
-  /**
-   * Find all departments with pagination and filtering
-   * @param queryDto - Query parameters for filtering and pagination
-   * @returns Paginated list of departments
-   */
   async findAll(
     queryDto: QueryDepartmentDto
   ): Promise<Pagination<DepartmentResponseDto>> {
@@ -84,12 +72,10 @@ export class DepartmentService {
       deletedAt: IsNull()
     };
 
-    // Add keyword search
     if (keyword) {
       whereConditions.name = Like(`%${keyword}%`);
     }
 
-    // Add active status filter
     if (isActive !== undefined) {
       whereConditions.isActive = isActive;
     }
@@ -117,11 +103,6 @@ export class DepartmentService {
     });
   }
 
-  /**
-   * Find department by ID
-   * @param id - Department ID
-   * @returns Department details
-   */
   async findOne(id: string): Promise<DepartmentResponseDto> {
     const department = await this.departmentRepository.findOne({
       where: { id, deletedAt: IsNull() }
@@ -134,12 +115,6 @@ export class DepartmentService {
     return this.mapToResponseDto(department);
   }
 
-  /**
-   * Update department
-   * @param id - Department ID
-   * @param updateDepartmentDto - Updated department data
-   * @returns Updated department
-   */
   async update(
     id: string,
     updateDepartmentDto: UpdateDepartmentDto
@@ -153,7 +128,6 @@ export class DepartmentService {
         throw new NotFoundException(`Department with ID '${id}' not found`);
       }
 
-      // Check if name is being updated and if it conflicts with existing department
       if (
         updateDepartmentDto.name &&
         updateDepartmentDto.name !== department.name
@@ -169,7 +143,6 @@ export class DepartmentService {
         }
       }
 
-      // Check if code is being updated and if it conflicts with existing department
       if (
         updateDepartmentDto.code &&
         updateDepartmentDto.code !== department.code
@@ -185,7 +158,6 @@ export class DepartmentService {
         }
       }
 
-      // Update department
       Object.assign(department, updateDepartmentDto);
       const updatedDepartment =
         await this.departmentRepository.save(department);
@@ -204,12 +176,6 @@ export class DepartmentService {
     }
   }
 
-  /**
-   * Soft delete department
-   * @param id - Department ID
-   * @param deletedById - ID of user performing the deletion
-   * @returns Success message
-   */
   async remove(id: string, deletedById: string): Promise<{ message: string }> {
     try {
       const department = await this.departmentRepository.findOne({
@@ -220,7 +186,6 @@ export class DepartmentService {
         throw new NotFoundException(`Department with ID '${id}' not found`);
       }
 
-      // Soft delete by setting deletedAt and deletedById
       await this.departmentRepository.update(id, {
         deletedAt: new Date(),
         deletedById
@@ -237,11 +202,6 @@ export class DepartmentService {
     }
   }
 
-  /**
-   * Restore soft deleted department
-   * @param id - Department ID
-   * @returns Restored department
-   */
   async restore(id: string): Promise<DepartmentResponseDto> {
     try {
       const department = await this.departmentRepository.findOne({
@@ -257,7 +217,6 @@ export class DepartmentService {
         throw new BadRequestException("Department is not deleted");
       }
 
-      // Restore by setting deletedAt to null and removing deletedById
       await this.departmentRepository.query(
         "UPDATE departments SET deleted_at = NULL, deleted_by = NULL WHERE id = $1",
         [id]
@@ -287,10 +246,6 @@ export class DepartmentService {
     }
   }
 
-  /**
-   * Get all active departments (for dropdowns, etc.)
-   * @returns List of active departments
-   */
   async findActive(): Promise<DepartmentResponseDto[]> {
     const departments = await this.departmentRepository.find({
       where: { isActive: true, deletedAt: IsNull() },
@@ -300,11 +255,6 @@ export class DepartmentService {
     return departments.map((department) => this.mapToResponseDto(department));
   }
 
-  /**
-   * Map entity to response DTO
-   * @param department - Department entity
-   * @returns Department response DTO
-   */
   private mapToResponseDto(department: Department): DepartmentResponseDto {
     return {
       id: department.id,

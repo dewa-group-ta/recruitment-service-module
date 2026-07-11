@@ -42,21 +42,21 @@ Recruitment Service Module adalah layanan REST API yang menjadi tulang punggung 
 
 ## Teknologi yang Digunakan
 
-| Kategori | Teknologi |
-|---|---|
-| Runtime | Node.js |
-| Framework | NestJS 11 |
-| Language | TypeScript 5 |
-| Database | PostgreSQL |
-| ORM | TypeORM 0.3 |
-| Object Storage | MinIO |
-| HTTP Client | Axios (`@nestjs/axios`) |
-| Authentication | Custom Bearer Token (DB-based) |
-| API Documentation | Swagger (`@nestjs/swagger`) |
-| File Upload | Multer |
-| Email | Nodemailer |
-| Logging | Pino (`nestjs-pino`) |
-| AI Scoring Service | FastAPI + SBERT + Groq LLM |
+| Kategori           | Teknologi                      |
+| ------------------ | ------------------------------ |
+| Runtime            | Node.js                        |
+| Framework          | NestJS 11                      |
+| Language           | TypeScript 5                   |
+| Database           | PostgreSQL                     |
+| ORM                | TypeORM 0.3                    |
+| Object Storage     | MinIO                          |
+| HTTP Client        | Axios (`@nestjs/axios`)        |
+| Authentication     | Custom Bearer Token (DB-based) |
+| API Documentation  | Swagger (`@nestjs/swagger`)    |
+| File Upload        | Multer                         |
+| Email              | Nodemailer                     |
+| Logging            | Pino (`nestjs-pino`)           |
+| AI Scoring Service | FastAPI + SBERT + Groq LLM     |
 
 ---
 
@@ -212,6 +212,7 @@ npm run start:debug
 ```
 
 Setelah berjalan, akses:
+
 - **API:** `http://localhost:3000`
 - **Swagger Docs:** `http://localhost:3000/api-docs`
 
@@ -219,12 +220,12 @@ Setelah berjalan, akses:
 
 ## Migrasi Database
 
-| Perintah | Deskripsi |
-|---|---|
+| Perintah                     | Deskripsi                                   |
+| ---------------------------- | ------------------------------------------- |
 | `npm run migration:generate` | Generate file migrasi dari perubahan entity |
-| `npm run migration:run` | Jalankan semua migrasi yang pending |
-| `npm run migration:revert` | Rollback migrasi terakhir |
-| `npm run migration:show` | Tampilkan status semua migrasi |
+| `npm run migration:run`      | Jalankan semua migrasi yang pending         |
+| `npm run migration:revert`   | Rollback migrasi terakhir                   |
+| `npm run migration:show`     | Tampilkan status semua migrasi              |
 
 ---
 
@@ -335,6 +336,7 @@ recruitment-services-module/
 Sistem menggunakan dua mekanisme autentikasi yang berbeda:
 
 ### HR / Admin Endpoints
+
 Token **tidak divalidasi ke database**. Nilai Bearer token langsung digunakan sebagai `userId` (`created_by` / `updated_by`).
 
 ```
@@ -344,15 +346,18 @@ Authorization: Bearer <uuid-apapun>
 Token yang dipakai akan tersimpan sebagai `created_by` di tabel terkait. Gunakan UUID yang konsisten untuk traceability.
 
 ### Applicant Endpoints
+
 Token divalidasi ke tabel `auth_tokens` di database.
 
 **Alur:**
+
 1. `POST /applicants/register` → sistem kirim token ke email
 2. Ambil token dari `auth_tokens` (dev) atau email (prod)
 3. `POST /applicants/validate-login-token` → dapat `applicantId`
 4. Gunakan `applicantId` sebagai query param / form body (tanpa JWT)
 
 ### Endpoint Publik (`@Public()`)
+
 Tidak memerlukan token apapun.
 
 ---
@@ -397,77 +402,77 @@ Satu pelamar **tidak dapat** melamar ke vacancy yang sama dua kali. Namun pelama
 
 ### 🔒 Keterangan Auth
 
-| Simbol | Keterangan |
-|---|---|
-| `[HR]` | Bearer token apapun (UUID), tidak cek DB |
-| `[PUBLIC]` | Tanpa token |
-| `[APPLICANT]` | `applicantId` di query/body, bukan JWT |
+| Simbol        | Keterangan                               |
+| ------------- | ---------------------------------------- |
+| `[HR]`        | Bearer token apapun (UUID), tidak cek DB |
+| `[PUBLIC]`    | Tanpa token                              |
+| `[APPLICANT]` | `applicantId` di query/body, bukan JWT   |
 
 ---
 
 ### Recruitment Pipelines
 
-| Method | Endpoint | Auth | Deskripsi |
-|---|---|---|---|
-| `GET` | `/recruitment-pipelines/default-template` | `[HR]` | Ambil template pipeline default |
-| `GET` | `/recruitment-pipelines/templates` | `[HR]` | List semua template pipeline |
-| `GET` | `/recruitment-pipelines/default` | `[HR]` | Ambil pipeline default |
-| `GET` | `/recruitment-pipelines/categories` | `[HR]` | List semua kategori |
-| `GET` | `/recruitment-pipelines/by-category/:cat` | `[HR]` | Filter pipeline by kategori |
-| `GET` | `/recruitment-pipelines` | `[HR]` | List semua pipeline (pagination) |
-| `GET` | `/recruitment-pipelines/:id` | `[HR]` | Detail pipeline by ID |
-| `POST` | `/recruitment-pipelines` | `[HR]` | Buat pipeline baru |
-| `POST` | `/recruitment-pipelines/:id/create-from-template` | `[HR]` | Buat instance dari template |
-| `PATCH` | `/recruitment-pipelines/:id` | `[HR]` | Update pipeline |
-| `PATCH` | `/recruitment-pipelines/:id/set-default` | `[HR]` | Set pipeline sebagai default |
-| `PATCH` | `/recruitment-pipelines/:id/increment-usage` | `[HR]` | Tambah counter penggunaan |
-| `PATCH` | `/recruitment-pipelines/:id/replace-stages-from-template/:tplId` | `[HR]` | Ganti stages dari template |
-| `DELETE` | `/recruitment-pipelines/:id` | `[HR]` | Hapus pipeline |
+| Method   | Endpoint                                                         | Auth   | Deskripsi                        |
+| -------- | ---------------------------------------------------------------- | ------ | -------------------------------- |
+| `GET`    | `/recruitment-pipelines/default-template`                        | `[HR]` | Ambil template pipeline default  |
+| `GET`    | `/recruitment-pipelines/templates`                               | `[HR]` | List semua template pipeline     |
+| `GET`    | `/recruitment-pipelines/default`                                 | `[HR]` | Ambil pipeline default           |
+| `GET`    | `/recruitment-pipelines/categories`                              | `[HR]` | List semua kategori              |
+| `GET`    | `/recruitment-pipelines/by-category/:cat`                        | `[HR]` | Filter pipeline by kategori      |
+| `GET`    | `/recruitment-pipelines`                                         | `[HR]` | List semua pipeline (pagination) |
+| `GET`    | `/recruitment-pipelines/:id`                                     | `[HR]` | Detail pipeline by ID            |
+| `POST`   | `/recruitment-pipelines`                                         | `[HR]` | Buat pipeline baru               |
+| `POST`   | `/recruitment-pipelines/:id/create-from-template`                | `[HR]` | Buat instance dari template      |
+| `PATCH`  | `/recruitment-pipelines/:id`                                     | `[HR]` | Update pipeline                  |
+| `PATCH`  | `/recruitment-pipelines/:id/set-default`                         | `[HR]` | Set pipeline sebagai default     |
+| `PATCH`  | `/recruitment-pipelines/:id/increment-usage`                     | `[HR]` | Tambah counter penggunaan        |
+| `PATCH`  | `/recruitment-pipelines/:id/replace-stages-from-template/:tplId` | `[HR]` | Ganti stages dari template       |
+| `DELETE` | `/recruitment-pipelines/:id`                                     | `[HR]` | Hapus pipeline                   |
 
 ---
 
 ### Vacancies (HR)
 
-| Method | Endpoint | Auth | Deskripsi |
-|---|---|---|---|
-| `POST` | `/vacancies` | `[HR]` | Buat vacancy baru (title saja, status: draft) |
-| `GET` | `/vacancies` | `[HR]` | List semua vacancy (pagination, filter) |
-| `GET` | `/vacancies/:id` | `[HR]` | Detail vacancy by ID |
-| `PUT` | `/vacancies/:id` | `[HR]` | Update vacancy (detail / status) |
-| `DELETE` | `/vacancies/:id` | `[HR]` | Hapus vacancy (soft delete) |
+| Method   | Endpoint         | Auth   | Deskripsi                                     |
+| -------- | ---------------- | ------ | --------------------------------------------- |
+| `POST`   | `/vacancies`     | `[HR]` | Buat vacancy baru (title saja, status: draft) |
+| `GET`    | `/vacancies`     | `[HR]` | List semua vacancy (pagination, filter)       |
+| `GET`    | `/vacancies/:id` | `[HR]` | Detail vacancy by ID                          |
+| `PUT`    | `/vacancies/:id` | `[HR]` | Update vacancy (detail / status)              |
+| `DELETE` | `/vacancies/:id` | `[HR]` | Hapus vacancy (soft delete)                   |
 
 **Query params `GET /vacancies`:**
 
-| Param | Tipe | Deskripsi |
-|---|---|---|
-| `page` | number | Nomor halaman (default: 1) |
-| `limit` | number | Item per halaman (default: 10) |
-| `status` | string | Filter by status (`draft`, `published`, `closed`) |
-| `jobCategory` | string | Filter by kategori pekerjaan |
-| `search` | string | Pencarian by judul |
+| Param         | Tipe   | Deskripsi                                         |
+| ------------- | ------ | ------------------------------------------------- |
+| `page`        | number | Nomor halaman (default: 1)                        |
+| `limit`       | number | Item per halaman (default: 10)                    |
+| `status`      | string | Filter by status (`draft`, `published`, `closed`) |
+| `jobCategory` | string | Filter by kategori pekerjaan                      |
+| `search`      | string | Pencarian by judul                                |
 
 ---
 
 ### Vacancies (Public)
 
-| Method | Endpoint | Auth | Deskripsi |
-|---|---|---|---|
-| `GET` | `/public/vacancies` | `[PUBLIC]` | List vacancy yang dipublikasikan |
-| `GET` | `/public/vacancies/:id` | `[PUBLIC]` | Detail vacancy publik by ID |
+| Method | Endpoint                | Auth       | Deskripsi                        |
+| ------ | ----------------------- | ---------- | -------------------------------- |
+| `GET`  | `/public/vacancies`     | `[PUBLIC]` | List vacancy yang dipublikasikan |
+| `GET`  | `/public/vacancies/:id` | `[PUBLIC]` | Detail vacancy publik by ID      |
 
 ---
 
 ### Applicants
 
-| Method | Endpoint | Auth | Deskripsi |
-|---|---|---|---|
-| `POST` | `/applicants/register` | `[PUBLIC]` | Daftar sebagai pelamar, kirim token ke email |
-| `POST` | `/applicants/login` | `[PUBLIC]` | Login dengan email (kirim ulang token) |
-| `POST` | `/applicants/validate-login-token` | `[PUBLIC]` | Validasi token login, dapat `applicantId` |
-| `POST` | `/applicants/validate-token` | `[PUBLIC]` | Validasi sesi token (cek masih aktif) |
-| `GET` | `/applicants/me?applicantId=` | `[PUBLIC]` | Profil pelamar + list application |
-| `POST` | `/applicants/upload-cv` | `[PUBLIC]` | Upload CV (applicantId di form body) |
-| `POST` | `/applicants/apply/:applicationId` | `[PUBLIC]` | Submit lamaran + trigger scoring |
+| Method | Endpoint                           | Auth       | Deskripsi                                    |
+| ------ | ---------------------------------- | ---------- | -------------------------------------------- |
+| `POST` | `/applicants/register`             | `[PUBLIC]` | Daftar sebagai pelamar, kirim token ke email |
+| `POST` | `/applicants/login`                | `[PUBLIC]` | Login dengan email (kirim ulang token)       |
+| `POST` | `/applicants/validate-login-token` | `[PUBLIC]` | Validasi token login, dapat `applicantId`    |
+| `POST` | `/applicants/validate-token`       | `[PUBLIC]` | Validasi sesi token (cek masih aktif)        |
+| `GET`  | `/applicants/me?applicantId=`      | `[PUBLIC]` | Profil pelamar + list application            |
+| `POST` | `/applicants/upload-cv`            | `[PUBLIC]` | Upload CV (applicantId di form body)         |
+| `POST` | `/applicants/apply/:applicationId` | `[PUBLIC]` | Submit lamaran + trigger scoring             |
 
 **Body `POST /applicants/register`:**
 
@@ -506,9 +511,7 @@ Satu pelamar **tidak dapat** melamar ke vacancy yang sama dua kali. Namun pelama
   "dateOfBirth": "1995-05-15",
   "linkedinUrl": "https://linkedin.com/in/prima",
   "availability": "immediately",
-  "addresses": [
-    { "fullAddress": "Jl. Dago No. 123, Bandung" }
-  ],
+  "addresses": [{ "fullAddress": "Jl. Dago No. 123, Bandung" }],
   "identities": [
     { "identityType": "KTP", "identityNumber": "3273012345678901" }
   ],
@@ -541,7 +544,11 @@ Satu pelamar **tidak dapat** melamar ke vacancy yang sama dua kali. Namun pelama
           }
         ],
         "educations": [
-          { "level": 1, "major": "Teknik Informatika", "institution": "Politeknik TEDC" }
+          {
+            "level": 1,
+            "major": "Teknik Informatika",
+            "institution": "Politeknik TEDC"
+          }
         ]
       }
     }
@@ -557,26 +564,26 @@ Modul `candidates` adalah inti dari fitur **pemeringkatan dan seleksi kandidat**
 
 #### Daftar Endpoint
 
-| Method | Endpoint | Auth | Deskripsi |
-|---|---|---|---|
-| `GET` | `/candidates` | `[HR]` | List semua kandidat (semua vacancy, pagination) |
-| `GET` | `/candidates/table` | `[HR]` | Tabel kandidat dengan sort by skor & filter lengkap |
-| `GET` | `/candidates/summary` | `[HR]` | Statistik ringkasan pelamar |
-| `GET` | `/candidates/stats` | `[HR]` | Statistik jumlah per status & stage |
-| `GET` | `/candidates/compare?candidates=id1,id2,...` | `[HR]` | Komparasi beberapa kandidat sekaligus (maks 10) |
-| `GET` | `/candidates/vacancy/:vacancyId` | `[HR]` | List kandidat per vacancy |
-| `GET` | `/candidates/vacancy/:vacancyId/stages` | `[HR]` | Kandidat dikelompokkan per stage pipeline |
-| `GET` | `/candidates/:applicationId` | `[HR]` | Detail kandidat + breakdown scoring lengkap |
-| `GET` | `/candidates/:applicationId/hiring-progress` | `[HR]` | Progress perjalanan rekrutmen kandidat |
-| `PATCH` | `/candidates/:applicationId/status` | `[HR]` | Update status kandidat |
-| `PATCH` | `/candidates/:applicationId/move-stage` | `[HR]` | Pindahkan ke stage berikutnya |
-| `PATCH` | `/candidates/:applicationId/score` | `[HR]` | Tambah/update skor manual HR |
-| `PATCH` | `/candidates/:applicationId/talent-pool` | `[HR]` | Tandai/lepas dari talent pool |
-| `POST` | `/candidates/:applicationId/notes` | `[HR]` | Tambah catatan HR untuk kandidat |
-| `GET` | `/candidates/:applicationId/notes` | `[HR]` | List catatan HR untuk kandidat |
-| `GET` | `/candidates/notes/:noteId` | `[HR]` | Detail catatan by ID |
-| `PATCH` | `/candidates/notes/:noteId` | `[HR]` | Update catatan |
-| `DELETE` | `/candidates/notes/:noteId` | `[HR]` | Hapus catatan |
+| Method   | Endpoint                                     | Auth   | Deskripsi                                           |
+| -------- | -------------------------------------------- | ------ | --------------------------------------------------- |
+| `GET`    | `/candidates`                                | `[HR]` | List semua kandidat (semua vacancy, pagination)     |
+| `GET`    | `/candidates/table`                          | `[HR]` | Tabel kandidat dengan sort by skor & filter lengkap |
+| `GET`    | `/candidates/summary`                        | `[HR]` | Statistik ringkasan pelamar                         |
+| `GET`    | `/candidates/stats`                          | `[HR]` | Statistik jumlah per status & stage                 |
+| `GET`    | `/candidates/compare?candidates=id1,id2,...` | `[HR]` | Komparasi beberapa kandidat sekaligus (maks 10)     |
+| `GET`    | `/candidates/vacancy/:vacancyId`             | `[HR]` | List kandidat per vacancy                           |
+| `GET`    | `/candidates/vacancy/:vacancyId/stages`      | `[HR]` | Kandidat dikelompokkan per stage pipeline           |
+| `GET`    | `/candidates/:applicationId`                 | `[HR]` | Detail kandidat + breakdown scoring lengkap         |
+| `GET`    | `/candidates/:applicationId/hiring-progress` | `[HR]` | Progress perjalanan rekrutmen kandidat              |
+| `PATCH`  | `/candidates/:applicationId/status`          | `[HR]` | Update status kandidat                              |
+| `PATCH`  | `/candidates/:applicationId/move-stage`      | `[HR]` | Pindahkan ke stage berikutnya                       |
+| `PATCH`  | `/candidates/:applicationId/score`           | `[HR]` | Tambah/update skor manual HR                        |
+| `PATCH`  | `/candidates/:applicationId/talent-pool`     | `[HR]` | Tandai/lepas dari talent pool                       |
+| `POST`   | `/candidates/:applicationId/notes`           | `[HR]` | Tambah catatan HR untuk kandidat                    |
+| `GET`    | `/candidates/:applicationId/notes`           | `[HR]` | List catatan HR untuk kandidat                      |
+| `GET`    | `/candidates/notes/:noteId`                  | `[HR]` | Detail catatan by ID                                |
+| `PATCH`  | `/candidates/notes/:noteId`                  | `[HR]` | Update catatan                                      |
+| `DELETE` | `/candidates/notes/:noteId`                  | `[HR]` | Hapus catatan                                       |
 
 ---
 
@@ -586,17 +593,17 @@ Endpoint ini adalah **tampilan utama pemeringkatan kandidat**. Mendukung sorting
 
 **Query Parameters:**
 
-| Param | Tipe | Default | Deskripsi |
-|---|---|---|---|
-| `page` | number | `1` | Halaman |
-| `limit` | number | `10` | Item per halaman |
-| `search` | string | - | Cari by nama, email, judul vacancy |
-| `vacancyId` | string (UUID) | - | Filter by vacancy tertentu |
-| `status` | string[] | - | Filter: `new`, `qualified`, `disqualified`, `talent-pool` |
-| `jobStatus` | string[] | - | Filter by status vacancy: `published`, `closed` |
-| `stage` | string[] (UUID) | - | Filter by stage template ID |
-| `sortBy` | string | `applyDate` | Kolom sort: `applyDate`, `name`, `maxExperienceScore` |
-| `sortOrder` | `asc` \| `desc` | `desc` | Urutan sort |
+| Param       | Tipe            | Default     | Deskripsi                                                 |
+| ----------- | --------------- | ----------- | --------------------------------------------------------- |
+| `page`      | number          | `1`         | Halaman                                                   |
+| `limit`     | number          | `10`        | Item per halaman                                          |
+| `search`    | string          | -           | Cari by nama, email, judul vacancy                        |
+| `vacancyId` | string (UUID)   | -           | Filter by vacancy tertentu                                |
+| `status`    | string[]        | -           | Filter: `new`, `qualified`, `disqualified`, `talent-pool` |
+| `jobStatus` | string[]        | -           | Filter by status vacancy: `published`, `closed`           |
+| `stage`     | string[] (UUID) | -           | Filter by stage template ID                               |
+| `sortBy`    | string          | `applyDate` | Kolom sort: `applyDate`, `name`, `maxExperienceScore`     |
+| `sortOrder` | `asc` \| `desc` | `desc`      | Urutan sort                                               |
 
 **Sorting by Skor (Pemeringkatan):**
 
@@ -741,7 +748,9 @@ Authorization: Bearer <hr-token>
       "progress": { "overallScore": 0.382, "stages": [] },
       "info": {
         "education": { "level": 2, "major": "Teknik Informatika" },
-        "jobHistory": [{ "position": "Full Stack Developer", "durationYears": 2 }]
+        "jobHistory": [
+          { "position": "Full Stack Developer", "durationYears": 2 }
+        ]
       }
     },
     {
@@ -837,7 +846,11 @@ Fields:
 {
   "application_id": "uuid",
   "educations": [
-    { "level": 3, "major": "Teknik Informatika", "institution": "Universitas X" }
+    {
+      "level": 3,
+      "major": "Teknik Informatika",
+      "institution": "Universitas X"
+    }
   ],
   "experience": [
     {
@@ -872,6 +885,7 @@ FASTAPI_BASE_URL=http://localhost:8000
 ```
 
 Untuk FastAPI Screening Service, pastikan:
+
 - File `screening-service/.env` memiliki konfigurasi model LLM (Groq/Ollama)
 - Service berjalan di port `8000` sebelum endpoint apply dipanggil
 
@@ -938,42 +952,42 @@ Semua endpoint menggunakan format response yang konsisten:
 {
   "responseCode": "200--00",
   "responseDesc": "Success",
-  "data": { }
+  "data": {}
 }
 ```
 
-| responseCode | Keterangan |
-|---|---|
-| `200--00` | Success |
-| `201--00` | Successfully Created |
-| `400--00` | Bad Request |
-| `401--01` | Unauthorized Auth |
-| `404--00` | Not Found |
-| `500--00` | Internal Server Error |
+| responseCode | Keterangan            |
+| ------------ | --------------------- |
+| `200--00`    | Success               |
+| `201--00`    | Successfully Created  |
+| `400--00`    | Bad Request           |
+| `401--01`    | Unauthorized Auth     |
+| `404--00`    | Not Found             |
+| `500--00`    | Internal Server Error |
 
 ---
 
 ## Status Aplikasi
 
-| Status | Keterangan |
-|---|---|
-| `new` | Application baru dibuat saat register |
-| `applied` | Pelamar sudah submit data + scoring selesai |
-| `in_review` | Sedang ditinjau HR |
-| `passed` | Lolos ke tahap berikutnya |
-| `rejected` | Ditolak |
+| Status      | Keterangan                                  |
+| ----------- | ------------------------------------------- |
+| `new`       | Application baru dibuat saat register       |
+| `applied`   | Pelamar sudah submit data + scoring selesai |
+| `in_review` | Sedang ditinjau HR                          |
+| `passed`    | Lolos ke tahap berikutnya                   |
+| `rejected`  | Ditolak                                     |
 
 ---
 
 ## Status Vacancy
 
-| Status | Keterangan |
-|---|---|
-| `draft` | Masih dalam pengerjaan, tidak terlihat publik |
-| `published` | Aktif dan terlihat di `/public/vacancies` |
-| `closed` | Pendaftaran ditutup |
-| `archived` | Diarsipkan |
+| Status      | Keterangan                                    |
+| ----------- | --------------------------------------------- |
+| `draft`     | Masih dalam pengerjaan, tidak terlihat publik |
+| `published` | Aktif dan terlihat di `/public/vacancies`     |
+| `closed`    | Pendaftaran ditutup                           |
+| `archived`  | Diarsipkan                                    |
 
 ---
 
-*Sistem Rekrutmen dengan Pemeringkatan Pelamar Bendasarkan Kesesuaian Pengalaman Kerja Berbasis Semantic Similarity.*
+_Sistem Rekrutmen dengan Pemeringkatan Pelamar Bendasarkan Kesesuaian Pengalaman Kerja Berbasis Semantic Similarity._

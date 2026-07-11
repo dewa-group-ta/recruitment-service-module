@@ -21,11 +21,6 @@ export class NotificationTemplateService {
     private readonly notificationTemplateRepository: Repository<NotificationTemplate>
   ) {}
 
-  /**
-   * Create a new notification template
-   * @param createNotificationTemplateDto - Data for creating notification template
-   * @returns Created notification template
-   */
   async create(
     createNotificationTemplateDto: CreateNotificationTemplateDto
   ): Promise<NotificationTemplateResponseDto> {
@@ -46,12 +41,6 @@ export class NotificationTemplateService {
     }
   }
 
-  /**
-   * Find all notification templates with pagination and filtering
-   * @param paginationDto - Pagination parameters
-   * @param filters - Optional filters
-   * @returns Paginated list of notification templates
-   */
   async findAll(
     paginationDto: BaseFindAllDto,
     filters?: {
@@ -69,7 +58,6 @@ export class NotificationTemplateService {
       .leftJoinAndSelect("notificationTemplate.stageTemplate", "stageTemplate")
       .where("notificationTemplate.deletedAt IS NULL");
 
-    // Apply filters
     if (filters?.stageTemplateId) {
       queryBuilder.andWhere(
         "notificationTemplate.stageTemplateId = :stageTemplateId",
@@ -101,13 +89,10 @@ export class NotificationTemplateService {
       );
     }
 
-    // Order by creation date (newest first)
     queryBuilder.orderBy("notificationTemplate.createdAt", "DESC");
 
-    // Get total count
     const totalItems = await queryBuilder.getCount();
 
-    // Apply pagination
     queryBuilder.skip(skip).take(limit);
 
     const notificationTemplates = await queryBuilder.getMany();
@@ -125,11 +110,6 @@ export class NotificationTemplateService {
     };
   }
 
-  /**
-   * Find a notification template by ID
-   * @param id - Notification template ID
-   * @returns Notification template
-   */
   async findOne(id: string): Promise<NotificationTemplateResponseDto> {
     const notificationTemplate =
       await this.notificationTemplateRepository.findOne({
@@ -149,12 +129,6 @@ export class NotificationTemplateService {
     return this.mapToResponseDto(notificationTemplate);
   }
 
-  /**
-   * Update a notification template
-   * @param id - Notification template ID
-   * @param updateNotificationTemplateDto - Data for updating notification template
-   * @returns Updated notification template
-   */
   async update(
     id: string,
     updateNotificationTemplateDto: UpdateNotificationTemplateDto
@@ -175,7 +149,6 @@ export class NotificationTemplateService {
     }
 
     try {
-      // Update the notification template
       Object.assign(notificationTemplate, updateNotificationTemplateDto);
 
       const updatedNotificationTemplate =
@@ -189,11 +162,6 @@ export class NotificationTemplateService {
     }
   }
 
-  /**
-   * Soft delete a notification template
-   * @param id - Notification template ID
-   * @returns Success message
-   */
   async remove(id: string): Promise<{ message: string }> {
     const notificationTemplate =
       await this.notificationTemplateRepository.findOne({
@@ -210,7 +178,6 @@ export class NotificationTemplateService {
     }
 
     try {
-      // Soft delete
       await this.notificationTemplateRepository.softDelete(id);
 
       return { message: "Notification template deleted successfully" };
@@ -221,11 +188,6 @@ export class NotificationTemplateService {
     }
   }
 
-  /**
-   * Find notification templates by stage template ID
-   * @param stageTemplateId - Stage template ID
-   * @returns List of notification templates for the stage template
-   */
   async findByStageTemplateId(
     stageTemplateId: string
   ): Promise<NotificationTemplateResponseDto[]> {
@@ -245,11 +207,6 @@ export class NotificationTemplateService {
     );
   }
 
-  /**
-   * Find notification templates by trigger event
-   * @param triggerEvent - Trigger event
-   * @returns List of notification templates for the trigger event
-   */
   async findByTriggerEvent(
     triggerEvent: string
   ): Promise<NotificationTemplateResponseDto[]> {
@@ -269,10 +226,6 @@ export class NotificationTemplateService {
     );
   }
 
-  /**
-   * Get available trigger events
-   * @returns List of unique trigger events
-   */
   async getTriggerEvents(): Promise<string[]> {
     const result = await this.notificationTemplateRepository
       .createQueryBuilder("notificationTemplate")
@@ -283,12 +236,6 @@ export class NotificationTemplateService {
     return result.map((item) => item.triggerEvent).filter(Boolean);
   }
 
-  /**
-   * Get notification template by stage template and trigger event
-   * @param stageTemplateId - Stage template ID
-   * @param triggerEvent - Trigger event
-   * @returns Notification template
-   */
   async findByStageTemplateAndTrigger(
     stageTemplateId: string,
     triggerEvent: string
@@ -309,12 +256,6 @@ export class NotificationTemplateService {
       : null;
   }
 
-  /**
-   * Duplicate a notification template
-   * @param id - Notification template ID to duplicate
-   * @param newName - New name for the duplicated template
-   * @returns Duplicated notification template
-   */
   async duplicate(
     id: string,
     newName: string
@@ -353,11 +294,6 @@ export class NotificationTemplateService {
     }
   }
 
-  /**
-   * Map entity to response DTO
-   * @param notificationTemplate - Notification template entity
-   * @returns Notification template response DTO
-   */
   private mapToResponseDto(
     notificationTemplate: NotificationTemplate
   ): NotificationTemplateResponseDto {

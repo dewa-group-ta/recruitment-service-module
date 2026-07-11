@@ -60,7 +60,6 @@ export class DepartmentController {
     @Body() createDepartmentDto: CreateDepartmentDto,
     @Req() req: AuthenticatedRequest
   ): Promise<DepartmentResponseDto> {
-    // Set createdById from authenticated user
     if (!req.user?.id) {
       throw new BadRequestException("User not authenticated");
     }
@@ -168,7 +167,6 @@ export class DepartmentController {
     @Body() updateDepartmentDto: UpdateDepartmentDto,
     @Req() req: AuthenticatedRequest
   ): Promise<DepartmentResponseDto> {
-    // Set updatedById from authenticated user
     if (!req.user?.id) {
       throw new BadRequestException("User not authenticated");
     }

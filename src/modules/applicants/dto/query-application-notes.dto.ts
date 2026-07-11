@@ -14,11 +14,25 @@ export class QueryApplicationNotesDto extends BaseFindAllDto {
   @ApiPropertyOptional({
     description: "Filter by category",
     example: "interview",
-    enum: ["interview", "assessment", "general", "follow_up", "rejection", "offer"]
+    enum: [
+      "interview",
+      "assessment",
+      "general",
+      "follow_up",
+      "rejection",
+      "offer"
+    ]
   })
   @IsString()
   @IsOptional()
-  @IsIn(["interview", "assessment", "general", "follow_up", "rejection", "offer"])
+  @IsIn([
+    "interview",
+    "assessment",
+    "general",
+    "follow_up",
+    "rejection",
+    "offer"
+  ])
   category?: string;
 
   @ApiPropertyOptional({

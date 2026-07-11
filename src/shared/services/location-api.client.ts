@@ -6,8 +6,7 @@ import {
 } from "../interface/location.interface";
 
 /**
- * Location API client implementation using fetch
- * Handles HTTP requests to the location API service
+ * client http untuk location api eksternal, pakai fetch dengan retry + timeout.
  */
 @Injectable()
 export class LocationApiClient implements ILocationApiClient {
@@ -25,12 +24,6 @@ export class LocationApiClient implements ILocationApiClient {
     };
   }
 
-  /**
-   * Make GET request to location API
-   * @param endpoint API endpoint
-   * @param params Query parameters
-   * @returns Promise<T> API response
-   */
   async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
     const url = this.buildUrl(endpoint, params);
 
@@ -53,12 +46,6 @@ export class LocationApiClient implements ILocationApiClient {
     return data;
   }
 
-  /**
-   * Make POST request to location API
-   * @param endpoint API endpoint
-   * @param data Request data
-   * @returns Promise<T> API response
-   */
   async post<T>(endpoint: string, data?: Record<string, any>): Promise<T> {
     const url = this.buildUrl(endpoint);
 
@@ -82,13 +69,6 @@ export class LocationApiClient implements ILocationApiClient {
     return responseData;
   }
 
-  /**
-   * Build full URL with query parameters
-   * @param endpoint API endpoint
-   * @param params Query parameters
-   * @returns Full URL string
-   * @private
-   */
   private buildUrl(endpoint: string, params?: Record<string, any>): string {
     const url = new URL(endpoint, this.config.baseUrl);
 
@@ -103,13 +83,6 @@ export class LocationApiClient implements ILocationApiClient {
     return url.toString();
   }
 
-  /**
-   * Make HTTP request with retry logic and timeout
-   * @param url Request URL
-   * @param options Request options
-   * @returns Promise<Response> HTTP response
-   * @private
-   */
   private async makeRequest(
     url: string,
     options: RequestInit
@@ -139,7 +112,7 @@ export class LocationApiClient implements ILocationApiClient {
             maxRetries: this.config.retries
           });
 
-          // Wait before retry (exponential backoff)
+          // tunggu sebelum retry (exponential backoff)
           await this.delay(Math.pow(2, attempt) * 1000);
         } else {
           this.logger.error(
@@ -161,28 +134,14 @@ export class LocationApiClient implements ILocationApiClient {
     throw new Error("All request attempts failed");
   }
 
-  /**
-   * Delay execution for specified milliseconds
-   * @param ms Milliseconds to delay
-   * @returns Promise<void>
-   * @private
-   */
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  /**
-   * Get API configuration
-   * @returns LocationApiConfig Current configuration
-   */
   getConfig(): LocationApiConfig {
     return { ...this.config };
   }
 
-  /**
-   * Test API connection
-   * @returns Promise<boolean> Connection status
-   */
   async testConnection(): Promise<boolean> {
     try {
       await this.get("/api/health");

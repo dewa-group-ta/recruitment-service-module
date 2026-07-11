@@ -7,26 +7,31 @@ Dokumentasi lengkap tentang variable yang digunakan dalam template email recruit
 Semua template email menggunakan variable yang konsisten untuk memastikan konsistensi dan kemudahan maintenance:
 
 ### 1. `{{applicant_name}}`
+
 - **Deskripsi**: Nama lengkap applicant
 - **Contoh**: "John Doe", "Jane Smith"
 - **Digunakan di**: Semua template notifikasi
 
 ### 2. `{{vacancy_name}}`
+
 - **Deskripsi**: Nama posisi yang dilamar
 - **Contoh**: "Senior Software Engineer", "Product Manager"
 - **Digunakan di**: Template aplikasi dan status update
 
 ### 3. `{{application_link}}`
+
 - **Deskripsi**: Link untuk mengakses aplikasi atau login
 - **Contoh**: "https://recruitment.company.com/application/123"
 - **Digunakan di**: Semua template yang memerlukan link akses
 
 ### 4. `{{company_name}}`
+
 - **Deskripsi**: Nama perusahaan (diambil dari system configuration)
 - **Contoh**: "PT Neuronworks", "Acme Corporation"
 - **Digunakan di**: Semua template untuk branding
 
 ### 5. `{{company_website}}`
+
 - **Deskripsi**: Website perusahaan (diambil dari system configuration)
 - **Contoh**: "https://neuronworks.com", "https://acme.com"
 - **Digunakan di**: Footer email untuk branding
@@ -34,6 +39,7 @@ Semua template email menggunakan variable yang konsisten untuk memastikan konsis
 ## Template Mapping
 
 ### notification_applicant_register
+
 ```json
 {
   "subject": "Registration Success - {{applicant_name}}",
@@ -42,12 +48,14 @@ Semua template email menggunakan variable yang konsisten untuk memastikan konsis
 ```
 
 **Variables yang digunakan:**
+
 - `{{applicant_name}}`
 - `{{application_link}}`
 - `{{company_name}}`
 - `{{company_website}}`
 
 ### notification_applicant_apply
+
 ```json
 {
   "subject": "Application Received - {{vacancy_name}}",
@@ -56,6 +64,7 @@ Semua template email menggunakan variable yang konsisten untuk memastikan konsis
 ```
 
 **Variables yang digunakan:**
+
 - `{{applicant_name}}`
 - `{{vacancy_name}}`
 - `{{application_link}}`
@@ -63,6 +72,7 @@ Semua template email menggunakan variable yang konsisten untuk memastikan konsis
 - `{{company_website}}`
 
 ### notification_applicant_status_update
+
 ```json
 {
   "subject": "Application Status Update - {{vacancy_name}}",
@@ -71,6 +81,7 @@ Semua template email menggunakan variable yang konsisten untuk memastikan konsis
 ```
 
 **Variables yang digunakan:**
+
 - `{{applicant_name}}`
 - `{{vacancy_name}}`
 - `{{application_link}}`
@@ -78,6 +89,7 @@ Semua template email menggunakan variable yang konsisten untuk memastikan konsis
 - `{{company_website}}`
 
 ### notification_applicant_login_token
+
 ```json
 {
   "subject": "Your Login Token - {{company_name}}",
@@ -86,6 +98,7 @@ Semua template email menggunakan variable yang konsisten untuk memastikan konsis
 ```
 
 **Variables yang digunakan:**
+
 - `{{applicant_name}}`
 - `{{application_link}}`
 - `{{company_name}}`
@@ -93,6 +106,7 @@ Semua template email menggunakan variable yang konsisten untuk memastikan konsis
 ## Contoh Penggunaan dalam Code
 
 ### SystemConfigEmailService
+
 ```typescript
 await this.systemConfigEmailService.sendEmailFromConfig(
   "notification_applicant_register",
@@ -107,6 +121,7 @@ await this.systemConfigEmailService.sendEmailFromConfig(
 ```
 
 ### NotificationService
+
 ```typescript
 await this.notificationService.sendApplicantRegistrationNotification(
   "applicant@example.com",
@@ -116,6 +131,7 @@ await this.notificationService.sendApplicantRegistrationNotification(
 ```
 
 ### Custom Notification
+
 ```typescript
 await this.notificationService.sendCustomNotification(
   "notification_applicant_apply",
@@ -131,10 +147,12 @@ await this.notificationService.sendCustomNotification(
 ## Data Source
 
 ### Automatic Variables (System Configuration)
+
 - `{{company_name}}` - Diambil dari `company_name` config
 - `{{company_website}}` - Diambil dari `social_website` config
 
 ### Manual Variables (Dari Code)
+
 - `{{applicant_name}}` - Dikirim dari service
 - `{{vacancy_name}}` - Dikirim dari service
 - `{{application_link}}` - Dikirim dari service
@@ -150,6 +168,7 @@ await this.notificationService.sendCustomNotification(
 ## Error Handling
 
 Jika variable tidak tersedia:
+
 - Template akan menampilkan placeholder kosong `{{variable_name}}`
 - System akan log warning untuk missing variables
 - Email tetap akan dikirim dengan placeholder yang tidak ter-replace
@@ -158,23 +177,26 @@ Jika variable tidak tersedia:
 
 Jika ada template yang menggunakan variable lama, update ke format baru:
 
-| Variable Lama | Variable Baru |
-|---------------|---------------|
-| `{{companyName}}` | `{{company_name}}` |
-| `{{companyWebsite}}` | `{{company_website}}` |
-| `{{login_link}}` | `{{application_link}}` |
+| Variable Lama            | Variable Baru          |
+| ------------------------ | ---------------------- |
+| `{{companyName}}`        | `{{company_name}}`     |
+| `{{companyWebsite}}`     | `{{company_website}}`  |
+| `{{login_link}}`         | `{{application_link}}` |
 | `{{apply_for_job_link}}` | `{{application_link}}` |
-| `{{login_url}}` | `{{application_link}}` |
+| `{{login_url}}`          | `{{application_link}}` |
 
 ## Template Validation
 
 Untuk memvalidasi template, gunakan:
 
 ```typescript
-const isValid = await this.notificationService.validateTemplate("notification_applicant_register");
+const isValid = await this.notificationService.validateTemplate(
+  "notification_applicant_register"
+);
 ```
 
 Template dianggap valid jika:
+
 - Memiliki `subject` dan `body`
 - Menggunakan variable yang supported
 - Format JSON valid

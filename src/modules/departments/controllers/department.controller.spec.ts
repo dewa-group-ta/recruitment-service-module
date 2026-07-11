@@ -76,13 +76,10 @@ describe("DepartmentController", () => {
     };
 
     it("should create a new department successfully", async () => {
-      // Arrange
       departmentService.create.mockResolvedValue(mockDepartmentResponse);
 
-      // Act
       const result = await controller.create(createDto, mockRequest);
 
-      // Assert
       expect(departmentService.create).toHaveBeenCalledWith({
         ...createDto,
         createdById: "user-1"
@@ -92,10 +89,8 @@ describe("DepartmentController", () => {
     });
 
     it("should throw BadRequestException when user not authenticated", async () => {
-      // Arrange
       const requestWithoutUser = {} as AuthenticatedRequest;
 
-      // Act & Assert
       await expect(
         controller.create(createDto, requestWithoutUser)
       ).rejects.toThrow(BadRequestException);
@@ -103,24 +98,20 @@ describe("DepartmentController", () => {
     });
 
     it("should throw ConflictException when department with same name exists", async () => {
-      // Arrange
       departmentService.create.mockRejectedValue(
         new ConflictException("Department with same name already exists")
       );
 
-      // Act & Assert
       await expect(controller.create(createDto, mockRequest)).rejects.toThrow(
         ConflictException
       );
     });
 
     it("should throw BadRequestException when creation fails", async () => {
-      // Arrange
       departmentService.create.mockRejectedValue(
         new BadRequestException("Creation failed")
       );
 
-      // Act & Assert
       await expect(controller.create(createDto, mockRequest)).rejects.toThrow(
         BadRequestException
       );
@@ -138,7 +129,6 @@ describe("DepartmentController", () => {
     };
 
     it("should return paginated departments", async () => {
-      // Arrange
       const mockPaginatedResponse = {
         data: [mockDepartmentResponse],
         page: 1,
@@ -148,10 +138,8 @@ describe("DepartmentController", () => {
       };
       departmentService.findAll.mockResolvedValue(mockPaginatedResponse);
 
-      // Act
       const result = await controller.findAll(queryDto);
 
-      // Assert
       expect(departmentService.findAll).toHaveBeenCalledWith(queryDto);
       expect(result).toBeDefined();
       expect(result.data).toHaveLength(1);
@@ -159,7 +147,6 @@ describe("DepartmentController", () => {
     });
 
     it("should return departments with default query parameters", async () => {
-      // Arrange
       const defaultQueryDto = { page: 1, limit: 10 };
       const mockPaginatedResponse = {
         data: [mockDepartmentResponse],
@@ -170,10 +157,8 @@ describe("DepartmentController", () => {
       };
       departmentService.findAll.mockResolvedValue(mockPaginatedResponse);
 
-      // Act
       const result = await controller.findAll(defaultQueryDto);
 
-      // Assert
       expect(departmentService.findAll).toHaveBeenCalledWith(defaultQueryDto);
       expect(result).toBeDefined();
     });
@@ -181,14 +166,11 @@ describe("DepartmentController", () => {
 
   describe("findActive", () => {
     it("should return all active departments", async () => {
-      // Arrange
       const activeDepartments = [mockDepartmentResponse];
       departmentService.findActive.mockResolvedValue(activeDepartments);
 
-      // Act
       const result = await controller.findActive();
 
-      // Assert
       expect(departmentService.findActive).toHaveBeenCalled();
       expect(result).toBeDefined();
       expect(result).toHaveLength(1);
@@ -196,13 +178,10 @@ describe("DepartmentController", () => {
     });
 
     it("should return empty array when no active departments found", async () => {
-      // Arrange
       departmentService.findActive.mockResolvedValue([]);
 
-      // Act
       const result = await controller.findActive();
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });
@@ -210,25 +189,20 @@ describe("DepartmentController", () => {
 
   describe("findOne", () => {
     it("should return department when found", async () => {
-      // Arrange
       departmentService.findOne.mockResolvedValue(mockDepartmentResponse);
 
-      // Act
       const result = await controller.findOne("dept-1");
 
-      // Assert
       expect(departmentService.findOne).toHaveBeenCalledWith("dept-1");
       expect(result).toBeDefined();
       expect(result.id).toBe("dept-1");
     });
 
     it("should throw NotFoundException when department not found", async () => {
-      // Arrange
       departmentService.findOne.mockRejectedValue(
         new NotFoundException("Department not found")
       );
 
-      // Act & Assert
       await expect(controller.findOne("nonexistent-id")).rejects.toThrow(
         NotFoundException
       );
@@ -242,14 +216,11 @@ describe("DepartmentController", () => {
     };
 
     it("should update department successfully", async () => {
-      // Arrange
       const updatedDepartment = { ...mockDepartmentResponse, ...updateDto };
       departmentService.update.mockResolvedValue(updatedDepartment);
 
-      // Act
       const result = await controller.update("dept-1", updateDto);
 
-      // Assert
       expect(departmentService.update).toHaveBeenCalledWith(
         "dept-1",
         updateDto
@@ -259,36 +230,30 @@ describe("DepartmentController", () => {
     });
 
     it("should throw NotFoundException when department not found", async () => {
-      // Arrange
       departmentService.update.mockRejectedValue(
         new NotFoundException("Department not found")
       );
 
-      // Act & Assert
       await expect(
         controller.update("nonexistent-id", updateDto)
       ).rejects.toThrow(NotFoundException);
     });
 
     it("should throw ConflictException when updating to existing name", async () => {
-      // Arrange
       departmentService.update.mockRejectedValue(
         new ConflictException("Department with same name already exists")
       );
 
-      // Act & Assert
       await expect(controller.update("dept-1", updateDto)).rejects.toThrow(
         ConflictException
       );
     });
 
     it("should throw BadRequestException when update fails", async () => {
-      // Arrange
       departmentService.update.mockRejectedValue(
         new BadRequestException("Update failed")
       );
 
-      // Act & Assert
       await expect(controller.update("dept-1", updateDto)).rejects.toThrow(
         BadRequestException
       );
@@ -297,38 +262,31 @@ describe("DepartmentController", () => {
 
   describe("remove", () => {
     it("should delete department successfully", async () => {
-      // Arrange
       const deleteResponse = { message: "Department deleted successfully" };
       departmentService.remove.mockResolvedValue(deleteResponse);
 
-      // Act
       const result = await controller.remove("dept-1", mockRequest);
 
-      // Assert
       expect(departmentService.remove).toHaveBeenCalledWith("dept-1", "user-1");
       expect(result).toBeDefined();
       expect(result.message).toBe("Department deleted successfully");
     });
 
     it("should throw NotFoundException when department not found", async () => {
-      // Arrange
       departmentService.remove.mockRejectedValue(
         new NotFoundException("Department not found")
       );
 
-      // Act & Assert
       await expect(
         controller.remove("nonexistent-id", mockRequest)
       ).rejects.toThrow(NotFoundException);
     });
 
     it("should throw BadRequestException when deletion fails", async () => {
-      // Arrange
       departmentService.remove.mockRejectedValue(
         new BadRequestException("Deletion failed")
       );
 
-      // Act & Assert
       await expect(controller.remove("dept-1", mockRequest)).rejects.toThrow(
         BadRequestException
       );
@@ -337,49 +295,40 @@ describe("DepartmentController", () => {
 
   describe("restore", () => {
     it("should restore department successfully", async () => {
-      // Arrange
       departmentService.restore.mockResolvedValue(mockDepartmentResponse);
 
-      // Act
       const result = await controller.restore("dept-1");
 
-      // Assert
       expect(departmentService.restore).toHaveBeenCalledWith("dept-1");
       expect(result).toBeDefined();
       expect(result.id).toBe("dept-1");
     });
 
     it("should throw NotFoundException when department not found", async () => {
-      // Arrange
       departmentService.restore.mockRejectedValue(
         new NotFoundException("Department not found")
       );
 
-      // Act & Assert
       await expect(controller.restore("nonexistent-id")).rejects.toThrow(
         NotFoundException
       );
     });
 
     it("should throw BadRequestException when department is not deleted", async () => {
-      // Arrange
       departmentService.restore.mockRejectedValue(
         new BadRequestException("Department is not deleted")
       );
 
-      // Act & Assert
       await expect(controller.restore("dept-1")).rejects.toThrow(
         BadRequestException
       );
     });
 
     it("should throw BadRequestException when restore fails", async () => {
-      // Arrange
       departmentService.restore.mockRejectedValue(
         new BadRequestException("Restore failed")
       );
 
-      // Act & Assert
       await expect(controller.restore("dept-1")).rejects.toThrow(
         BadRequestException
       );

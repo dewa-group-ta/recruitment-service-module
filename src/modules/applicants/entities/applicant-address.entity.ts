@@ -44,7 +44,6 @@ export class ApplicantAddress {
   @Column({ type: "enum", enum: AddressTypeEnum, nullable: true })
   addressType!: AddressTypeEnum;
 
-  // Audit fields
   @CreateDateColumn({ name: "created_at" })
   createdAt!: Date;
 

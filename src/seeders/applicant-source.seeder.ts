@@ -3,9 +3,8 @@ import { ApplicantSource } from "../modules/applicants/entities/applicant-source
 
 export class ApplicantSourceSeeder extends BaseSeeder {
   async run(): Promise<void> {
-    console.log("🌱 Seeding applicant sources...");
+    console.log("Seeding applicant sources...");
 
-    // Check if data already exists
     const repository = await this.getRepository(ApplicantSource);
     const existingSources = await repository.find();
     if (existingSources.length > 0) {
@@ -54,6 +53,6 @@ export class ApplicantSourceSeeder extends BaseSeeder {
 
     await this.saveEntities(ApplicantSource, applicantSourceData);
 
-    console.log("✅ Applicant sources seeded successfully");
+    console.log("Applicant sources seeded successfully");
   }
 }

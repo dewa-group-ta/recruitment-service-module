@@ -17,19 +17,12 @@ import { LocationService } from "../../../shared/services/location.service";
 import { Public } from "../../../shared/decorators/public.decorator";
 import { LocationSearchFilter } from "../../../shared/interface/location.interface";
 
-/**
- * Location controller
- * Provides endpoints for location data retrieval
- */
 @ApiTags("Locations")
 @Controller("locations")
 @Public()
 export class LocationController {
   constructor(private readonly locationService: LocationService) {}
 
-  /**
-   * Get all provinces
-   */
   @Get("provinces")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -50,9 +43,6 @@ export class LocationController {
     return this.locationService.getProvinces(filter);
   }
 
-  /**
-   * Get province by ID
-   */
   @Get("provinces/:id")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -68,9 +58,6 @@ export class LocationController {
     return this.locationService.getProvinceById(id);
   }
 
-  /**
-   * Get cities by province ID
-   */
   @Get("provinces/:provinceId/cities")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -95,9 +82,6 @@ export class LocationController {
     return this.locationService.getCitiesByProvince(provinceId, filter);
   }
 
-  /**
-   * Get city by ID
-   */
   @Get("cities/:id")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -113,9 +97,6 @@ export class LocationController {
     return this.locationService.getCityById(id);
   }
 
-  /**
-   * Get districts by city ID
-   */
   @Get("cities/:cityId/districts")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -140,9 +121,6 @@ export class LocationController {
     return this.locationService.getDistrictsByCity(cityId, filter);
   }
 
-  /**
-   * Get district by ID
-   */
   @Get("districts/:id")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -158,9 +136,6 @@ export class LocationController {
     return this.locationService.getDistrictById(id);
   }
 
-  /**
-   * Get sub-districts by district ID
-   */
   @Get("districts/:districtId/sub-districts")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -185,9 +160,6 @@ export class LocationController {
     return this.locationService.getSubDistrictsByDistrict(districtId, filter);
   }
 
-  /**
-   * Get sub-district by ID
-   */
   @Get("sub-districts/:id")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -203,9 +175,6 @@ export class LocationController {
     return this.locationService.getSubDistrictById(id);
   }
 
-  /**
-   * Search locations
-   */
   @Get("search")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -237,9 +206,6 @@ export class LocationController {
     return this.locationService.searchLocations(query, type, filter);
   }
 
-  /**
-   * Get location hierarchy
-   */
   @Get("hierarchy/:subDistrictId")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -255,9 +221,6 @@ export class LocationController {
     return this.locationService.getLocationHierarchy(subDistrictId);
   }
 
-  /**
-   * Get all locations in a province
-   */
   @Get("provinces/:provinceId/all")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

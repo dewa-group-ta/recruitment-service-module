@@ -7,14 +7,16 @@ This document outlines the comprehensive improvements made to the recruitment se
 ## ✅ Completed Improvements
 
 ### 1. TypeScript Configuration Enhancement
+
 - **File**: `tsconfig.json`
-- **Changes**: 
+- **Changes**:
   - Enabled strict mode with all strict checks
   - Added `noImplicitAny`, `strictBindCallApply`, `noFallthroughCasesInSwitch`
   - Added additional strict checks for better type safety
 - **Impact**: Improved type safety and caught potential runtime errors at compile time
 
 ### 2. ESLint Configuration Improvement
+
 - **File**: `eslint.config.mjs`
 - **Changes**:
   - Removed `src/shared/**/*` from ignores to ensure all code is linted
@@ -24,6 +26,7 @@ This document outlines the comprehensive improvements made to the recruitment se
 - **Impact**: Better code quality and consistency across the codebase
 
 ### 3. Enhanced Error Handling & Logging
+
 - **File**: `src/shared/guards/bearer-auth/bearer-auth.guard.ts`
 - **Changes**:
   - Added comprehensive logging with structured log messages
@@ -33,7 +36,8 @@ This document outlines the comprehensive improvements made to the recruitment se
 - **Impact**: Better debugging capabilities and security
 
 ### 4. Database Migration System
-- **Files**: 
+
+- **Files**:
   - `src/migrations/1700000000000-InitialMigration.ts`
   - `src/config/migration.config.ts`
   - `package.json` (added migration scripts)
@@ -45,6 +49,7 @@ This document outlines the comprehensive improvements made to the recruitment se
 - **Impact**: Proper database versioning and deployment management
 
 ### 5. Interface-Based Dependency Injection
+
 - **Files**:
   - `src/shared/interfaces/applicant.interface.ts`
   - `src/shared/interfaces/vacancy.interface.ts`
@@ -57,6 +62,7 @@ This document outlines the comprehensive improvements made to the recruitment se
 - **Impact**: Better testability, maintainability, and adherence to SOLID principles
 
 ### 6. Comprehensive JSDoc Documentation
+
 - **File**: `src/modules/applicants/services/applicant.service.ts`
 - **Changes**:
   - Added detailed JSDoc comments for all public methods
@@ -66,6 +72,7 @@ This document outlines the comprehensive improvements made to the recruitment se
 - **Impact**: Better code documentation and developer experience
 
 ### 7. Enhanced Validation System
+
 - **Files**:
   - `src/shared/validators/vacancy-exists.validator.ts`
   - `src/shared/validators/phone-number.validator.ts`
@@ -79,6 +86,7 @@ This document outlines the comprehensive improvements made to the recruitment se
 - **Impact**: Better data validation and user experience
 
 ### 8. Caching Layer Implementation
+
 - **Files**:
   - `src/shared/modules/cache.module.ts`
   - `src/shared/services/cache.service.ts`
@@ -97,8 +105,8 @@ This document outlines the comprehensive improvements made to the recruitment se
 ### Using Custom Validators
 
 ```typescript
-import { IsUUID, IsString } from 'class-validator';
-import { VacancyExists, IsIndonesianPhoneNumber } from '../shared/validators';
+import { IsUUID, IsString } from "class-validator";
+import { VacancyExists, IsIndonesianPhoneNumber } from "../shared/validators";
 
 export class ApplyForJobDto {
   @IsUUID()
@@ -114,15 +122,15 @@ export class ApplyForJobDto {
 ### Using Caching
 
 ```typescript
-import { Cacheable, CacheInvalidate } from '../shared/decorators/cache';
+import { Cacheable, CacheInvalidate } from "../shared/decorators/cache";
 
 export class VacancyService {
-  @Cacheable({ key: 'vacancy', ttl: 300 })
+  @Cacheable({ key: "vacancy", ttl: 300 })
   async findById(id: string): Promise<Vacancy> {
     // Method implementation
   }
 
-  @CacheInvalidate({ keys: ['vacancy'] })
+  @CacheInvalidate({ keys: ["vacancy"] })
   async update(id: string, data: UpdateVacancyDto): Promise<Vacancy> {
     // Method implementation
   }
@@ -132,12 +140,12 @@ export class VacancyService {
 ### Using Interfaces
 
 ```typescript
-import { IApplicantService } from '../shared/interfaces';
+import { IApplicantService } from "../shared/interfaces";
 
 @Injectable()
 export class ApplicantController {
   constructor(
-    @Inject('IApplicantService')
+    @Inject("IApplicantService")
     private readonly applicantService: IApplicantService
   ) {}
 }
@@ -145,16 +153,16 @@ export class ApplicantController {
 
 ## 📊 Impact Summary
 
-| Improvement Area | Before | After | Impact |
-|------------------|--------|-------|---------|
-| Type Safety | Basic | Strict | High |
-| Code Quality | Good | Excellent | High |
-| Error Handling | Basic | Comprehensive | High |
-| Database Management | Manual | Automated | High |
-| Testability | Moderate | High | High |
-| Documentation | Minimal | Comprehensive | High |
-| Performance | Good | Optimized | Medium |
-| Validation | Basic | Advanced | High |
+| Improvement Area    | Before   | After         | Impact |
+| ------------------- | -------- | ------------- | ------ |
+| Type Safety         | Basic    | Strict        | High   |
+| Code Quality        | Good     | Excellent     | High   |
+| Error Handling      | Basic    | Comprehensive | High   |
+| Database Management | Manual   | Automated     | High   |
+| Testability         | Moderate | High          | High   |
+| Documentation       | Minimal  | Comprehensive | High   |
+| Performance         | Good     | Optimized     | Medium |
+| Validation          | Basic    | Advanced      | High   |
 
 ## 🔧 Migration Commands
 
@@ -190,6 +198,7 @@ npm run migration:show
 ## 🤝 Contributing
 
 When making changes to the codebase:
+
 1. Follow the established patterns and interfaces
 2. Add comprehensive JSDoc documentation
 3. Include proper error handling and logging

@@ -24,9 +24,20 @@ import { ResponseMessage } from "../../../shared/decorators/response.decorator";
 import { responseMessage, role } from "src/shared/utils/constant";
 import { IsRole } from "src/shared/decorators/roles.decorator";
 import { BaseFindAllDto } from "../../../shared/paginate/base-find-all.dto";
-import { ApplicantTableQueryDto, ApplicantSummaryQueryDto } from "../dto/applicant-table-query.dto";
-import { ApplicantTableResponseDto, ApplicantSummaryResponseDto } from "../dto/applicant-table-response.dto";
-import { CandidateDetailDto, UpdateCandidateStatusDto, MoveToNextStageDto, UpdateTalentPoolDto } from "../dto/candidate-detail.dto";
+import {
+  ApplicantTableQueryDto,
+  ApplicantSummaryQueryDto
+} from "../dto/applicant-table-query.dto";
+import {
+  ApplicantTableResponseDto,
+  ApplicantSummaryResponseDto
+} from "../dto/applicant-table-response.dto";
+import {
+  CandidateDetailDto,
+  UpdateCandidateStatusDto,
+  MoveToNextStageDto,
+  UpdateTalentPoolDto
+} from "../dto/candidate-detail.dto";
 import { CreateApplicationNotesDto } from "../../applicants/dto/create-application-notes.dto";
 import { UpdateApplicationNotesDto } from "../../applicants/dto/update-application-notes.dto";
 import { ApplicationNotesResponseDto } from "../../applicants/dto/application-notes-response.dto";
@@ -307,7 +318,8 @@ export class CandidatesController {
   @IsRole(role.HR_MANAGER)
   @ApiOperation({
     summary: "Get applicants for table display",
-    description: "Retrieve applicants with optimized data structure for table display, including pagination, filtering, and sorting support."
+    description:
+      "Retrieve applicants with optimized data structure for table display, including pagination, filtering, and sorting support."
   })
   @ApiResponse({
     status: 200,
@@ -331,7 +343,8 @@ export class CandidatesController {
   @IsRole(role.HR_MANAGER)
   @ApiOperation({
     summary: "Get applicant summary/statistics",
-    description: "Retrieve applicant statistics including counts by status, stage, and trends."
+    description:
+      "Retrieve applicant statistics including counts by status, stage, and trends."
   })
   @ApiResponse({
     status: 200,
@@ -341,7 +354,7 @@ export class CandidatesController {
   async getApplicantsSummary(@Query() query: ApplicantSummaryQueryDto) {
     const result = await this.candidatesService.getApplicantsSummary(query);
 
-    return result
+    return result;
   }
 
   @Get("compare")
@@ -350,12 +363,14 @@ export class CandidatesController {
   @IsRole(role.HR_MANAGER)
   @ApiOperation({
     summary: "Get multiple candidates for comparison",
-    description: "Retrieve detailed information for multiple candidates by their application IDs for comparison purposes."
+    description:
+      "Retrieve detailed information for multiple candidates by their application IDs for comparison purposes."
   })
   @ApiQuery({
     name: "candidates",
     description: "Comma-separated list of application IDs",
-    example: "a4417aae-2639-418d-9184-0e635449ed30,f12d13c3-7fad-4dcd-bd93-5fb08d07eca7",
+    example:
+      "a4417aae-2639-418d-9184-0e635449ed30,f12d13c3-7fad-4dcd-bd93-5fb08d07eca7",
     type: String,
     required: true
   })
@@ -400,8 +415,11 @@ export class CandidatesController {
       throw new Error("Candidates parameter is required");
     }
 
-    const candidateIds = candidates.split(',').map(id => id.trim()).filter(id => id);
-    
+    const candidateIds = candidates
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id);
+
     if (candidateIds.length === 0) {
       throw new Error("At least one candidate ID is required");
     }
@@ -410,9 +428,10 @@ export class CandidatesController {
       throw new Error("Maximum 10 candidates can be compared at once");
     }
 
-    const result = await this.candidatesService.getCandidatesForComparison(candidateIds);
+    const result =
+      await this.candidatesService.getCandidatesForComparison(candidateIds);
 
-    return result
+    return result;
   }
 
   @Get(":applicationId")
@@ -421,7 +440,8 @@ export class CandidatesController {
   @IsRole(role.HR_MANAGER)
   @ApiOperation({
     summary: "Get candidate detail",
-    description: "Retrieve detailed information for a specific candidate by application ID."
+    description:
+      "Retrieve detailed information for a specific candidate by application ID."
   })
   @ApiParam({
     name: "applicationId",
@@ -434,10 +454,13 @@ export class CandidatesController {
     description: "Candidate detail retrieved successfully",
     type: CandidateDetailDto
   })
-  async getCandidateDetail(@Param("applicationId", ParseUUIDPipe) applicationId: string) {
-    const result = await this.candidatesService.getCandidateDetail(applicationId);
+  async getCandidateDetail(
+    @Param("applicationId", ParseUUIDPipe) applicationId: string
+  ) {
+    const result =
+      await this.candidatesService.getCandidateDetail(applicationId);
 
-    return result
+    return result;
   }
 
   @Patch(":applicationId/status")
@@ -470,7 +493,7 @@ export class CandidatesController {
       updateStatusDto.score
     );
 
-    return result
+    return result;
   }
 
   @Patch(":applicationId/move-stage")
@@ -479,7 +502,8 @@ export class CandidatesController {
   @IsRole(role.HR_MANAGER)
   @ApiOperation({
     summary: "Move candidate to next stage",
-    description: "Move a candidate to the next stage in the recruitment pipeline."
+    description:
+      "Move a candidate to the next stage in the recruitment pipeline."
   })
   @ApiParam({
     name: "applicationId",
@@ -502,7 +526,7 @@ export class CandidatesController {
       moveStageDto.score
     );
 
-    return result
+    return result;
   }
 
   @Get(":applicationId/hiring-progress")
@@ -511,7 +535,8 @@ export class CandidatesController {
   @IsRole(role.HR_MANAGER)
   @ApiOperation({
     summary: "Get candidate hiring progress",
-    description: "Retrieve the hiring progress and stage information for a specific candidate."
+    description:
+      "Retrieve the hiring progress and stage information for a specific candidate."
   })
   @ApiParam({
     name: "applicationId",
@@ -524,8 +549,11 @@ export class CandidatesController {
     description: "Hiring progress retrieved successfully",
     type: HiringProgressDto
   })
-  async getHiringProgress(@Param("applicationId", ParseUUIDPipe) applicationId: string) {
-    const result = await this.candidatesService.getHiringProgress(applicationId);
+  async getHiringProgress(
+    @Param("applicationId", ParseUUIDPipe) applicationId: string
+  ) {
+    const result =
+      await this.candidatesService.getHiringProgress(applicationId);
     return result;
   }
 
@@ -557,11 +585,11 @@ export class CandidatesController {
     );
 
     return {
-      message: `Candidate ${updateTalentPoolDto.isTalentPool ? 'added to' : 'removed from'} talent pool successfully`
+      message: `Candidate ${updateTalentPoolDto.isTalentPool ? "added to" : "removed from"} talent pool successfully`
     };
   }
 
-  // ==================== APPLICATION NOTES ENDPOINTS ====================
+  // ==================== endpoint application notes ====================
 
   @Post(":applicationId/notes")
   @HttpCode(HttpStatus.CREATED)
@@ -598,7 +626,8 @@ export class CandidatesController {
   @IsRole(role.HR_MANAGER)
   @ApiOperation({
     summary: "Get application notes",
-    description: "Retrieve all notes for a specific application with pagination and filtering."
+    description:
+      "Retrieve all notes for a specific application with pagination and filtering."
   })
   @ApiParam({
     name: "applicationId",
@@ -627,7 +656,10 @@ export class CandidatesController {
     @Param("applicationId", ParseUUIDPipe) applicationId: string,
     @Query() query: QueryApplicationNotesDto
   ) {
-    const result = await this.candidatesService.getApplicationNotes(applicationId, query);
+    const result = await this.candidatesService.getApplicationNotes(
+      applicationId,
+      query
+    );
 
     return {
       data: result.data,
@@ -683,7 +715,10 @@ export class CandidatesController {
     @Param("noteId", ParseUUIDPipe) noteId: string,
     @Body() updateDto: UpdateApplicationNotesDto
   ) {
-    const result = await this.candidatesService.updateApplicationNote(noteId, updateDto);
+    const result = await this.candidatesService.updateApplicationNote(
+      noteId,
+      updateDto
+    );
 
     return result;
   }

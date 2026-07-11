@@ -1,7 +1,12 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column,
-  CreateDateColumn, UpdateDateColumn, DeleteDateColumn,
-  ManyToOne, JoinColumn
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  DeleteDateColumn,
+  ManyToOne,
+  JoinColumn
 } from "typeorm";
 import { Applicant } from "./applicant.entity";
 import { EmployeeStatus } from "../../../shared/enums/applicant.enum";
@@ -27,7 +32,6 @@ export class ApplicantJobHistory {
 
   @Column({ type: "varchar", length: 255, nullable: true })
   company!: string | null;
-
 
   @Column({ type: "date" })
   startDate!: Date;

@@ -21,11 +21,6 @@ export class RecruitmentPipelineService {
     private readonly dataSource: DataSource
   ) {}
 
-  /**
-   * Create a new recruitment pipeline
-   * @param createRecruitmentPipelineDto - Data for creating recruitment pipeline
-   * @returns Created recruitment pipeline
-   */
   async create(
     createRecruitmentPipelineDto: CreateRecruitmentPipelineDto
   ): Promise<RecruitmentPipelineResponseDto> {
@@ -50,12 +45,6 @@ export class RecruitmentPipelineService {
     }
   }
 
-  /**
-   * Find all recruitment pipelines with pagination and filtering
-   * @param paginationDto - Pagination parameters
-   * @param filters - Optional filters
-   * @returns Paginated list of recruitment pipelines
-   */
   async findAll(
     paginationDto: BaseFindAllDto,
     filters?: {
@@ -65,7 +54,15 @@ export class RecruitmentPipelineService {
       isDefault?: boolean;
       search?: string;
     }
-  ): Promise<{ data: RecruitmentPipelineResponseDto[]; pagination: { page: number; limit: number; total_items: number; total_pages: number } }> {
+  ): Promise<{
+    data: RecruitmentPipelineResponseDto[];
+    pagination: {
+      page: number;
+      limit: number;
+      total_items: number;
+      total_pages: number;
+    };
+  }> {
     const { page, limit } = paginationDto;
     const skip = (page - 1) * limit;
 
@@ -75,7 +72,6 @@ export class RecruitmentPipelineService {
       .leftJoinAndSelect("stages.stageTemplate", "stageTemplate")
       .where("pipeline.deletedAt IS NULL");
 
-    // Apply filters
     if (filters?.category) {
       queryBuilder.andWhere("pipeline.category = :category", {
         category: filters.category
@@ -107,13 +103,10 @@ export class RecruitmentPipelineService {
       );
     }
 
-    // Order by creation date (newest first)
     queryBuilder.orderBy("pipeline.createdAt", "DESC");
 
-    // Get total count
     const totalItems = await queryBuilder.getCount();
 
-    // Apply pagination
     queryBuilder.skip(skip).take(limit);
 
     const recruitmentPipelines = await queryBuilder.getMany();
@@ -133,11 +126,6 @@ export class RecruitmentPipelineService {
     };
   }
 
-  /**
-   * Find a recruitment pipeline by ID
-   * @param id - Recruitment pipeline ID
-   * @returns Recruitment pipeline
-   */
   async findOne(id: string): Promise<RecruitmentPipelineResponseDto> {
     const recruitmentPipeline =
       await this.recruitmentPipelineRepository.findOne({
@@ -157,12 +145,6 @@ export class RecruitmentPipelineService {
     return this.mapToResponseDto(recruitmentPipeline);
   }
 
-  /**
-   * Update a recruitment pipeline
-   * @param id - Recruitment pipeline ID
-   * @param updateRecruitmentPipelineDto - Data for updating recruitment pipeline
-   * @returns Updated recruitment pipeline
-   */
   async update(
     id: string,
     updateRecruitmentPipelineDto: UpdateRecruitmentPipelineDto
@@ -183,7 +165,6 @@ export class RecruitmentPipelineService {
     }
 
     try {
-      // Update the recruitment pipeline
       Object.assign(recruitmentPipeline, updateRecruitmentPipelineDto);
 
       const updatedRecruitmentPipeline =
@@ -197,11 +178,6 @@ export class RecruitmentPipelineService {
     }
   }
 
-  /**
-   * Soft delete a recruitment pipeline
-   * @param id - Recruitment pipeline ID
-   * @returns Success message
-   */
   async remove(id: string): Promise<{ message: string }> {
     const recruitmentPipeline =
       await this.recruitmentPipelineRepository.findOne({
@@ -218,7 +194,6 @@ export class RecruitmentPipelineService {
     }
 
     try {
-      // Soft delete
       await this.recruitmentPipelineRepository.softDelete(id);
 
       return { message: "Recruitment pipeline deleted successfully" };
@@ -229,11 +204,6 @@ export class RecruitmentPipelineService {
     }
   }
 
-  /**
-   * Find recruitment pipelines by category
-   * @param category - Category name
-   * @returns List of recruitment pipelines in the category
-   */
   async findByCategory(
     category: string
   ): Promise<RecruitmentPipelineResponseDto[]> {
@@ -252,10 +222,6 @@ export class RecruitmentPipelineService {
     );
   }
 
-  /**
-   * Find template recruitment pipelines
-   * @returns List of template recruitment pipelines
-   */
   async findTemplates(): Promise<RecruitmentPipelineResponseDto[]> {
     const recruitmentPipelines = await this.recruitmentPipelineRepository.find({
       where: {
@@ -272,10 +238,6 @@ export class RecruitmentPipelineService {
     );
   }
 
-  /**
-   * Get the default recruitment pipeline
-   * @returns Default recruitment pipeline
-   */
   async getDefault(): Promise<RecruitmentPipelineResponseDto | null> {
     const defaultPipeline = await this.recruitmentPipelineRepository.findOne({
       where: {
@@ -289,11 +251,6 @@ export class RecruitmentPipelineService {
     return defaultPipeline ? this.mapToResponseDto(defaultPipeline) : null;
   }
 
-  /**
-   * Set a recruitment pipeline as default
-   * @param id - Recruitment pipeline ID
-   * @returns Updated recruitment pipeline
-   */
   async setAsDefault(id: string): Promise<RecruitmentPipelineResponseDto> {
     const recruitmentPipeline =
       await this.recruitmentPipelineRepository.findOne({
@@ -311,16 +268,22 @@ export class RecruitmentPipelineService {
     }
 
     try {
-      // wrap in transaction to prevent race condition where two pipelines end up as default
+      // dibungkus transaksi untuk mencegah race condition dua pipeline sama-sama jadi default
       return await this.dataSource.transaction(async (manager) => {
         await manager.update(
           RecruitmentPipeline,
-          { isDefault: true, deletedAt: IsNull() } as FindOptionsWhere<RecruitmentPipeline>,
+          {
+            isDefault: true,
+            deletedAt: IsNull()
+          } as FindOptionsWhere<RecruitmentPipeline>,
           { isDefault: false }
         );
 
         recruitmentPipeline.isDefault = true;
-        const updatedPipeline = await manager.save(RecruitmentPipeline, recruitmentPipeline);
+        const updatedPipeline = await manager.save(
+          RecruitmentPipeline,
+          recruitmentPipeline
+        );
         return this.mapToResponseDto(updatedPipeline);
       });
     } catch (error) {
@@ -330,11 +293,6 @@ export class RecruitmentPipelineService {
     }
   }
 
-  /**
-   * Increment usage count for a template pipeline
-   * @param id - Recruitment pipeline ID
-   * @returns Updated recruitment pipeline
-   */
   async incrementUsageCount(
     id: string
   ): Promise<RecruitmentPipelineResponseDto> {
@@ -366,19 +324,11 @@ export class RecruitmentPipelineService {
     }
   }
 
-  /**
-   * Create a pipeline from a template
-   * @param templateId - Template pipeline ID
-   * @param createdById - ID of the user creating the pipeline
-   * @param customName - Optional custom name for the new pipeline
-   * @returns Created pipeline instance
-   */
   async createFromTemplate(
     templateId: string,
     createdById: string,
     customName?: string
   ): Promise<RecruitmentPipelineResponseDto> {
-    // Find the template pipeline
     const templatePipeline = await this.recruitmentPipelineRepository.findOne({
       where: {
         id: templateId,
@@ -396,7 +346,6 @@ export class RecruitmentPipelineService {
     }
 
     try {
-      // Create new pipeline instance from template
       const newPipeline = this.recruitmentPipelineRepository.create({
         name: customName || `${templatePipeline.name} - Instance`,
         description: templatePipeline.description,
@@ -412,7 +361,7 @@ export class RecruitmentPipelineService {
       const savedPipeline =
         await this.recruitmentPipelineRepository.save(newPipeline);
 
-      // Copy stages from template
+      // salin stages dari template
       if (templatePipeline.stages && templatePipeline.stages.length > 0) {
         const { PipelineStage } = await import(
           "../entities/pipeline-stage.entity"
@@ -435,10 +384,8 @@ export class RecruitmentPipelineService {
         await pipelineStageRepository.save(newStages);
       }
 
-      // Increment usage count of the template
       await this.incrementUsageCount(templateId);
 
-      // Return the created pipeline with stages
       return await this.findOne(savedPipeline.id);
     } catch (error) {
       throw new BadRequestException(
@@ -447,10 +394,6 @@ export class RecruitmentPipelineService {
     }
   }
 
-  /**
-   * Get the default template pipeline
-   * @returns Default template pipeline
-   */
   async getDefaultTemplate(): Promise<RecruitmentPipelineResponseDto | null> {
     const defaultTemplate = await this.recruitmentPipelineRepository.findOne({
       where: {
@@ -465,17 +408,10 @@ export class RecruitmentPipelineService {
     return defaultTemplate ? this.mapToResponseDto(defaultTemplate) : null;
   }
 
-  /**
-   * Replace stages in an existing pipeline with stages from a template
-   * @param pipelineId - Existing pipeline ID
-   * @param templateId - Template pipeline ID to copy stages from
-   * @returns Updated pipeline with new stages
-   */
   async replaceStagesFromTemplate(
     pipelineId: string,
     templateId: string
   ): Promise<RecruitmentPipelineResponseDto> {
-    // Find the existing pipeline
     const existingPipeline = await this.recruitmentPipelineRepository.findOne({
       where: {
         id: pipelineId,
@@ -488,7 +424,6 @@ export class RecruitmentPipelineService {
       throw new NotFoundException(`Pipeline with ID ${pipelineId} not found`);
     }
 
-    // Find the template pipeline
     const templatePipeline = await this.recruitmentPipelineRepository.findOne({
       where: {
         id: templateId,
@@ -506,7 +441,7 @@ export class RecruitmentPipelineService {
     }
 
     try {
-      // Delete existing stages
+      // hapus stages yang lama
       if (existingPipeline.stages && existingPipeline.stages.length > 0) {
         const { PipelineStage } = await import(
           "../entities/pipeline-stage.entity"
@@ -518,7 +453,7 @@ export class RecruitmentPipelineService {
         await pipelineStageRepository.delete({ pipelineId });
       }
 
-      // Copy stages from template
+      // salin stages dari template
       if (templatePipeline.stages && templatePipeline.stages.length > 0) {
         const { PipelineStage } = await import(
           "../entities/pipeline-stage.entity"
@@ -541,10 +476,8 @@ export class RecruitmentPipelineService {
         await pipelineStageRepository.save(newStages);
       }
 
-      // Increment usage count of the template
       await this.incrementUsageCount(templateId);
 
-      // Return the updated pipeline with new stages
       return await this.findOne(existingPipeline.id);
     } catch (error) {
       throw new BadRequestException(
@@ -553,10 +486,6 @@ export class RecruitmentPipelineService {
     }
   }
 
-  /**
-   * Get available categories
-   * @returns List of unique categories
-   */
   async getCategories(): Promise<string[]> {
     const result = await this.recruitmentPipelineRepository
       .createQueryBuilder("pipeline")
@@ -568,11 +497,6 @@ export class RecruitmentPipelineService {
     return result.map((item) => item.category).filter(Boolean);
   }
 
-  /**
-   * Map entity to response DTO
-   * @param recruitmentPipeline - Recruitment pipeline entity
-   * @returns Recruitment pipeline response DTO
-   */
   private mapToResponseDto(
     recruitmentPipeline: RecruitmentPipeline
   ): RecruitmentPipelineResponseDto {

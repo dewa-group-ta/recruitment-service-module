@@ -7,14 +7,13 @@ async function runSeeder() {
   const dataSource = migrationConnectionSource;
 
   try {
-    console.log("🔌 Connecting to database...");
+    console.log("Connecting to database...");
     await dataSource.initialize();
-    console.log("✅ Database connected successfully!");
+    console.log("Database connected successfully!");
     console.log("");
 
     const seeder = new MainSeeder(dataSource);
 
-    // Parse command line arguments
     const args = process.argv.slice(2);
     const command = args[0];
     const seederName = args[1];
@@ -26,17 +25,17 @@ async function runSeeder() {
 
       case "run-specific":
         if (!seederName) {
-          console.error("❌ Please specify a seeder name.");
+          console.error("Please specify a seeder name.");
           console.log("Usage: npm run seed:run-specific <seeder-name>");
           console.log("Available seeders:");
-          console.log("   • system-configuration");
-          console.log("   • job-category");
-          console.log("   • pipeline-template");
-          console.log("   • recruitment-pipeline");
-          console.log("   • vacancy-form");
-          console.log("   • vacancy");
-          console.log("   • applicants-data");
-          console.log("   • application");
+          console.log("• system-configuration");
+          console.log("• job-category");
+          console.log("• pipeline-template");
+          console.log("• recruitment-pipeline");
+          console.log("• vacancy-form");
+          console.log("• vacancy");
+          console.log("• applicants-data");
+          console.log("• application");
           process.exit(1);
         }
         await seeder.runSpecificSeeder(seederName);
@@ -47,64 +46,57 @@ async function runSeeder() {
         break;
 
       default:
-        console.log("🌱 Recruitment System Database Seeder");
+        console.log("Recruitment System Database Seeder");
         console.log("=====================================");
         console.log("");
         console.log("Usage:");
-        console.log("  npm run seed:run              - Run all seeders");
-        console.log("  npm run seed:run-specific <name> - Run specific seeder");
-        console.log("  npm run seed:clear            - Clear all seeded data");
+        console.log("npm run seed:run - Run all seeders");
+        console.log("npm run seed:run-specific <name> - Run specific seeder");
+        console.log("npm run seed:clear - Clear all seeded data");
         console.log("");
         console.log("Available seeders:");
         console.log(
-          "  • system-configuration       - Seed system configurations (company info, social media, banners)"
+          "• system-configuration - Seed system configurations (company info, social media, banners)"
         );
-        console.log("  • job-category               - Seed job categories");
+        console.log("• job-category - Seed job categories");
+        console.log("• pipeline-template - Seed pipeline templates");
         console.log(
-          "  • pipeline-template          - Seed pipeline templates"
+          "• recruitment-pipeline - Seed recruitment pipelines and stages"
         );
-        console.log(
-          "  • recruitment-pipeline        - Seed recruitment pipelines and stages"
-        );
-        console.log(
-          "  • vacancy-form               - Seed vacancy form templates"
-        );
-        console.log("  • vacancy                    - Seed sample vacancies");
-        console.log("  • applicants-data            - Seed sample applicants");
-        console.log("  • application                - Seed sample applications");
+        console.log("• vacancy-form - Seed vacancy form templates");
+        console.log("• vacancy - Seed sample vacancies");
+        console.log("• applicants-data - Seed sample applicants");
+        console.log("• application - Seed sample applications");
         console.log("");
         console.log("Examples:");
-        console.log("  npm run seed:run-specific system-configuration");
-        console.log("  npm run seed:run-specific job-category");
-        console.log("  npm run seed:run-specific pipeline-template");
-        console.log("  npm run seed:run-specific recruitment-pipeline");
-        console.log("  npm run seed:run-specific vacancy");
-        console.log("  npm run seed:run-specific applicants-data");
-        console.log("  npm run seed:run-specific application");
+        console.log("npm run seed:run-specific system-configuration");
+        console.log("npm run seed:run-specific job-category");
+        console.log("npm run seed:run-specific pipeline-template");
+        console.log("npm run seed:run-specific recruitment-pipeline");
+        console.log("npm run seed:run-specific vacancy");
+        console.log("npm run seed:run-specific applicants-data");
+        console.log("npm run seed:run-specific application");
         break;
     }
   } catch (error) {
-    console.error("❌ Seeding failed:", error);
+    console.error("Seeding failed:", error);
     process.exit(1);
   } finally {
     if (dataSource.isInitialized) {
       await dataSource.destroy();
-      console.log("🔌 Database connection closed.");
+      console.log("Database connection closed.");
     }
   }
 }
 
-// Handle unhandled promise rejections
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
   process.exit(1);
 });
 
-// Handle uncaught exceptions
 process.on("uncaughtException", (error) => {
-  console.error("❌ Uncaught Exception:", error);
+  console.error("Uncaught Exception:", error);
   process.exit(1);
 });
 
-// Run the seeder
 void runSeeder();

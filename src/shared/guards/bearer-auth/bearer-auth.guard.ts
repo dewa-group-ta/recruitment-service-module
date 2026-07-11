@@ -14,8 +14,7 @@ import { role } from "src/shared/utils/constant";
 import { Request } from "express";
 
 /**
- * Bearer authentication guard for protecting routes
- * Handles JWT token validation and role-based access control
+ * guard autentikasi bearer token, termasuk validasi khusus untuk role applicant.
  */
 @Injectable()
 export class BearerAuthGuard implements CanActivate {
@@ -26,13 +25,6 @@ export class BearerAuthGuard implements CanActivate {
     private readonly tokenService: TokenService
   ) {}
 
-  /**
-   * Determines if the request should be allowed to proceed
-   * @param context - Execution context containing request information
-   * @returns Promise<boolean> - True if access is granted, false otherwise
-   * @throws UnauthorizedException - When authentication fails
-   * @throws BadRequestException - When token validation fails
-   */
   async canActivate(context: ExecutionContext): Promise<boolean> {
     try {
       const isPublic = this.reflector.getAllAndOverride<boolean>(
@@ -57,7 +49,7 @@ export class BearerAuthGuard implements CanActivate {
         throw new UnauthorizedException("Authorization token is required");
       }
 
-      // Validate token for applicant role
+      // role applicant divalidasi lewat token service, bukan sekadar dipakai sebagai id
       const roles = this.reflector.getAllAndOverride<string[]>(ROLES, [
         context.getHandler(),
         context.getClass()
@@ -67,7 +59,7 @@ export class BearerAuthGuard implements CanActivate {
         return await this.validateApplicantToken(token, request);
       }
 
-      // For other roles, set user info from token
+      // untuk role lain, token langsung dipakai sebagai user id
       request["user"] = {
         id: token
       };
@@ -95,14 +87,6 @@ export class BearerAuthGuard implements CanActivate {
     }
   }
 
-  /**
-   * Validates applicant token and sets applicant ID in request
-   * @param token - JWT token to validate
-   * @param request - Express request object
-   * @returns Promise<boolean> - True if validation succeeds
-   * @throws UnauthorizedException - When token is invalid
-   * @throws BadRequestException - When validation fails
-   */
   private async validateApplicantToken(
     token: string,
     request: Request
@@ -142,11 +126,6 @@ export class BearerAuthGuard implements CanActivate {
     }
   }
 
-  /**
-   * Extracts Bearer token from Authorization header
-   * @param request - Express request object
-   * @returns string | undefined - Extracted token or undefined
-   */
   private extractTokenFromHeader(request: Request): string | undefined {
     const authHeader = request.headers.authorization;
     if (!authHeader) {

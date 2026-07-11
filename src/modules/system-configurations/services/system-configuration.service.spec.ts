@@ -70,7 +70,6 @@ describe("SystemConfigurationService", () => {
     };
 
     it("should create a new system configuration successfully", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(null); // No existing config
       systemConfigurationRepository.create.mockReturnValue(
         mockSystemConfiguration as any
@@ -79,10 +78,8 @@ describe("SystemConfigurationService", () => {
         mockSystemConfiguration as any
       );
 
-      // Act
       const result = await service.create(createDto);
 
-      // Assert
       expect(systemConfigurationRepository.findOne).toHaveBeenCalledWith({
         where: { configKey: "app.name" }
       });
@@ -95,12 +92,10 @@ describe("SystemConfigurationService", () => {
     });
 
     it("should throw ConflictException when config key already exists", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(
         mockSystemConfiguration as any
       );
 
-      // Act & Assert
       await expect(service.create(createDto)).rejects.toThrow(
         ConflictException
       );
@@ -110,7 +105,6 @@ describe("SystemConfigurationService", () => {
     });
 
     it("should handle creation errors", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(null);
       systemConfigurationRepository.create.mockReturnValue(
         mockSystemConfiguration as any
@@ -119,7 +113,6 @@ describe("SystemConfigurationService", () => {
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.create(createDto)).rejects.toThrow("Database error");
     });
   });
@@ -134,16 +127,13 @@ describe("SystemConfigurationService", () => {
     };
 
     it("should return paginated system configurations with filters", async () => {
-      // Arrange
       systemConfigurationRepository.findAndCount.mockResolvedValue([
         [mockSystemConfiguration],
         1
       ]);
 
-      // Act
       const result = await service.findAll(queryDto);
 
-      // Assert
       expect(systemConfigurationRepository.findAndCount).toHaveBeenCalledWith({
         where: {
           configKey: Like("%app%"),
@@ -165,17 +155,14 @@ describe("SystemConfigurationService", () => {
     });
 
     it("should return configurations without filters when not provided", async () => {
-      // Arrange
       const simpleQueryDto = { page: 1, limit: 10 };
       systemConfigurationRepository.findAndCount.mockResolvedValue([
         [mockSystemConfiguration],
         1
       ]);
 
-      // Act
       const result = await service.findAll(simpleQueryDto);
 
-      // Assert
       expect(systemConfigurationRepository.findAndCount).toHaveBeenCalledWith({
         where: {},
         skip: 0,
@@ -188,27 +175,22 @@ describe("SystemConfigurationService", () => {
     });
 
     it("should handle pagination errors", async () => {
-      // Arrange
       systemConfigurationRepository.findAndCount.mockRejectedValue(
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.findAll(queryDto)).rejects.toThrow("Database error");
     });
   });
 
   describe("findOne", () => {
     it("should return system configuration when found", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(
         mockSystemConfiguration as any
       );
 
-      // Act
       const result = await service.findOne("config-1");
 
-      // Assert
       expect(systemConfigurationRepository.findOne).toHaveBeenCalledWith({
         where: { id: "config-1" }
       });
@@ -217,10 +199,8 @@ describe("SystemConfigurationService", () => {
     });
 
     it("should throw NotFoundException when system configuration not found", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.findOne("nonexistent-id")).rejects.toThrow(
         NotFoundException
       );
@@ -229,15 +209,12 @@ describe("SystemConfigurationService", () => {
 
   describe("findByKey", () => {
     it("should return system configuration by key", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(
         mockSystemConfiguration as any
       );
 
-      // Act
       const result = await service.findByKey("app.name");
 
-      // Assert
       expect(systemConfigurationRepository.findOne).toHaveBeenCalledWith({
         where: { configKey: "app.name" }
       });
@@ -246,13 +223,10 @@ describe("SystemConfigurationService", () => {
     });
 
     it("should return null when configuration not found by key", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(null);
 
-      // Act
       const result = await service.findByKey("nonexistent.key");
 
-      // Assert
       expect(result).toBeNull();
     });
   });
@@ -264,7 +238,6 @@ describe("SystemConfigurationService", () => {
     };
 
     it("should update system configuration successfully", async () => {
-      // Arrange
       const updatedConfig = { ...mockSystemConfiguration, ...updateDto };
       systemConfigurationRepository.findOne
         .mockResolvedValueOnce(mockSystemConfiguration as any) // First call for finding existing config
@@ -273,10 +246,8 @@ describe("SystemConfigurationService", () => {
         affected: 1
       } as any);
 
-      // Act
       const result = await service.update("config-1", updateDto);
 
-      // Assert
       expect(systemConfigurationRepository.findOne).toHaveBeenCalledWith({
         where: { id: "config-1" }
       });
@@ -289,17 +260,14 @@ describe("SystemConfigurationService", () => {
     });
 
     it("should throw NotFoundException when system configuration not found", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.update("nonexistent-id", updateDto)).rejects.toThrow(
         NotFoundException
       );
     });
 
     it("should handle update errors", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(
         mockSystemConfiguration as any
       );
@@ -307,7 +275,6 @@ describe("SystemConfigurationService", () => {
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.update("config-1", updateDto)).rejects.toThrow(
         "Database error"
       );
@@ -316,7 +283,6 @@ describe("SystemConfigurationService", () => {
 
   describe("remove", () => {
     it("should delete system configuration successfully", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(
         mockSystemConfiguration as any
       );
@@ -324,10 +290,8 @@ describe("SystemConfigurationService", () => {
         affected: 1
       } as any);
 
-      // Act
       await service.remove("config-1");
 
-      // Assert
       expect(systemConfigurationRepository.findOne).toHaveBeenCalledWith({
         where: { id: "config-1" }
       });
@@ -337,17 +301,14 @@ describe("SystemConfigurationService", () => {
     });
 
     it("should throw NotFoundException when system configuration not found", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.remove("nonexistent-id")).rejects.toThrow(
         NotFoundException
       );
     });
 
     it("should handle deletion errors", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(
         mockSystemConfiguration as any
       );
@@ -355,7 +316,6 @@ describe("SystemConfigurationService", () => {
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.remove("config-1")).rejects.toThrow(
         "Database error"
       );
@@ -364,14 +324,11 @@ describe("SystemConfigurationService", () => {
 
   describe("findByCategory", () => {
     it("should return system configurations by category", async () => {
-      // Arrange
       const configs = [mockSystemConfiguration];
       systemConfigurationRepository.find.mockResolvedValue(configs as any);
 
-      // Act
       const result = await service.findByCategory("GENERAL");
 
-      // Assert
       expect(systemConfigurationRepository.find).toHaveBeenCalledWith({
         where: { category: "GENERAL", isActive: true },
         order: { configKey: "ASC" }
@@ -382,13 +339,10 @@ describe("SystemConfigurationService", () => {
     });
 
     it("should return empty array when no configurations found", async () => {
-      // Arrange
       systemConfigurationRepository.find.mockResolvedValue([]);
 
-      // Act
       const result = await service.findByCategory("NONEXISTENT");
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });
@@ -396,16 +350,13 @@ describe("SystemConfigurationService", () => {
 
   describe("findActive", () => {
     it("should return all active system configurations", async () => {
-      // Arrange
       const activeConfigs = [mockSystemConfiguration];
       systemConfigurationRepository.find.mockResolvedValue(
         activeConfigs as any
       );
 
-      // Act
       const result = await service.findActive();
 
-      // Assert
       expect(systemConfigurationRepository.find).toHaveBeenCalledWith({
         where: { isActive: true },
         order: { configKey: "ASC" }
@@ -416,13 +367,10 @@ describe("SystemConfigurationService", () => {
     });
 
     it("should return empty array when no active configurations found", async () => {
-      // Arrange
       systemConfigurationRepository.find.mockResolvedValue([]);
 
-      // Act
       const result = await service.findActive();
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });
@@ -430,15 +378,12 @@ describe("SystemConfigurationService", () => {
 
   describe("getConfigValue", () => {
     it("should return configuration value by key", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(
         mockSystemConfiguration as any
       );
 
-      // Act
       const result = await service.getConfigValue("app.name");
 
-      // Assert
       expect(systemConfigurationRepository.findOne).toHaveBeenCalledWith({
         where: { configKey: "app.name", isActive: true }
       });
@@ -446,34 +391,27 @@ describe("SystemConfigurationService", () => {
     });
 
     it("should return default value when configuration not found", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(null);
 
-      // Act
       const result = await service.getConfigValue(
         "nonexistent.key",
         "default-value"
       );
 
-      // Assert
       expect(result).toBe("default-value");
     });
 
     it("should return null when configuration not found and no default provided", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(null);
 
-      // Act
       const result = await service.getConfigValue("nonexistent.key");
 
-      // Assert
       expect(result).toBeNull();
     });
   });
 
   describe("setConfigValue", () => {
     it("should update configuration value by key", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(
         mockSystemConfiguration as any
       );
@@ -481,10 +419,8 @@ describe("SystemConfigurationService", () => {
         affected: 1
       } as any);
 
-      // Act
       await service.setConfigValue("app.name", "New Value");
 
-      // Assert
       expect(systemConfigurationRepository.findOne).toHaveBeenCalledWith({
         where: { configKey: "app.name" }
       });
@@ -495,10 +431,8 @@ describe("SystemConfigurationService", () => {
     });
 
     it("should throw NotFoundException when configuration not found", async () => {
-      // Arrange
       systemConfigurationRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(
         service.setConfigValue("nonexistent.key", "value")
       ).rejects.toThrow(NotFoundException);

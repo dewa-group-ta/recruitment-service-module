@@ -171,7 +171,6 @@ describe("VacancyService", () => {
     };
 
     it("should create a new vacancy successfully", async () => {
-      // Arrange
       recruitmentPipelineService.getDefaultTemplate.mockResolvedValue(
         mockDefaultTemplate
       );
@@ -181,10 +180,8 @@ describe("VacancyService", () => {
       vacancyRepository.create.mockReturnValue(mockVacancy as any);
       vacancyRepository.save.mockResolvedValue(mockVacancy as any);
 
-      // Act
       const result = await service.create(createVacancyDto, "user-1");
 
-      // Assert
       expect(recruitmentPipelineService.getDefaultTemplate).toHaveBeenCalled();
       expect(
         recruitmentPipelineService.createFromTemplate
@@ -209,10 +206,8 @@ describe("VacancyService", () => {
     });
 
     it("should throw BadRequestException when no default template is found", async () => {
-      // Arrange
       recruitmentPipelineService.getDefaultTemplate.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.create(createVacancyDto, "user-1")).rejects.toThrow(
         BadRequestException
       );
@@ -223,7 +218,6 @@ describe("VacancyService", () => {
     });
 
     it("should throw BadRequestException when pipeline creation fails", async () => {
-      // Arrange
       recruitmentPipelineService.getDefaultTemplate.mockResolvedValue(
         mockDefaultTemplate
       );
@@ -231,7 +225,6 @@ describe("VacancyService", () => {
         new Error("Pipeline creation failed")
       );
 
-      // Act & Assert
       await expect(service.create(createVacancyDto, "user-1")).rejects.toThrow(
         BadRequestException
       );
@@ -245,20 +238,17 @@ describe("VacancyService", () => {
     };
 
     it("should update vacancy successfully", async () => {
-      // Arrange
       vacancyRepository.findOne
         .mockResolvedValueOnce(mockVacancy as any) // First call for finding existing vacancy
         .mockResolvedValueOnce({ ...mockVacancy, ...updateVacancyDto } as any); // Second call for fetching updated vacancy
       vacancyRepository.update.mockResolvedValue({ affected: 1 } as any);
 
-      // Act
       const result = await service.update(
         "vacancy-1",
         updateVacancyDto,
         "user-1"
       );
 
-      // Assert
       expect(vacancyRepository.findOne).toHaveBeenCalledWith({
         where: { id: "vacancy-1" }
       });
@@ -275,31 +265,26 @@ describe("VacancyService", () => {
     });
 
     it("should throw NotFoundException when vacancy not found", async () => {
-      // Arrange
       vacancyRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(
         service.update("nonexistent-id", updateVacancyDto, "user-1")
       ).rejects.toThrow(NotFoundException);
     });
 
     it("should throw BadRequestException for invalid pipeline ID format", async () => {
-      // Arrange
       const invalidUpdateDto = {
         ...updateVacancyDto,
         pipelineId: "invalid-uuid"
       };
       vacancyRepository.findOne.mockResolvedValue(mockVacancy as any);
 
-      // Act & Assert
       await expect(
         service.update("vacancy-1", invalidUpdateDto, "user-1")
       ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw BadRequestException when minimum salary is greater than maximum salary", async () => {
-      // Arrange
       const invalidSalaryDto = {
         ...updateVacancyDto,
         salaryMin: 10000,
@@ -307,7 +292,6 @@ describe("VacancyService", () => {
       };
       vacancyRepository.findOne.mockResolvedValue(mockVacancy as any);
 
-      // Act & Assert
       await expect(
         service.update("vacancy-1", invalidSalaryDto, "user-1")
       ).rejects.toThrow(BadRequestException);
@@ -316,13 +300,10 @@ describe("VacancyService", () => {
 
   describe("findOne", () => {
     it("should return vacancy when found", async () => {
-      // Arrange
       vacancyRepository.findOne.mockResolvedValue(mockVacancy as any);
 
-      // Act
       const result = await service.findOne("vacancy-1");
 
-      // Assert
       expect(vacancyRepository.findOne).toHaveBeenCalledWith({
         where: { id: "vacancy-1" },
         relations: ["pipeline", "jobCategory"]
@@ -332,10 +313,8 @@ describe("VacancyService", () => {
     });
 
     it("should throw NotFoundException when vacancy not found", async () => {
-      // Arrange
       vacancyRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.findOne("nonexistent-id")).rejects.toThrow(
         NotFoundException
       );
@@ -344,7 +323,6 @@ describe("VacancyService", () => {
 
   describe("findAll", () => {
     it("should return paginated vacancies with applicant counts", async () => {
-      // Arrange
       const mockQueryBuilder = {
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
@@ -361,10 +339,8 @@ describe("VacancyService", () => {
         .mockResolvedValueOnce(5) // Total applicants
         .mockResolvedValueOnce(2); // Rejected applicants
 
-      // Act
       const result = await service.findAll(1, 10);
 
-      // Assert
       expect(result).toBeDefined();
       expect(result.data).toHaveLength(1);
       expect(result.data[0].totalApplicants).toBe(5);
@@ -376,7 +352,6 @@ describe("VacancyService", () => {
     });
 
     it("should apply filters correctly", async () => {
-      // Arrange
       const mockQueryBuilder = {
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
@@ -390,10 +365,8 @@ describe("VacancyService", () => {
         mockQueryBuilder as any
       );
 
-      // Act
       await service.findAll(1, 10, "cat-1", JobStatus.PUBLISHED, "engineer");
 
-      // Assert
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         "vacancy.jobCategoryId = :jobCategory",
         { jobCategory: "cat-1" }
@@ -411,15 +384,12 @@ describe("VacancyService", () => {
 
   describe("remove", () => {
     it("should soft delete vacancy successfully", async () => {
-      // Arrange
       vacancyRepository.findOne.mockResolvedValue(mockVacancy as any);
       vacancyRepository.softDelete.mockResolvedValue({ affected: 1 } as any);
       vacancyRepository.update.mockResolvedValue({ affected: 1 } as any);
 
-      // Act
       await service.remove("vacancy-1", "user-1");
 
-      // Assert
       expect(vacancyRepository.findOne).toHaveBeenCalledWith({
         where: { id: "vacancy-1" }
       });
@@ -430,10 +400,8 @@ describe("VacancyService", () => {
     });
 
     it("should throw NotFoundException when vacancy not found", async () => {
-      // Arrange
       vacancyRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.remove("nonexistent-id", "user-1")).rejects.toThrow(
         NotFoundException
       );
@@ -442,14 +410,11 @@ describe("VacancyService", () => {
 
   describe("findAllPublic", () => {
     it("should return public vacancies with PUBLISHED status only", async () => {
-      // Arrange
       const publishedVacancy = { ...mockVacancy, status: JobStatus.PUBLISHED };
       vacancyRepository.findAndCount.mockResolvedValue([[publishedVacancy], 1]);
 
-      // Act
       const result = await service.findAllPublic(1, 10);
 
-      // Assert
       expect(vacancyRepository.findAndCount).toHaveBeenCalledWith({
         where: {
           status: JobStatus.PUBLISHED,
@@ -464,13 +429,10 @@ describe("VacancyService", () => {
     });
 
     it("should filter by job category when provided", async () => {
-      // Arrange
       vacancyRepository.findAndCount.mockResolvedValue([[], 0]);
 
-      // Act
       await service.findAllPublic(1, 10, "cat-1");
 
-      // Assert
       expect(vacancyRepository.findAndCount).toHaveBeenCalledWith({
         where: {
           status: JobStatus.PUBLISHED,
@@ -487,14 +449,11 @@ describe("VacancyService", () => {
 
   describe("findOnePublic", () => {
     it("should return public vacancy when found and active", async () => {
-      // Arrange
       const publishedVacancy = { ...mockVacancy, status: JobStatus.PUBLISHED };
       vacancyRepository.findOne.mockResolvedValue(activeVacancy as any);
 
-      // Act
       const result = await service.findOnePublic("vacancy-1");
 
-      // Assert
       expect(vacancyRepository.findOne).toHaveBeenCalledWith({
         where: {
           id: "vacancy-1",
@@ -507,10 +466,8 @@ describe("VacancyService", () => {
     });
 
     it("should throw NotFoundException when public vacancy not found", async () => {
-      // Arrange
       vacancyRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.findOnePublic("nonexistent-id")).rejects.toThrow(
         NotFoundException
       );
@@ -519,7 +476,6 @@ describe("VacancyService", () => {
 
   describe("updateFromJobForm", () => {
     it("should update vacancy from job form data successfully", async () => {
-      // Arrange
       const jobFormData = {
         jobTitle: "Senior Developer",
         jobCode: "SD001",
@@ -539,14 +495,12 @@ describe("VacancyService", () => {
         .mockResolvedValueOnce({ ...mockVacancy, ...jobFormData } as any); // Second call after update
       vacancyRepository.update.mockResolvedValue({ affected: 1 } as any);
 
-      // Act
       const result = await service.updateFromJobForm(
         "vacancy-1",
         jobFormData,
         "user-1"
       );
 
-      // Assert
       expect(vacancyRepository.update).toHaveBeenCalledWith(
         "vacancy-1",
         expect.objectContaining({
@@ -560,10 +514,8 @@ describe("VacancyService", () => {
     });
 
     it("should throw NotFoundException when vacancy not found in updateFromJobForm", async () => {
-      // Arrange
       vacancyRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(
         service.updateFromJobForm("nonexistent-id", {}, "user-1")
       ).rejects.toThrow(NotFoundException);

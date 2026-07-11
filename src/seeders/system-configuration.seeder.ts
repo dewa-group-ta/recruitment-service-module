@@ -14,11 +14,10 @@ export class SystemConfigurationSeeder extends BaseSeeder {
     const systemConfigurationRepository =
       this.dataSource.getRepository(SystemConfiguration);
 
-    // Clear existing data
     await systemConfigurationRepository.clear();
 
     const configurations = [
-      // Company Information Group
+      // grup informasi perusahaan
       {
         configKey: "company_name",
         configValue: "PT Neuronworks",
@@ -99,7 +98,8 @@ export class SystemConfigurationSeeder extends BaseSeeder {
       },
       {
         configKey: "company_address",
-        configValue: "Komp. Buah Batu Regency A2 No.9 - 10 Kel. Kujangsari, Kec. Bandung Kidul, Bandung, Jawa Barat, Indonesia.",
+        configValue:
+          "Komp. Buah Batu Regency A2 No.9 - 10 Kel. Kujangsari, Kec. Bandung Kidul, Bandung, Jawa Barat, Indonesia.",
         configType: ConfigType.TEXT,
         groupName: "company",
         label: "Address",
@@ -121,7 +121,7 @@ export class SystemConfigurationSeeder extends BaseSeeder {
         sortOrder: 10
       },
 
-      // Company Social Media Group
+      // grup media sosial perusahaan
       {
         configKey: "social_twitter",
         configValue: "",
@@ -213,7 +213,7 @@ export class SystemConfigurationSeeder extends BaseSeeder {
         }
       },
 
-      // Banners Group
+      // grup banner
       {
         configKey: "company_banner",
         configValue: "/uploads/sidebar-banner.jpg",
@@ -260,7 +260,8 @@ export class SystemConfigurationSeeder extends BaseSeeder {
       },
       {
         configKey: "terms_of_service",
-        configValue: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        configValue:
+          "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
         configType: ConfigType.TEXT,
         groupName: "legal",
         label: "Terms of Service",
@@ -271,7 +272,8 @@ export class SystemConfigurationSeeder extends BaseSeeder {
       },
       {
         configKey: "privacy_policy",
-        configValue: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        configValue:
+          "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
         configType: ConfigType.TEXT,
         groupName: "legal",
         label: "Privacy Policy",
@@ -281,7 +283,7 @@ export class SystemConfigurationSeeder extends BaseSeeder {
         sortOrder: 2
       },
 
-      // Notification Template Group
+      // grup template notifikasi
       {
         configKey: "notification_applicant_register",
         configValue: "",
@@ -413,22 +415,21 @@ export class SystemConfigurationSeeder extends BaseSeeder {
             <p>Best regards,<br>{{company_name}}</p>
           </div>`
         }
-      },
+      }
     ];
 
-    // Insert configurations
     for (const config of configurations) {
       const systemConfig = systemConfigurationRepository.create(config);
       await systemConfigurationRepository.save(systemConfig);
     }
 
-    console.log("✅ System Configuration seeder completed successfully");
+    console.log("System Configuration seeder completed successfully");
   }
 
   async clear(): Promise<void> {
     const systemConfigurationRepository =
       this.dataSource.getRepository(SystemConfiguration);
     await systemConfigurationRepository.delete({});
-    console.log("🗑️ System Configuration data cleared");
+    console.log("System Configuration data cleared");
   }
 }

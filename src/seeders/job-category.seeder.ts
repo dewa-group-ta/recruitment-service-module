@@ -10,7 +10,6 @@ export class JobCategorySeeder extends BaseSeeder {
   async run(): Promise<void> {
     const jobCategoryRepository = await this.getRepository(JobCategory);
 
-    // Check if categories already exist
     const existingCategories = await jobCategoryRepository.count();
     if (existingCategories > 0) {
       console.log("Job categories already exist, skipping seeder...");
@@ -102,9 +101,9 @@ export class JobCategorySeeder extends BaseSeeder {
 
     try {
       await this.saveEntities(JobCategory, categories);
-      console.log(`✅ Seeded ${categories.length} job categories`);
+      console.log(`Seeded ${categories.length} job categories`);
     } catch (error) {
-      console.error("❌ Error seeding job categories:", error);
+      console.error("Error seeding job categories:", error);
       throw error;
     }
   }

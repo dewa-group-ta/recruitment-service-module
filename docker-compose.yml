@@ -28,8 +28,8 @@ services:
       TZ: Asia/Jakarta
     command: server --console-address ":9001" /data
     ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # MinIO Console
+      - "9000:9000" # S3 API
+      - "9001:9001" # MinIO Console
     volumes:
       - minio_data:/data
     healthcheck:

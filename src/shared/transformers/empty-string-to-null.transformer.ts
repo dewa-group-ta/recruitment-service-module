@@ -1,8 +1,7 @@
 import { Transform } from "class-transformer";
 
 /**
- * Transforms empty strings to null for enum fields
- * This prevents empty strings from being passed to database enum fields
+ * transform string kosong jadi null, supaya tidak dikirim sebagai nilai enum ke database.
  */
 export function EmptyStringToNull() {
   return Transform(({ value }) => {

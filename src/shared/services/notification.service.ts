@@ -3,8 +3,7 @@ import { SystemConfigEmailService } from "./system-config-email.service";
 import { EmailRecipient } from "../interface/email.interface";
 
 /**
- * Notification service that handles various types of notifications
- * Integrates with system configuration email templates
+ * kirim berbagai jenis notifikasi via template email dari system configuration.
  */
 @Injectable()
 export class NotificationService {
@@ -14,13 +13,6 @@ export class NotificationService {
     private readonly systemConfigEmailService: SystemConfigEmailService
   ) {}
 
-  /**
-   * Send applicant registration notification
-   * @param applicantEmail - Applicant email address
-   * @param applicantName - Applicant name
-   * @param applyLink - Link to apply for job
-   * @returns Promise<boolean> Success status
-   */
   async sendApplicantRegistrationNotification(
     applicantEmail: string,
     applicantName: string,
@@ -62,14 +54,6 @@ export class NotificationService {
     }
   }
 
-  /**
-   * Send applicant application notification
-   * @param applicantEmail - Applicant email address
-   * @param applicantName - Applicant name
-   * @param vacancyName - Vacancy name
-   * @param applicationLink - Link to application
-   * @returns Promise<boolean> Success status
-   */
   async sendApplicantApplicationNotification(
     applicantEmail: string,
     applicantName: string,
@@ -114,14 +98,6 @@ export class NotificationService {
     }
   }
 
-  /**
-   * Send applicant status update notification
-   * @param applicantEmail - Applicant email address
-   * @param applicantName - Applicant name
-   * @param vacancyName - Vacancy name
-   * @param loginUrl - Login URL for tracking
-   * @returns Promise<boolean> Success status
-   */
   async sendApplicantStatusUpdateNotification(
     applicantEmail: string,
     applicantName: string,
@@ -166,13 +142,6 @@ export class NotificationService {
     }
   }
 
-  /**
-   * Send custom notification using system configuration template
-   * @param configKey - System configuration key for the template
-   * @param to - Email recipients
-   * @param templateData - Data to replace placeholders in template
-   * @returns Promise<boolean> Success status
-   */
   async sendCustomNotification(
     configKey: string,
     to: EmailRecipient | EmailRecipient[],
@@ -212,12 +181,6 @@ export class NotificationService {
     }
   }
 
-  /**
-   * Send bulk notifications
-   * @param configKey - System configuration key for the template
-   * @param recipients - List of recipients with their data
-   * @returns Promise<{success: number, failed: number}> Success and failure counts
-   */
   async sendBulkNotifications(
     configKey: string,
     recipients: Array<{
@@ -262,10 +225,6 @@ export class NotificationService {
     return { success, failed };
   }
 
-  /**
-   * Get available notification templates
-   * @returns List of available template config keys
-   */
   async getAvailableTemplates(): Promise<string[]> {
     try {
       return await this.systemConfigEmailService.getAvailableTemplates();
@@ -275,11 +234,6 @@ export class NotificationService {
     }
   }
 
-  /**
-   * Validate notification template
-   * @param configKey - Configuration key to validate
-   * @returns Promise<boolean> Whether template is valid
-   */
   async validateTemplate(configKey: string): Promise<boolean> {
     try {
       return await this.systemConfigEmailService.validateTemplate(configKey);

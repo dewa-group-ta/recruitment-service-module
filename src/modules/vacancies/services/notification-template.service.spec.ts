@@ -78,7 +78,6 @@ describe("NotificationTemplateService", () => {
     };
 
     it("should create a new notification template successfully", async () => {
-      // Arrange
       notificationTemplateRepository.create.mockReturnValue(
         mockNotificationTemplate as any
       );
@@ -86,10 +85,8 @@ describe("NotificationTemplateService", () => {
         mockNotificationTemplate as any
       );
 
-      // Act
       const result = await service.create(createDto);
 
-      // Assert
       expect(notificationTemplateRepository.create).toHaveBeenCalledWith({
         ...createDto,
         isActive: true
@@ -100,7 +97,6 @@ describe("NotificationTemplateService", () => {
     });
 
     it("should create template with custom isActive value", async () => {
-      // Arrange
       const customDto = { ...createDto, isActive: false };
       const customTemplate = { ...mockNotificationTemplate, isActive: false };
       notificationTemplateRepository.create.mockReturnValue(
@@ -110,10 +106,8 @@ describe("NotificationTemplateService", () => {
         customTemplate as any
       );
 
-      // Act
       const result = await service.create(customDto);
 
-      // Assert
       expect(notificationTemplateRepository.create).toHaveBeenCalledWith(
         customDto
       );
@@ -122,7 +116,6 @@ describe("NotificationTemplateService", () => {
     });
 
     it("should throw BadRequestException when creation fails", async () => {
-      // Arrange
       notificationTemplateRepository.create.mockReturnValue(
         mockNotificationTemplate as any
       );
@@ -130,7 +123,6 @@ describe("NotificationTemplateService", () => {
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.create(createDto)).rejects.toThrow(
         BadRequestException
       );
@@ -144,7 +136,6 @@ describe("NotificationTemplateService", () => {
     };
 
     it("should return paginated notification templates", async () => {
-      // Arrange
       const mockQueryBuilder = {
         where: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
@@ -158,10 +149,8 @@ describe("NotificationTemplateService", () => {
         mockQueryBuilder as any
       );
 
-      // Act
       const result = await service.findAll(paginationDto);
 
-      // Assert
       expect(mockQueryBuilder.where).toHaveBeenCalledWith(
         "template.deletedAt IS NULL"
       );
@@ -173,7 +162,6 @@ describe("NotificationTemplateService", () => {
     });
 
     it("should apply filters correctly", async () => {
-      // Arrange
       const filters = {
         templateType: "EMAIL",
         isActive: true,
@@ -192,10 +180,8 @@ describe("NotificationTemplateService", () => {
         mockQueryBuilder as any
       );
 
-      // Act
       const result = await service.findAll(paginationDto, filters);
 
-      // Assert
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         "template.templateType = :templateType",
         { templateType: "EMAIL" }
@@ -214,15 +200,12 @@ describe("NotificationTemplateService", () => {
 
   describe("findOne", () => {
     it("should return notification template when found", async () => {
-      // Arrange
       notificationTemplateRepository.findOne.mockResolvedValue(
         mockNotificationTemplate as any
       );
 
-      // Act
       const result = await service.findOne("template-1");
 
-      // Assert
       expect(notificationTemplateRepository.findOne).toHaveBeenCalledWith({
         where: { id: "template-1", deletedAt: IsNull() }
       });
@@ -231,10 +214,8 @@ describe("NotificationTemplateService", () => {
     });
 
     it("should throw NotFoundException when notification template not found", async () => {
-      // Arrange
       notificationTemplateRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.findOne("nonexistent-id")).rejects.toThrow(
         NotFoundException
       );
@@ -248,7 +229,6 @@ describe("NotificationTemplateService", () => {
     };
 
     it("should update notification template successfully", async () => {
-      // Arrange
       const updatedTemplate = { ...mockNotificationTemplate, ...updateDto };
       notificationTemplateRepository.findOne
         .mockResolvedValueOnce(mockNotificationTemplate as any) // First call for finding existing template
@@ -257,10 +237,8 @@ describe("NotificationTemplateService", () => {
         affected: 1
       } as any);
 
-      // Act
       const result = await service.update("template-1", updateDto);
 
-      // Assert
       expect(notificationTemplateRepository.findOne).toHaveBeenCalledWith({
         where: { id: "template-1", deletedAt: IsNull() }
       });
@@ -273,17 +251,14 @@ describe("NotificationTemplateService", () => {
     });
 
     it("should throw NotFoundException when notification template not found", async () => {
-      // Arrange
       notificationTemplateRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.update("nonexistent-id", updateDto)).rejects.toThrow(
         NotFoundException
       );
     });
 
     it("should throw BadRequestException when update fails", async () => {
-      // Arrange
       notificationTemplateRepository.findOne.mockResolvedValue(
         mockNotificationTemplate as any
       );
@@ -291,7 +266,6 @@ describe("NotificationTemplateService", () => {
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.update("template-1", updateDto)).rejects.toThrow(
         BadRequestException
       );
@@ -300,7 +274,6 @@ describe("NotificationTemplateService", () => {
 
   describe("remove", () => {
     it("should soft delete notification template successfully", async () => {
-      // Arrange
       notificationTemplateRepository.findOne.mockResolvedValue(
         mockNotificationTemplate as any
       );
@@ -311,10 +284,8 @@ describe("NotificationTemplateService", () => {
         affected: 1
       } as any);
 
-      // Act
       await service.remove("template-1", "user-1");
 
-      // Assert
       expect(notificationTemplateRepository.findOne).toHaveBeenCalledWith({
         where: { id: "template-1", deletedAt: IsNull() }
       });
@@ -328,10 +299,8 @@ describe("NotificationTemplateService", () => {
     });
 
     it("should throw NotFoundException when notification template not found", async () => {
-      // Arrange
       notificationTemplateRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.remove("nonexistent-id", "user-1")).rejects.toThrow(
         NotFoundException
       );
@@ -340,14 +309,11 @@ describe("NotificationTemplateService", () => {
 
   describe("findByTemplateType", () => {
     it("should return notification templates by template type", async () => {
-      // Arrange
       const templates = [mockNotificationTemplate];
       notificationTemplateRepository.find.mockResolvedValue(templates as any);
 
-      // Act
       const result = await service.findByTemplateType("EMAIL");
 
-      // Assert
       expect(notificationTemplateRepository.find).toHaveBeenCalledWith({
         where: { templateType: "EMAIL", isActive: true, deletedAt: IsNull() },
         order: { name: "ASC" }
@@ -358,13 +324,10 @@ describe("NotificationTemplateService", () => {
     });
 
     it("should return empty array when no templates found", async () => {
-      // Arrange
       notificationTemplateRepository.find.mockResolvedValue([]);
 
-      // Act
       const result = await service.findByTemplateType("SMS");
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });
@@ -372,16 +335,13 @@ describe("NotificationTemplateService", () => {
 
   describe("findActive", () => {
     it("should return all active notification templates", async () => {
-      // Arrange
       const activeTemplates = [mockNotificationTemplate];
       notificationTemplateRepository.find.mockResolvedValue(
         activeTemplates as any
       );
 
-      // Act
       const result = await service.findActive();
 
-      // Assert
       expect(notificationTemplateRepository.find).toHaveBeenCalledWith({
         where: { isActive: true, deletedAt: IsNull() },
         order: { name: "ASC" }
@@ -392,13 +352,10 @@ describe("NotificationTemplateService", () => {
     });
 
     it("should return empty array when no active templates found", async () => {
-      // Arrange
       notificationTemplateRepository.find.mockResolvedValue([]);
 
-      // Act
       const result = await service.findActive();
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });
@@ -406,7 +363,6 @@ describe("NotificationTemplateService", () => {
 
   describe("renderTemplate", () => {
     it("should render template with variables", async () => {
-      // Arrange
       const template = {
         ...mockNotificationTemplate,
         subject: "Application Received - {{jobTitle}}",
@@ -415,13 +371,11 @@ describe("NotificationTemplateService", () => {
       };
       notificationTemplateRepository.findOne.mockResolvedValue(template as any);
 
-      // Act
       const result = await service.renderTemplate("template-1", {
         applicantName: "John Doe",
         jobTitle: "Software Engineer"
       });
 
-      // Assert
       expect(result).toBeDefined();
       expect(result.subject).toBe("Application Received - Software Engineer");
       expect(result.content).toBe(
@@ -430,17 +384,14 @@ describe("NotificationTemplateService", () => {
     });
 
     it("should throw NotFoundException when template not found", async () => {
-      // Arrange
       notificationTemplateRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(
         service.renderTemplate("nonexistent-id", {})
       ).rejects.toThrow(NotFoundException);
     });
 
     it("should handle missing variables by leaving placeholders unchanged", async () => {
-      // Arrange
       const template = {
         ...mockNotificationTemplate,
         subject: "Application Received - {{jobTitle}}",
@@ -448,13 +399,11 @@ describe("NotificationTemplateService", () => {
       };
       notificationTemplateRepository.findOne.mockResolvedValue(template as any);
 
-      // Act
       const result = await service.renderTemplate("template-1", {
         applicantName: "John Doe"
-        // jobTitle is missing
+        // jobTitle sengaja tidak diisi
       });
 
-      // Assert
       expect(result).toBeDefined();
       expect(result.subject).toBe("Application Received - {{jobTitle}}");
       expect(result.content).toBe(

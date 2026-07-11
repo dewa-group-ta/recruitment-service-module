@@ -44,9 +44,6 @@ export class SystemConfigurationController {
     private readonly systemConfigurationService: SystemConfigurationService
   ) {}
 
-  /**
-   * Create a new system configuration
-   */
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ResponseMessage(responseMessage.SUCCESSFULLY_CREATED)
@@ -75,9 +72,6 @@ export class SystemConfigurationController {
     return result;
   }
 
-  /**
-   * Get all system configurations with optional filtering
-   */
   @Get()
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESS)
@@ -128,9 +122,6 @@ export class SystemConfigurationController {
     return result;
   }
 
-  /**
-   * Get public system configurations only
-   */
   @Get("public")
   @Public()
   @HttpCode(HttpStatus.OK)
@@ -150,9 +141,6 @@ export class SystemConfigurationController {
     return result;
   }
 
-  /**
-   * Get configurations by group name
-   */
   @Get("group/:groupName")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESS)
@@ -171,9 +159,6 @@ export class SystemConfigurationController {
     return result;
   }
 
-  /**
-   * Get configuration by ID
-   */
   @Get(":id")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESS)
@@ -211,9 +196,6 @@ export class SystemConfigurationController {
     return result;
   }
 
-  /**
-   * Get configuration by key
-   */
   @Get("key/:configKey")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESS)
@@ -322,9 +304,8 @@ export class SystemConfigurationController {
     @Param("configKey") configKey: string,
     @UploadedFile(
       new FileValidationPipe({
-        maxSize: 10 * 1024 * 1024, // 10MB
+        maxSize: 10 * 1024 * 1024,
         allowedMimeTypes: [
-          // Image types
           "image/jpeg",
           "image/png",
           "image/gif",
@@ -347,9 +328,6 @@ export class SystemConfigurationController {
       throw new BadRequestException(`File upload failed: ${errorMessage}`);
     }
   }
-  /**
-   * Update configuration by key
-   */
   @Patch("key/:configKey")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESSFULLY_UPDATED)
@@ -395,9 +373,6 @@ export class SystemConfigurationController {
     return result;
   }
 
-  /**
-   * Get configuration JSON value by key
-   */
   @Get("key/:configKey/json")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESS)
@@ -444,9 +419,6 @@ export class SystemConfigurationController {
     return result;
   }
 
-  /**
-   * Update configuration JSON value by key
-   */
   @Patch("key/:configKey/json")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESSFULLY_UPDATED)
@@ -499,9 +471,6 @@ export class SystemConfigurationController {
     return result;
   }
 
-  /**
-   * Update configuration JSON value by ID
-   */
   @Patch(":id/json")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESSFULLY_UPDATED)
@@ -555,9 +524,6 @@ export class SystemConfigurationController {
     return result;
   }
 
-  /**
-   * Delete configuration by ID
-   */
   @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
   @ResponseMessage(responseMessage.SUCCESSFULLY_DELETED)

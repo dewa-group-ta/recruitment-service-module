@@ -118,7 +118,14 @@ export class RecruitmentPipelineController {
   async findAll(
     @Query() query: FindAllPipelinesDto
   ): Promise<{ data: RecruitmentPipelineResponseDto[]; pagination: object }> {
-    const { isActive, isTemplate, isDefault, category, search, ...paginationDto } = query;
+    const {
+      isActive,
+      isTemplate,
+      isDefault,
+      category,
+      search,
+      ...paginationDto
+    } = query;
     return await this.recruitmentPipelineService.findAll(paginationDto, {
       category,
       isActive,

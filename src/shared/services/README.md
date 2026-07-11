@@ -19,21 +19,25 @@ The File Upload Service provides a comprehensive solution for handling file uplo
 The file upload system consists of:
 
 ### 1. MinioService
+
 - Handles MinIO client initialization
 - Manages file upload/download operations
 - Generates presigned URLs for secure access
 
 ### 2. FileUploadService
+
 - Business logic for file operations
 - Database metadata management
 - File validation and organization
 
 ### 3. File Entity
+
 - Database entity for file metadata
 - Supports multiple file types
 - Links files to related entities
 
 ### 4. File Validation Pipe
+
 - Validates file size, type, and extension
 - Configurable validation rules
 - Prevents malicious file uploads
@@ -57,6 +61,7 @@ MINIO_BUCKET_NAME=recruitment-files
 ### MinIO Setup
 
 1. Install MinIO server:
+
 ```bash
 # Using Docker
 docker run -p 9000:9000 -p 9001:9001 \
@@ -73,11 +78,13 @@ docker run -p 9000:9000 -p 9001:9001 \
 ### File Upload Endpoints
 
 #### Applicant File Upload
+
 - `POST /applicants/upload-cv` - Upload CV file
 - `GET /applicants/files` - Get applicant files
 - `DELETE /applicants/files/:fileId` - Delete file
 
 #### Vacancy File Upload
+
 - `POST /vacancies/:id/upload-job-description` - Upload job description
 - `POST /vacancies/:id/upload-company-logo` - Upload company logo
 - `GET /vacancies/:id/files` - Get vacancy files
@@ -87,30 +94,33 @@ docker run -p 9000:9000 -p 9001:9001 \
 
 ```typescript
 enum FileType {
-  CV = 'cv',
-  COVER_LETTER = 'cover_letter',
-  PORTFOLIO = 'portfolio',
-  CERTIFICATE = 'certificate',
-  IDENTITY_DOCUMENT = 'identity_document',
-  JOB_DESCRIPTION = 'job_description',
-  COMPANY_LOGO = 'company_logo',
-  OTHER = 'other',
+  CV = "cv",
+  COVER_LETTER = "cover_letter",
+  PORTFOLIO = "portfolio",
+  CERTIFICATE = "certificate",
+  IDENTITY_DOCUMENT = "identity_document",
+  JOB_DESCRIPTION = "job_description",
+  COMPANY_LOGO = "company_logo",
+  OTHER = "other"
 }
 ```
 
 ### File Validation Rules
 
 #### CV Files
+
 - Max size: 5MB
 - Allowed types: PDF, DOC, DOCX
 - MIME types: application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document
 
 #### Job Description Files
+
 - Max size: 10MB
 - Allowed types: PDF, DOC, DOCX
 - MIME types: application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document
 
 #### Company Logo Files
+
 - Max size: 2MB
 - Allowed types: JPG, JPEG, PNG, GIF, WEBP
 - MIME types: image/jpeg, image/png, image/gif, image/webp
@@ -118,6 +128,7 @@ enum FileType {
 ## API Examples
 
 ### Upload CV
+
 ```bash
 curl -X POST \
   http://localhost:3000/applicants/upload-cv \
@@ -127,6 +138,7 @@ curl -X POST \
 ```
 
 ### Upload Job Description
+
 ```bash
 curl -X POST \
   http://localhost:3000/vacancies/uuid/upload-job-description \
@@ -136,6 +148,7 @@ curl -X POST \
 ```
 
 ### Get Files
+
 ```bash
 curl -X GET \
   http://localhost:3000/applicants/files \

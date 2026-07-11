@@ -66,7 +66,7 @@ export class VacancyService {
 
       const savedVacancy = await this.vacancyRepository.save(vacancy);
 
-      // Reload with relations so department name resolves in the response
+      // reload dengan relasi supaya nama department bisa di-resolve di response
       const vacancyWithRelations = await this.vacancyRepository.findOne({
         where: { id: savedVacancy.id },
         relations: ["department", "pipeline", "jobCategory"]
@@ -99,7 +99,7 @@ export class VacancyService {
     }
 
     if (existingVacancy.status !== JobStatus.DRAFT) {
-      throw new BadRequestException('Only draft vacancies can be edited');
+      throw new BadRequestException("Only draft vacancies can be edited");
     }
 
     this.validateUpdateData(updateVacancyDto);
@@ -108,7 +108,7 @@ export class VacancyService {
 
     await this.vacancyRepository.update(id, updateData);
 
-    // Reload with relations so mapToResponseDto can resolve department name etc.
+    // reload dengan relasi supaya mapToResponseDto bisa resolve nama department dll
     const updatedVacancy = await this.vacancyRepository.findOne({
       where: { id },
       relations: ["department", "pipeline", "jobCategory"]
@@ -201,7 +201,7 @@ export class VacancyService {
 
     const totalPages = Math.ceil(total / limit);
 
-    // Single query for all applicant counts — avoids N+1
+    // satu query untuk semua hitungan applicant, menghindari N+1
     const vacancyIds = vacancies.map((v) => v.id);
     const countMap = await this.getApplicantCountsForVacancies(vacancyIds);
 
@@ -236,18 +236,24 @@ export class VacancyService {
     }
 
     if (vacancy.status !== JobStatus.DRAFT) {
-      throw new BadRequestException('Only draft vacancies can be deleted');
+      throw new BadRequestException("Only draft vacancies can be deleted");
     }
 
     await this.vacancyRepository.softDelete(id);
     await this.vacancyRepository.update(id, { deletedById });
   }
 
-  async publishVacancy(id: string, updatedById: string): Promise<VacancyResponseDto> {
+  async publishVacancy(
+    id: string,
+    updatedById: string
+  ): Promise<VacancyResponseDto> {
     const preCheck = await this.vacancyRepository.findOne({ where: { id } });
-    if (!preCheck) throw new NotFoundException(`Vacancy with ID ${id} not found`);
+    if (!preCheck)
+      throw new NotFoundException(`Vacancy with ID ${id} not found`);
     if (!preCheck.jobCode) {
-      throw new BadRequestException('Job code is required before publishing a vacancy');
+      throw new BadRequestException(
+        "Job code is required before publishing a vacancy"
+      );
     }
 
     const result = await this.vacancyRepository.update(
@@ -256,17 +262,21 @@ export class VacancyService {
     );
 
     if (result.affected === 0) {
-      throw new BadRequestException('Only draft vacancies can be published');
+      throw new BadRequestException("Only draft vacancies can be published");
     }
 
     return this.mapToResponseDto(
       (await this.vacancyRepository.findOne({
-        where: { id }, relations: ['department', 'pipeline', 'jobCategory']
+        where: { id },
+        relations: ["department", "pipeline", "jobCategory"]
       }))!
     );
   }
 
-  async unpublishVacancy(id: string, updatedById: string): Promise<VacancyResponseDto> {
+  async unpublishVacancy(
+    id: string,
+    updatedById: string
+  ): Promise<VacancyResponseDto> {
     const result = await this.vacancyRepository.update(
       { id, status: JobStatus.PUBLISHED },
       { status: JobStatus.DRAFT, updatedById }
@@ -274,18 +284,25 @@ export class VacancyService {
 
     if (result.affected === 0) {
       const vacancy = await this.vacancyRepository.findOne({ where: { id } });
-      if (!vacancy) throw new NotFoundException(`Vacancy with ID ${id} not found`);
-      throw new BadRequestException('Only published vacancies can be unpublished');
+      if (!vacancy)
+        throw new NotFoundException(`Vacancy with ID ${id} not found`);
+      throw new BadRequestException(
+        "Only published vacancies can be unpublished"
+      );
     }
 
     return this.mapToResponseDto(
       (await this.vacancyRepository.findOne({
-        where: { id }, relations: ['department', 'pipeline', 'jobCategory']
+        where: { id },
+        relations: ["department", "pipeline", "jobCategory"]
       }))!
     );
   }
 
-  async closeVacancy(id: string, updatedById: string): Promise<VacancyResponseDto> {
+  async closeVacancy(
+    id: string,
+    updatedById: string
+  ): Promise<VacancyResponseDto> {
     const result = await this.vacancyRepository.update(
       { id, status: JobStatus.PUBLISHED },
       { status: JobStatus.CLOSED, updatedById }
@@ -293,18 +310,23 @@ export class VacancyService {
 
     if (result.affected === 0) {
       const vacancy = await this.vacancyRepository.findOne({ where: { id } });
-      if (!vacancy) throw new NotFoundException(`Vacancy with ID ${id} not found`);
-      throw new BadRequestException('Only published vacancies can be closed');
+      if (!vacancy)
+        throw new NotFoundException(`Vacancy with ID ${id} not found`);
+      throw new BadRequestException("Only published vacancies can be closed");
     }
 
     return this.mapToResponseDto(
       (await this.vacancyRepository.findOne({
-        where: { id }, relations: ['department', 'pipeline', 'jobCategory']
+        where: { id },
+        relations: ["department", "pipeline", "jobCategory"]
       }))!
     );
   }
 
-  async reopenVacancy(id: string, updatedById: string): Promise<VacancyResponseDto> {
+  async reopenVacancy(
+    id: string,
+    updatedById: string
+  ): Promise<VacancyResponseDto> {
     const result = await this.vacancyRepository.update(
       { id, status: JobStatus.CLOSED },
       { status: JobStatus.PUBLISHED, updatedById }
@@ -312,18 +334,23 @@ export class VacancyService {
 
     if (result.affected === 0) {
       const vacancy = await this.vacancyRepository.findOne({ where: { id } });
-      if (!vacancy) throw new NotFoundException(`Vacancy with ID ${id} not found`);
-      throw new BadRequestException('Only closed vacancies can be reopened');
+      if (!vacancy)
+        throw new NotFoundException(`Vacancy with ID ${id} not found`);
+      throw new BadRequestException("Only closed vacancies can be reopened");
     }
 
     return this.mapToResponseDto(
       (await this.vacancyRepository.findOne({
-        where: { id }, relations: ['department', 'pipeline', 'jobCategory']
+        where: { id },
+        relations: ["department", "pipeline", "jobCategory"]
       }))!
     );
   }
 
-  async archiveVacancy(id: string, updatedById: string): Promise<VacancyResponseDto> {
+  async archiveVacancy(
+    id: string,
+    updatedById: string
+  ): Promise<VacancyResponseDto> {
     const result = await this.vacancyRepository.update(
       { id, status: Not(JobStatus.ARCHIVED) },
       { status: JobStatus.ARCHIVED, updatedById }
@@ -331,13 +358,15 @@ export class VacancyService {
 
     if (result.affected === 0) {
       const vacancy = await this.vacancyRepository.findOne({ where: { id } });
-      if (!vacancy) throw new NotFoundException(`Vacancy with ID ${id} not found`);
-      throw new BadRequestException('Vacancy is already archived');
+      if (!vacancy)
+        throw new NotFoundException(`Vacancy with ID ${id} not found`);
+      throw new BadRequestException("Vacancy is already archived");
     }
 
     return this.mapToResponseDto(
       (await this.vacancyRepository.findOne({
-        where: { id }, relations: ['department', 'pipeline', 'jobCategory']
+        where: { id },
+        relations: ["department", "pipeline", "jobCategory"]
       }))!
     );
   }
@@ -423,7 +452,7 @@ export class VacancyService {
     return this.mapToPublicResponseDto(vacancy);
   }
 
-  // ─── Private helpers ───────────────────────────────────────────────────────
+  // ─── helper privat ───────────────────────────────────────────────────────
 
   private validateUpdateData(updateVacancyDto: UpdateVacancyDto): void {
     if (updateVacancyDto.pipelineId) {
@@ -447,9 +476,7 @@ export class VacancyService {
       updateVacancyDto.endDate &&
       new Date(updateVacancyDto.startDate) > new Date(updateVacancyDto.endDate)
     ) {
-      throw new BadRequestException(
-        "Start date cannot be after end date"
-      );
+      throw new BadRequestException("Start date cannot be after end date");
     }
   }
 
@@ -484,13 +511,14 @@ export class VacancyService {
       }
     });
 
-    // salaryPeriod and requiredEducation can be explicitly set to null to clear them.
-    // Cast through any because Partial<Vacancy> uses undefined but TypeORM accepts null for nullable columns.
+    // salaryPeriod dan requiredEducation bisa di-set null secara eksplisit untuk mengosongkannya.
+    // di-cast lewat any karena Partial<Vacancy> memakai undefined, sementara TypeORM menerima null untuk kolom nullable.
     if (updateVacancyDto.salaryPeriod !== undefined) {
       (updateData as any).salaryPeriod = updateVacancyDto.salaryPeriod ?? null;
     }
     if (updateVacancyDto.requiredEducation !== undefined) {
-      (updateData as any).requiredEducation = updateVacancyDto.requiredEducation ?? null;
+      (updateData as any).requiredEducation =
+        updateVacancyDto.requiredEducation ?? null;
     }
 
     const numberFields = [
@@ -507,7 +535,7 @@ export class VacancyService {
       }
     });
 
-    // Quota constraints disabled — applicantLimit, hiredLimit, isLimitApplicantEnabled, isLimitHiredEnabled always set to null/false
+    // batasan kuota dinonaktifkan — applicantLimit, hiredLimit, isLimitApplicantEnabled, isLimitHiredEnabled selalu di-set null/false
     updateData.isLimitApplicantEnabled = false;
     (updateData as any).applicantLimit = null;
     updateData.isLimitHiredEnabled = false;
@@ -521,7 +549,7 @@ export class VacancyService {
       updateData.posterConfiguration = updateVacancyDto.posterConfiguration;
     }
 
-    // Real date columns — stored directly on the entity
+    // kolom tanggal asli — disimpan langsung di entity
     if (updateVacancyDto.startDate) {
       const d = this.parseDate(updateVacancyDto.startDate);
       if (d) updateData.startDate = d;
@@ -601,12 +629,9 @@ export class VacancyService {
   }
 
   /**
-   * Retrieve totalApplicants, hiredApplicants, and rejectedApplicants for a
-   * set of vacancy IDs in a single aggregated query — avoids N+1.
+   * ambil totalApplicants, hiredApplicants, dan rejectedApplicants untuk sekumpulan vacancy id dalam satu query agregat, menghindari N+1.
    */
-  private async getApplicantCountsForVacancies(
-    vacancyIds: string[]
-  ): Promise<
+  private async getApplicantCountsForVacancies(vacancyIds: string[]): Promise<
     Record<
       string,
       {
@@ -666,5 +691,4 @@ export class VacancyService {
     const date = new Date(dateString);
     return isNaN(date.getTime()) ? undefined : date;
   }
-
 }

@@ -46,11 +46,17 @@ export class QuickApplyDto {
   @IsString()
   placeOfBirth: string;
 
-  @ApiProperty({ description: "Date of birth (YYYY-MM-DD)", example: "1998-01-15" })
+  @ApiProperty({
+    description: "Date of birth (YYYY-MM-DD)",
+    example: "1998-01-15"
+  })
   @IsDateString()
   dateOfBirth: string;
 
-  @ApiPropertyOptional({ description: "Full address", example: "Jl. Merdeka No. 1, Jakarta" })
+  @ApiPropertyOptional({
+    description: "Full address",
+    example: "Jl. Merdeka No. 1, Jakarta"
+  })
   @IsOptional()
   @IsString()
   address?: string;

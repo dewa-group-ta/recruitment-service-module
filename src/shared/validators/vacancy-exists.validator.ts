@@ -12,8 +12,7 @@ import { Vacancy } from "../../modules/vacancies/entities/vacancy.entity";
 import { JobStatus } from "../enums/job-status.enum";
 
 /**
- * Validator constraint to check if vacancy exists and is active
- * Validates that the vacancy ID exists in the database and the vacancy is in an active state
+ * memvalidasi vacancy id ada di database dan statusnya published.
  */
 @ValidatorConstraint({ name: "VacancyExists", async: true })
 @Injectable()
@@ -23,12 +22,6 @@ export class VacancyExistsConstraint implements ValidatorConstraintInterface {
     private readonly vacancyRepository: Repository<Vacancy>
   ) {}
 
-  /**
-   * Validates if vacancy exists and is active
-   * @param value - Vacancy ID to validate
-   * @param args - Validation arguments
-   * @returns Promise<boolean> - True if vacancy exists and is active
-   */
   async validate(value: string, _args: ValidationArguments): Promise<boolean> {
     if (!value) {
       return false;
@@ -43,37 +36,20 @@ export class VacancyExistsConstraint implements ValidatorConstraintInterface {
         return false;
       }
 
-      // Only published vacancies accept applications
+      // hanya vacancy berstatus published yang bisa menerima lamaran
       return vacancy.status === JobStatus.PUBLISHED;
     } catch (_error) {
       return false;
     }
   }
 
-  /**
-   * Returns default error message
-   * @param args - Validation arguments
-   * @returns string - Error message
-   */
   defaultMessage(args: ValidationArguments): string {
     return `Vacancy with ID '${args.value}' does not exist or is not available for applications`;
   }
 }
 
 /**
- * Decorator to validate that a vacancy exists and is active
- *
- * @param validationOptions - Validation options
- * @returns PropertyDecorator - Validation decorator
- *
- * @example
- * ```typescript
- * export class ApplyForJobDto {
- *   @IsUUID()
- *   @VacancyExists()
- *   vacancyId: string;
- * }
- * ```
+ * decorator validasi: vacancy id harus ada dan berstatus published.
  */
 export function VacancyExists(
   validationOptions?: ValidationOptions

@@ -10,7 +10,6 @@ export class DepartmentSeeder extends BaseSeeder {
   async run(): Promise<void> {
     const departmentRepository = await this.getRepository(Department);
 
-    // Check if departments already exist
     const existingDepartments = await departmentRepository.count();
     if (existingDepartments > 0) {
       console.log("Departments already exist, skipping seeder...");
@@ -21,14 +20,16 @@ export class DepartmentSeeder extends BaseSeeder {
       {
         name: "Engineering",
         code: "ENG",
-        description: "Software development, system architecture, and technical innovation",
+        description:
+          "Software development, system architecture, and technical innovation",
         isActive: true,
         createdById: "system"
       },
       {
         name: "Product Management",
         code: "PM",
-        description: "Product strategy, roadmap planning, and feature development",
+        description:
+          "Product strategy, roadmap planning, and feature development",
         isActive: true,
         createdById: "system"
       },
@@ -42,21 +43,24 @@ export class DepartmentSeeder extends BaseSeeder {
       {
         name: "Marketing",
         code: "MKT",
-        description: "Brand management, digital marketing, and customer acquisition",
+        description:
+          "Brand management, digital marketing, and customer acquisition",
         isActive: true,
         createdById: "system"
       },
       {
         name: "Sales",
         code: "SALES",
-        description: "Business development, client relations, and revenue generation",
+        description:
+          "Business development, client relations, and revenue generation",
         isActive: true,
         createdById: "system"
       },
       {
         name: "Human Resources",
         code: "HR",
-        description: "Talent acquisition, employee relations, and organizational development",
+        description:
+          "Talent acquisition, employee relations, and organizational development",
         isActive: true,
         createdById: "system"
       },
@@ -70,14 +74,16 @@ export class DepartmentSeeder extends BaseSeeder {
       {
         name: "Operations",
         code: "OPS",
-        description: "Business operations, process optimization, and administrative support",
+        description:
+          "Business operations, process optimization, and administrative support",
         isActive: true,
         createdById: "system"
       },
       {
         name: "Customer Success",
         code: "CS",
-        description: "Customer support, account management, and client satisfaction",
+        description:
+          "Customer support, account management, and client satisfaction",
         isActive: true,
         createdById: "system"
       },
@@ -91,7 +97,8 @@ export class DepartmentSeeder extends BaseSeeder {
       {
         name: "Quality Assurance",
         code: "QA",
-        description: "Software testing, quality control, and process improvement",
+        description:
+          "Software testing, quality control, and process improvement",
         isActive: true,
         createdById: "system"
       },
@@ -112,7 +119,8 @@ export class DepartmentSeeder extends BaseSeeder {
       {
         name: "Legal",
         code: "LEGAL",
-        description: "Legal compliance, contract management, and regulatory affairs",
+        description:
+          "Legal compliance, contract management, and regulatory affairs",
         isActive: true,
         createdById: "system"
       },
@@ -127,9 +135,9 @@ export class DepartmentSeeder extends BaseSeeder {
 
     try {
       await this.saveEntities(Department, departments);
-      console.log(`✅ Seeded ${departments.length} departments`);
+      console.log(`Seeded ${departments.length} departments`);
     } catch (error) {
-      console.error("❌ Error seeding departments:", error);
+      console.error("Error seeding departments:", error);
       throw error;
     }
   }

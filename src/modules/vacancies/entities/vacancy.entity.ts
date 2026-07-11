@@ -46,7 +46,6 @@ export class Vacancy {
   @Column({ type: "enum", enum: JobStatus, default: JobStatus.DRAFT })
   status!: JobStatus;
 
-
   @Column({ type: "enum", enum: JobType, default: JobType.RECRUITMENT })
   jobType!: JobType;
 
@@ -56,14 +55,12 @@ export class Vacancy {
   @Column({ type: "enum", enum: WorkModel, default: WorkModel.ON_SITE })
   workModel!: WorkModel;
 
-  // Date fields
   @Column({ type: "date", nullable: true })
   startDate!: Date;
 
   @Column({ type: "date", nullable: true })
   endDate!: Date;
 
-  // Applicant and hired limits with enable flags
   @Column({ type: "boolean", default: false })
   isLimitApplicantEnabled!: boolean;
 
@@ -76,11 +73,9 @@ export class Vacancy {
   @Column({ type: "int", nullable: true })
   hiredLimit!: number;
 
-  // Office addresses
   @Column({ type: "json", nullable: true })
   officeAddresses!: string[];
 
-  // Department
   @ManyToOne(() => Department)
   @JoinColumn({ name: "department_id" })
   department!: Department;
@@ -88,7 +83,6 @@ export class Vacancy {
   @Column({ name: "department_id", nullable: true })
   departmentId!: string;
 
-  // salary
   @Column({ type: "int", nullable: true })
   salaryMin!: number;
 
@@ -101,15 +95,12 @@ export class Vacancy {
   @Column({ type: "varchar", length: 3, default: "IDR" })
   currency!: string;
 
-  // Generated poster URL
   @Column({ type: "varchar", length: 500, nullable: true })
   generatedPosterUrl!: string;
 
-  // Poster Configuration - stores which fields to include in job poster
   @Column({ type: "json", nullable: true })
   posterConfiguration!: PosterConfiguration;
 
-  // Relations
   @ManyToOne(() => RecruitmentPipeline)
   @JoinColumn({ name: "pipeline_id" })
   pipeline!: RecruitmentPipeline;
@@ -117,7 +108,6 @@ export class Vacancy {
   @Column({ name: "pipeline_id", nullable: true })
   pipelineId!: string;
 
-  // Job Category
   @ManyToOne(() => JobCategory)
   @JoinColumn({ name: "job_category_id" })
   jobCategory!: JobCategory;
@@ -125,14 +115,12 @@ export class Vacancy {
   @Column({ name: "job_category_id", nullable: true })
   jobCategoryId!: string;
 
-  // Required qualifications
   @Column({ type: "enum", enum: EducationLevel, nullable: true })
   requiredEducation!: EducationLevel;
 
   @Column({ type: "int", nullable: true })
   requiredExperienceYears!: number;
 
-  // Working hours
   @Column({ type: "int", nullable: true })
   hoursPerWeekMin!: number;
 
@@ -148,7 +136,6 @@ export class Vacancy {
   @OneToMany(() => Application, (application) => application.vacancy)
   applications!: Application[];
 
-  // Audit fields
   @CreateDateColumn({ name: "created_at" })
   createdAt!: Date;
 

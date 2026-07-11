@@ -32,11 +32,9 @@ export class Department {
   @Column({ name: "updated_by", nullable: true })
   updatedById: string;
 
-  // Relations
   @OneToMany(() => Vacancy, (vacancy) => vacancy.department)
   vacancies: Vacancy[];
 
-  // Audit fields
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 

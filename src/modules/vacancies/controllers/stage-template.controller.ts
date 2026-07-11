@@ -158,10 +158,9 @@ export class StageTemplateController {
   async findByIds(
     @Query("ids") ids: string | string[]
   ): Promise<StageTemplateResponseDto[]> {
-    // Handle both single value and array values
+    // query param bisa berupa satu nilai atau array, tergantung jumlah ids yang dikirim
     const idsArray = Array.isArray(ids) ? ids : [ids];
 
-    // Filter out any undefined or empty values
     const validIds = idsArray.filter((id) => id && id.trim() !== "");
 
     if (validIds.length === 0) {

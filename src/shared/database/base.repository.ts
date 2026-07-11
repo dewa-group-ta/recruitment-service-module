@@ -42,30 +42,7 @@ export abstract class BaseRepository<
   }
 
   /**
-   * Register a prebuilt query for reuse.
-   *
-   * @param name - The name of the prebuilt query.
-   * @param builderFunction - The function to build the query.
-   * @example
-   * ```typescript
-   * this.registerPrebuiltQuery("dashboardStats", (builder, alias) => {
-   *   return builder
-   *     .select([
-   *       `${alias}.status`,
-   *       `COUNT(${alias}.id) as count`,
-   *       `role.name as roleName`,
-   *     ])
-   *     .leftJoin(`${alias}.role`, "role")
-   *     .groupBy(`${alias}.status, role.name`);
-   * });
-   *
-   * // Usage in paginateWithPrebuiltQuery
-   * const stats = await this.paginateWithPrebuiltQuery("dashboardStats", dto, {
-   * searchCriteria: ["status", "role.name"]
-   * relations: ["role"],
-   * query: {}
-   * });
-   * ```
+   * daftarkan query builder custom supaya bisa dipakai ulang lewat paginateWithPrebuiltQuery.
    */
   protected registerPrebuiltQuery(
     name: string,
@@ -205,13 +182,9 @@ export abstract class BaseRepository<
     options?: PaginationOptions<T>
   ) {
     let builder = this.createQueryBuilder(this.alias);
-    // Apply select, join, groupBy, and having from options.query
     builder = this.buildPaginateQuery(builder, dto, options);
-    // Where
     builder = await this.applyWhereConditions(builder, dto, options);
-    // Order
     builder = this.applyOrderBy(builder, dto, options);
-    // Paginate
     return options?.raw
       ? (utils.paginateRaw(builder, dto) as Promise<Result>)
       : (utils.paginate(builder, dto) as Promise<Result>);
@@ -228,13 +201,9 @@ export abstract class BaseRepository<
     }
 
     let builder = prebuiltQuery.build();
-    // Apply select, join, groupBy, and having from options.query
     builder = this.buildPaginateQuery(builder, dto, options);
-    // Where
     builder = await this.applyWhereConditions(builder, dto, options);
-    // Order
     builder = this.applyOrderBy(builder, dto, options);
-    // Paginate
     return options?.raw
       ? (utils.paginateRaw(builder, dto) as Promise<Result>)
       : (utils.paginate(builder, dto) as Promise<Result>);

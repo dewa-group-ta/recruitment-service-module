@@ -10,7 +10,7 @@ import { ApplicantResultsService } from "./services/applicant-results.service";
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      ApplicantEducation, 
+      ApplicantEducation,
       ApplicantJobHistory,
       EvaluationResult,
       Application,

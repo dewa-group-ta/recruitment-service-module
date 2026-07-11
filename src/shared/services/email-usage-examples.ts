@@ -119,7 +119,6 @@ export class EmailUsageExamples {
     );
 
     console.log("Bulk notifications result:", result);
-    // Output: { success: 2, failed: 0 }
   }
 
   /**
@@ -146,7 +145,6 @@ export class EmailUsageExamples {
   async getAvailableTemplates() {
     const templates = await this.notificationService.getAvailableTemplates();
     console.log("Available templates:", templates);
-    // Output: ["notification_applicant_register", "notification_applicant_apply", ...]
   }
 
   /**
@@ -186,20 +184,17 @@ export class EmailUsageExamples {
    */
   async sendWithErrorHandling() {
     try {
-      // Try to send with system configuration template
       const result = await this.notificationService.sendCustomNotification(
-        "non_existent_template", // Template yang tidak ada
+        "non_existent_template",
         { email: "test@example.com", name: "Test User" },
         { test_data: "value" }
       );
 
       if (!result) {
         console.log("Template not found, using fallback method");
-        // Fallback logic here
       }
     } catch (error) {
       console.error("Error sending notification:", error);
-      // Handle error appropriately
     }
   }
 }
@@ -211,7 +206,6 @@ export class ExampleController {
   constructor(private readonly notificationService: NotificationService) {}
 
   async handleApplicantRegistration(applicantData: any) {
-    // Send registration notification
     await this.notificationService.sendApplicantRegistrationNotification(
       applicantData.email,
       applicantData.fullName,
@@ -222,7 +216,6 @@ export class ExampleController {
   }
 
   async handleApplicationSubmission(applicationData: any) {
-    // Send application received notification
     await this.notificationService.sendApplicantApplicationNotification(
       applicationData.applicantEmail,
       applicationData.applicantName,
@@ -234,7 +227,6 @@ export class ExampleController {
   }
 
   async handleStatusUpdate(statusData: any) {
-    // Send status update notification
     await this.notificationService.sendApplicantStatusUpdateNotification(
       statusData.applicantEmail,
       statusData.applicantName,
@@ -255,9 +247,6 @@ export class ExampleService {
   ) {}
 
   async processApplication(application: any) {
-    // Business logic here...
-
-    // Send notification using system configuration
     const emailSent = await this.systemConfigEmailService.sendEmailFromConfig(
       "notification_applicant_apply",
       { email: application.applicantEmail, name: application.applicantName },

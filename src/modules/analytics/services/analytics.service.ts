@@ -35,21 +35,16 @@ export class AnalyticsService {
     private readonly applicantSourceRepository: Repository<ApplicantSource>
   ) {}
 
-  /**
-   * Get recruitment trend data
-   */
   async getRecruitmentTrend(
     query: AnalyticsQueryDto
   ): Promise<RecruitmentTrendData[]> {
     const { startDate, endDate, period } = query;
 
-    // Set default date range if not provided
     const end = endDate ? new Date(endDate) : new Date();
     const start = startDate
       ? new Date(startDate)
-      : new Date(end.getTime() - 365 * 24 * 60 * 60 * 1000); // 1 year ago
+      : new Date(end.getTime() - 365 * 24 * 60 * 60 * 1000);
 
-    // Build date format based on period
     let dateFormat: string;
     let groupBy: string;
 
@@ -95,9 +90,6 @@ export class AnalyticsService {
     }));
   }
 
-  /**
-   * Get stage distribution data
-   */
   async getStageDistribution(
     query: AnalyticsQueryDto
   ): Promise<StageDistributionData[]> {
@@ -125,7 +117,6 @@ export class AnalyticsService {
       ]
     });
 
-    // Group by stage and count passed/not passed
     const stageStats = new Map<
       string,
       { passed: number; not_passed: number; total: number }
@@ -155,9 +146,6 @@ export class AnalyticsService {
     }));
   }
 
-  /**
-   * Get experience distribution data
-   */
   async getExperienceDistribution(
     query: AnalyticsQueryDto
   ): Promise<ExperienceDistributionData[]> {
@@ -176,7 +164,6 @@ export class AnalyticsService {
       relations: ["applicant", "applicant.jobHistories"]
     });
 
-    // Group by experience ranges
     const experienceRanges = {
       "0-1 years": 0,
       "1-3 years": 0,
@@ -215,9 +202,6 @@ export class AnalyticsService {
     }));
   }
 
-  /**
-   * Get hiring statistics
-   */
   async getHiringStats(query: AnalyticsQueryDto): Promise<HiringStatsData> {
     const { startDate, endDate } = query;
 
@@ -247,7 +231,6 @@ export class AnalyticsService {
       })
     ]);
 
-    // Calculate average processing time for hired applications
     const hiredApps = await this.applicationRepository.find({
       where: { ...whereConditions, status: ApplicantStatus.HIRED },
       select: ["appliedAt", "updatedAt"]
@@ -262,7 +245,7 @@ export class AnalyticsService {
             return total + processingTime;
           }, 0) /
           hiredApps.length /
-          (1000 * 60 * 60 * 24) // Convert to days
+          (1000 * 60 * 60 * 24)
         : 0;
 
     const conversionRate =
@@ -278,9 +261,6 @@ export class AnalyticsService {
     };
   }
 
-  /**
-   * Get department statistics
-   */
   async getDepartmentStats(
     query: AnalyticsQueryDto
   ): Promise<DepartmentStatsData[]> {
@@ -329,9 +309,6 @@ export class AnalyticsService {
     }));
   }
 
-  /**
-   * Get job category statistics
-   */
   async getJobCategoryStats(
     query: AnalyticsQueryDto
   ): Promise<JobCategoryStatsData[]> {
@@ -380,15 +357,11 @@ export class AnalyticsService {
     }));
   }
 
-  /**
-   * Get assessment trend data
-   */
   async getAssessmentTrend(
     query: AnalyticsQueryDto
   ): Promise<AssessmentTrendData[]> {
     const { startDate, endDate, period } = query;
 
-    // Set default date range if not provided
     const end = endDate ? new Date(endDate) : new Date();
     const start = startDate
       ? new Date(startDate)
@@ -439,9 +412,6 @@ export class AnalyticsService {
     }));
   }
 
-  /**
-   * Get time to hire statistics
-   */
   async getTimeToHireStats(
     query: AnalyticsQueryDto
   ): Promise<TimeToHireStatsData[]> {
@@ -500,9 +470,6 @@ export class AnalyticsService {
     }));
   }
 
-  /**
-   * Get source effectiveness data
-   */
   async getSourceEffectiveness(
     query: AnalyticsQueryDto
   ): Promise<SourceEffectivenessData[]> {
@@ -548,7 +515,7 @@ export class AnalyticsService {
         stats.applications > 0
           ? Math.round((stats.hired / stats.applications) * 100 * 100) / 100
           : 0,
-      cost_per_hire: 0 // This would need to be calculated based on actual cost data
+      cost_per_hire: 0 // belum dihitung dari data biaya aktual
     }));
   }
 }

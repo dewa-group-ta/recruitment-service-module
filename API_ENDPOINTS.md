@@ -1,15 +1,19 @@
 # Recruitment Service API Endpoints
 
 ## Overview
+
 This document describes all the API endpoints available in the recruitment service backend.
 
 ## Base URL
+
 ```
 http://localhost:3000
 ```
 
 ## Authentication
+
 All endpoints require Bearer token authentication:
+
 ```
 Authorization: Bearer <token>
 ```
@@ -17,11 +21,13 @@ Authorization: Bearer <token>
 ## Candidates API
 
 ### 1. Get All Candidates
+
 **GET** `/candidates`
 
 Retrieve all candidates with pagination and filtering support.
 
 **Query Parameters:**
+
 - `page` (number, optional): Page number (default: 1)
 - `limit` (number, optional): Items per page (default: 10)
 - `status` (string, optional): Filter by application status
@@ -30,6 +36,7 @@ Retrieve all candidates with pagination and filtering support.
 - `vacancyId` (string, optional): Filter by vacancy ID
 
 **Response:**
+
 ```json
 {
   "responseCode": 200,
@@ -61,21 +68,25 @@ Retrieve all candidates with pagination and filtering support.
 ```
 
 ### 2. Get Candidates by Vacancy
+
 **GET** `/candidates/vacancy/{vacancyId}`
 
 Retrieve candidates for a specific vacancy.
 
 **Path Parameters:**
+
 - `vacancyId` (string): Vacancy ID
 
 **Query Parameters:** Same as Get All Candidates
 
 ### 3. Get Candidates by Stage
+
 **GET** `/candidates/vacancy/{vacancyId}/stages`
 
 Retrieve candidates grouped by recruitment stage.
 
 **Response:**
+
 ```json
 {
   "responseCode": 200,
@@ -94,14 +105,17 @@ Retrieve candidates grouped by recruitment stage.
 ```
 
 ### 4. Get Candidate Detail
+
 **GET** `/candidates/{applicationId}`
 
 Retrieve detailed information for a specific candidate.
 
 **Path Parameters:**
+
 - `applicationId` (string): Application ID
 
 **Response:**
+
 ```json
 {
   "responseCode": 200,
@@ -151,14 +165,17 @@ Retrieve detailed information for a specific candidate.
 ```
 
 ### 5. Update Candidate Status
+
 **PATCH** `/candidates/{applicationId}/status`
 
 Update the status of a candidate application.
 
 **Path Parameters:**
+
 - `applicationId` (string): Application ID
 
 **Request Body:**
+
 ```json
 {
   "status": "hired",
@@ -169,14 +186,17 @@ Update the status of a candidate application.
 **Response:** Same as Get Candidate Detail
 
 ### 6. Move Candidate to Next Stage
+
 **PATCH** `/candidates/{applicationId}/move-stage`
 
 Move a candidate to the next stage in the recruitment pipeline.
 
 **Path Parameters:**
+
 - `applicationId` (string): Application ID
 
 **Request Body:**
+
 ```json
 {
   "stageId": "uuid",
@@ -187,14 +207,17 @@ Move a candidate to the next stage in the recruitment pipeline.
 **Response:** Same as Get Candidate Detail
 
 ### 7. Add Candidate Score
+
 **PATCH** `/candidates/{applicationId}/score`
 
 Add or update the score for a candidate.
 
 **Path Parameters:**
+
 - `applicationId` (string): Application ID
 
 **Request Body:**
+
 ```json
 {
   "score": 85,
@@ -205,14 +228,17 @@ Add or update the score for a candidate.
 **Response:** Same as Get Candidate Detail
 
 ### 8. Get Candidate Statistics
+
 **GET** `/candidates/stats`
 
 Retrieve candidate statistics.
 
 **Query Parameters:**
+
 - `vacancyId` (string, optional): Filter by vacancy ID
 
 **Response:**
+
 ```json
 {
   "responseCode": 200,
@@ -234,11 +260,13 @@ Retrieve candidate statistics.
 ```
 
 ### 9. Get Applicants Table
+
 **GET** `/candidates/table`
 
 Retrieve applicants with optimized data structure for table display.
 
 **Query Parameters:**
+
 - `page` (number, optional): Page number
 - `limit` (number, optional): Items per page
 - `search` (string, optional): Search term
@@ -250,11 +278,13 @@ Retrieve applicants with optimized data structure for table display.
 - `sortOrder` (string, optional): Sort order (asc/desc)
 
 ### 10. Get Applicants Summary
+
 **GET** `/candidates/summary`
 
 Retrieve applicant summary/statistics.
 
 **Query Parameters:**
+
 - `status` (string[], optional): Filter by status array
 - `jobStatus` (string[], optional): Filter by job status array
 - `stage` (string[], optional): Filter by stage array
@@ -263,6 +293,7 @@ Retrieve applicant summary/statistics.
 - `dateTo` (string, optional): End date filter
 
 **Response:**
+
 ```json
 {
   "responseCode": 200,
@@ -304,6 +335,7 @@ All endpoints return standardized error responses:
 ```
 
 Common HTTP status codes:
+
 - `200`: Success
 - `400`: Bad Request
 - `401`: Unauthorized
@@ -314,11 +346,13 @@ Common HTTP status codes:
 ## Data Types
 
 ### Status Values
+
 - `applied`: New application
 - `hired`: Candidate hired
 - `rejected`: Candidate rejected
 
 ### Stage Names
+
 - `Applied`: Initial application
 - `Screening`: CV screening
 - `Interview`: Interview stage
@@ -326,13 +360,16 @@ Common HTTP status codes:
 - `Hired`: Final stage
 
 ### Job Status
+
 - `published`: Job is published
 - `draft`: Job is in draft
 - `closed`: Job is closed
 - `archived`: Job is archived
 
 ## Rate Limiting
+
 API requests are rate limited to prevent abuse. Contact the development team for higher limits if needed.
 
 ## Support
+
 For API support and questions, contact the development team or refer to the internal documentation.

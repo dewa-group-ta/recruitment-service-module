@@ -21,11 +21,6 @@ export class StageTemplateService {
     private readonly stageTemplateRepository: Repository<StageTemplate>
   ) {}
 
-  /**
-   * Create a new stage template
-   * @param createStageTemplateDto - Data for creating stage template
-   * @returns Created stage template
-   */
   async create(
     createStageTemplateDto: CreateStageTemplateDto
   ): Promise<StageTemplateResponseDto> {
@@ -50,12 +45,6 @@ export class StageTemplateService {
     }
   }
 
-  /**
-   * Find all stage templates with pagination and filtering
-   * @param paginationDto - Pagination parameters
-   * @param filters - Optional filters
-   * @returns Paginated list of stage templates
-   */
   async findAll(
     paginationDto: BaseFindAllDto,
     filters?: {
@@ -71,7 +60,6 @@ export class StageTemplateService {
       .createQueryBuilder("stageTemplate")
       .where("stageTemplate.deletedAt IS NULL");
 
-    // Apply filters
     if (filters?.category) {
       queryBuilder.andWhere("stageTemplate.category = :category", {
         category: filters.category
@@ -91,13 +79,10 @@ export class StageTemplateService {
       );
     }
 
-    // Order by creation date (newest first)
     queryBuilder.orderBy("stageTemplate.createdAt", "DESC");
 
-    // Get total count
     const totalItems = await queryBuilder.getCount();
 
-    // Apply pagination
     queryBuilder.skip(skip).take(limit);
 
     const stageTemplates = await queryBuilder.getMany();
@@ -113,11 +98,6 @@ export class StageTemplateService {
     });
   }
 
-  /**
-   * Find a stage template by ID
-   * @param id - Stage template ID
-   * @returns Stage template
-   */
   async findOne(id: string): Promise<StageTemplateResponseDto> {
     const stageTemplate = await this.stageTemplateRepository.findOne({
       where: { id, deletedAt: IsNull() } as FindOptionsWhere<StageTemplate>
@@ -130,12 +110,6 @@ export class StageTemplateService {
     return this.mapToResponseDto(stageTemplate);
   }
 
-  /**
-   * Update a stage template
-   * @param id - Stage template ID
-   * @param updateStageTemplateDto - Data for updating stage template
-   * @returns Updated stage template
-   */
   async update(
     id: string,
     updateStageTemplateDto: UpdateStageTemplateDto
@@ -149,7 +123,6 @@ export class StageTemplateService {
     }
 
     try {
-      // Update the stage template
       Object.assign(stageTemplate, updateStageTemplateDto);
 
       const updatedStageTemplate =
@@ -165,11 +138,6 @@ export class StageTemplateService {
     }
   }
 
-  /**
-   * Soft delete a stage template
-   * @param id - Stage template ID
-   * @returns Success message
-   */
   async remove(id: string): Promise<{ message: string }> {
     const stageTemplate = await this.stageTemplateRepository.findOne({
       where: { id, deletedAt: IsNull() } as FindOptionsWhere<StageTemplate>
@@ -180,7 +148,6 @@ export class StageTemplateService {
     }
 
     try {
-      // Soft delete
       await this.stageTemplateRepository.softDelete(id);
 
       return { message: "Stage template deleted successfully" };
@@ -191,11 +158,6 @@ export class StageTemplateService {
     }
   }
 
-  /**
-   * Find stage templates by category
-   * @param category - Category name
-   * @returns List of stage templates in the category
-   */
   async findByCategory(category: string): Promise<StageTemplateResponseDto[]> {
     const stageTemplates = await this.stageTemplateRepository.find({
       where: {
@@ -209,11 +171,6 @@ export class StageTemplateService {
     return stageTemplates.map((template) => this.mapToResponseDto(template));
   }
 
-  /**
-   * Find stage templates by IDs (bulk fetch)
-   * @param ids - Array of stage template IDs
-   * @returns List of stage templates
-   */
   async findByIds(ids: string[]): Promise<StageTemplateResponseDto[]> {
     console.log(ids);
     if (!ids || ids.length === 0) {
@@ -232,10 +189,6 @@ export class StageTemplateService {
     return stageTemplates.map((template) => this.mapToResponseDto(template));
   }
 
-  /**
-   * Get available categories
-   * @returns List of unique categories
-   */
   async getCategories(): Promise<string[]> {
     const result = await this.stageTemplateRepository
       .createQueryBuilder("stageTemplate")
@@ -247,11 +200,6 @@ export class StageTemplateService {
     return result.map((item) => item.category).filter(Boolean);
   }
 
-  /**
-   * Map entity to response DTO
-   * @param stageTemplate - Stage template entity
-   * @returns Stage template response DTO
-   */
   private mapToResponseDto(
     stageTemplate: StageTemplate
   ): StageTemplateResponseDto {

@@ -20,44 +20,47 @@ import {
 } from "../../../shared/enums/applicant.enum";
 import {
   transformToNumber,
-  transformToInteger,
+  transformToInteger
 } from "../../../shared/transformers";
 
 export class ApplyAddressDto {
   @ApiPropertyOptional({ example: "JABAR" })
-  @IsOptional()       // ← tambah
+  @IsOptional()
   @IsString()
-  province?: string;  // ← tambah ?
+  province?: string;
 
   @ApiPropertyOptional({ example: "CIANJ" })
-  @IsOptional()       // ← tambah
+  @IsOptional()
   @IsString()
-  regency?: string;   // ← tambah ?
+  regency?: string;
 
   @ApiPropertyOptional({ example: "CAMPA" })
-  @IsOptional()       // ← tambah
+  @IsOptional()
   @IsString()
-  district?: string;  // ← tambah ?
+  district?: string;
 
   @ApiPropertyOptional({ example: "CIJUN" })
-  @IsOptional()       // ← tambah
+  @IsOptional()
   @IsString()
-  village?: string;   // ← tambah ?
+  village?: string;
 
   @ApiPropertyOptional({ example: "Jl. Kramat Pela No. 123" })
-  @IsOptional()       // ← tambah
+  @IsOptional()
   @IsString()
-  fullAddress?: string; // ← tambah ?
+  fullAddress?: string;
 
   @ApiPropertyOptional({ example: "12345" })
   @IsOptional()
   @IsString()
   postalCode?: string;
 
-  @ApiPropertyOptional({ enum: AddressTypeEnum, example: AddressTypeEnum.REGISTERED })
-  @IsOptional()       // ← tambah
+  @ApiPropertyOptional({
+    enum: AddressTypeEnum,
+    example: AddressTypeEnum.REGISTERED
+  })
+  @IsOptional()
   @IsEnum(AddressTypeEnum)
-  addressType?: AddressTypeEnum; // ← tambah ?
+  addressType?: AddressTypeEnum;
 }
 
 export class ApplyEducationDto {

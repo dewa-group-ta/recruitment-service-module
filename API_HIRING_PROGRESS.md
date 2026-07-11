@@ -1,6 +1,7 @@
 # Hiring Progress API Documentation
 
 ## Overview
+
 API untuk mengambil informasi progress recruitment seorang kandidat, termasuk stage saat ini, stage selanjutnya, skor keseluruhan, dan detail setiap stage.
 
 ## Endpoint
@@ -10,21 +11,24 @@ API untuk mengambil informasi progress recruitment seorang kandidat, termasuk st
 Mengambil informasi progress recruitment untuk kandidat tertentu.
 
 #### Parameters
+
 - `applicationId` (string, required): ID aplikasi kandidat
 
 #### Headers
+
 - `Authorization: Bearer <token>` (required)
 
 #### Response
 
 **Success (200 OK)**
+
 ```json
 {
   "responseCode": 200,
   "responseDesc": "Success",
   "data": {
     "currentStage": "Interview",
-    "upcomingStage": "Offering", 
+    "upcomingStage": "Offering",
     "overallScore": 87.5,
     "stages": [
       {
@@ -35,7 +39,7 @@ Mengambil informasi progress recruitment untuk kandidat tertentu.
       },
       {
         "title": "Screening CV",
-        "date": "2024-01-16T14:20:00Z", 
+        "date": "2024-01-16T14:20:00Z",
         "status": "done",
         "score": 90,
         "notes": "CV screening completed"
@@ -60,26 +64,27 @@ Mengambil informasi progress recruitment untuk kandidat tertentu.
 
 #### Response Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `currentStage` | string | Nama stage saat ini |
-| `upcomingStage` | string | Nama stage selanjutnya |
-| `overallScore` | number | Skor keseluruhan kandidat |
-| `stages` | array | Daftar semua stage dengan detail |
+| Field           | Type   | Description                      |
+| --------------- | ------ | -------------------------------- |
+| `currentStage`  | string | Nama stage saat ini              |
+| `upcomingStage` | string | Nama stage selanjutnya           |
+| `overallScore`  | number | Skor keseluruhan kandidat        |
+| `stages`        | array  | Daftar semua stage dengan detail |
 
 #### Stage Object Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `title` | string | Nama stage |
-| `date` | string (ISO 8601) | Tanggal penyelesaian stage (optional) |
-| `status` | string | Status stage: `done`, `in-progress`, `pending` |
-| `score` | number | Skor stage (optional) |
-| `notes` | string | Catatan stage (optional) |
+| Field    | Type              | Description                                    |
+| -------- | ----------------- | ---------------------------------------------- |
+| `title`  | string            | Nama stage                                     |
+| `date`   | string (ISO 8601) | Tanggal penyelesaian stage (optional)          |
+| `status` | string            | Status stage: `done`, `in-progress`, `pending` |
+| `score`  | number            | Skor stage (optional)                          |
+| `notes`  | string            | Catatan stage (optional)                       |
 
 #### Error Responses
 
 **404 Not Found**
+
 ```json
 {
   "responseCode": 404,
@@ -88,6 +93,7 @@ Mengambil informasi progress recruitment untuk kandidat tertentu.
 ```
 
 **401 Unauthorized**
+
 ```json
 {
   "responseCode": 401,
@@ -96,6 +102,7 @@ Mengambil informasi progress recruitment untuk kandidat tertentu.
 ```
 
 **403 Forbidden**
+
 ```json
 {
   "responseCode": 403,
@@ -106,41 +113,48 @@ Mengambil informasi progress recruitment untuk kandidat tertentu.
 ## Implementation Details
 
 ### Backend Service
+
 - **File**: `src/modules/candidates/services/candidates.service.ts`
 - **Method**: `getHiringProgress(applicationId: string)`
 - **Return Type**: `HiringProgressDto`
 
 ### Controller
+
 - **File**: `src/modules/candidates/controllers/candidates.controller.ts`
 - **Route**: `GET /candidates/:applicationId/hiring-progress`
 - **Role Required**: `HR_MANAGER`
 
 ### DTO
+
 - **File**: `src/modules/candidates/dto/hiring-progress.dto.ts`
 - **Classes**: `HiringProgressDto`, `StageProgressDto`
 
 ## Usage Examples
 
 ### Frontend Integration
+
 ```typescript
 // Menggunakan API service
-const response = await candidatesService.getHiringProgress('app-123');
+const response = await candidatesService.getHiringProgress("app-123");
 const progress = response.data;
 
 // Menggunakan composable
 const { hiringProgress, loadApplicantDetails } = useApplicantDetails();
-await loadApplicantDetails('app-123');
+await loadApplicantDetails("app-123");
 ```
 
 ### Default Stages
+
 Jika tidak ada pipeline yang dikonfigurasi, API akan menggunakan default stages:
+
 1. Applied
-2. Screening CV  
+2. Screening CV
 3. Interview
 4. Offering
 5. Hired
 
 ## Notes
+
 - API ini memerlukan autentikasi dan role HR Manager
 - Data stage diambil dari pipeline recruitment yang terkait dengan aplikasi
 - Jika tidak ada pipeline, akan menggunakan default stages

@@ -16,8 +16,10 @@ export abstract class BaseSeeder {
 
   protected async clearTable<T>(entity: new () => T) {
     const repository = await this.getRepository(entity);
-    // Use query to delete all records to avoid foreign key constraint issues
-    await repository.query(`TRUNCATE TABLE ${repository.metadata.tableName} CASCADE`);
+    // pakai TRUNCATE CASCADE langsung supaya tidak kena constraint foreign key
+    await repository.query(
+      `TRUNCATE TABLE ${repository.metadata.tableName} CASCADE`
+    );
   }
 
   protected async saveEntities<T>(entity: new () => T, data: any[]) {

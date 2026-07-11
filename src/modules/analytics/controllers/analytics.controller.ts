@@ -23,9 +23,6 @@ import { StageDistributionData } from "../entities/analytics.entity";
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
-  /**
-   * Get recruitment trend data
-   */
   @Get("recruitment-trend")
   @ApiOperation({ summary: "Get recruitment trend data" })
   @ApiQuery({
@@ -63,9 +60,6 @@ export class AnalyticsController {
     };
   }
 
-  /**
-   * Get stage distribution data
-   */
   @Get("stage-distribution")
   @ApiOperation({ summary: "Get stage distribution data" })
   @ApiQuery({
@@ -99,9 +93,6 @@ export class AnalyticsController {
     return data;
   }
 
-  /**
-   * Get experience distribution data
-   */
   @Get("experience-distribution")
   @ApiOperation({ summary: "Get experience distribution data" })
   @ApiQuery({
@@ -133,9 +124,6 @@ export class AnalyticsController {
     };
   }
 
-  /**
-   * Get hiring statistics
-   */
   @Get("hiring-stats")
   @ApiOperation({ summary: "Get hiring statistics" })
   @ApiQuery({
@@ -167,9 +155,6 @@ export class AnalyticsController {
     };
   }
 
-  /**
-   * Get department statistics
-   */
   @Get("department-stats")
   @ApiOperation({ summary: "Get department statistics" })
   @ApiQuery({
@@ -201,9 +186,6 @@ export class AnalyticsController {
     };
   }
 
-  /**
-   * Get job category statistics
-   */
   @Get("job-category-stats")
   @ApiOperation({ summary: "Get job category statistics" })
   @ApiQuery({
@@ -235,9 +217,6 @@ export class AnalyticsController {
     };
   }
 
-  /**
-   * Get assessment trend data
-   */
   @Get("assessment-trend")
   @ApiOperation({ summary: "Get assessment trend data" })
   @ApiQuery({
@@ -275,9 +254,6 @@ export class AnalyticsController {
     };
   }
 
-  /**
-   * Get time to hire statistics
-   */
   @Get("time-to-hire-stats")
   @ApiOperation({ summary: "Get time to hire statistics" })
   @ApiQuery({
@@ -315,9 +291,6 @@ export class AnalyticsController {
     };
   }
 
-  /**
-   * Get source effectiveness data
-   */
   @Get("source-effectiveness")
   @ApiOperation({ summary: "Get source effectiveness data" })
   @ApiQuery({

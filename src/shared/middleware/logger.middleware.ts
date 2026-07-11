@@ -6,21 +6,19 @@ export class LoggerMiddleware implements NestMiddleware {
   private readonly maxDataLengthForLogging = 1000;
 
   /**
-   * If you don't want to log certain method requests, add the method to the list.
-   * For example, the OPTIONS method is used by browsers to retrieve information.
+   * method http yang tidak perlu di-log, tambahkan ke list ini. contoh: OPTIONS dipakai browser untuk retrieve info, jadi tidak perlu di-log.
    */
   private readonly blackListMethods = ["OPTIONS"];
 
   /**
-   * If you prefer not to log specific path requests, add them to the list.
-   * For example, I added the /ignore-log (locahost:3000/ignore-log).
+   * path yang tidak perlu di-log sama sekali, tambahkan ke list ini (contoh: /ignore-log).
    */
   private readonly blackListPaths = ["/ignore-log"];
 
   /**
-   * If you prefer not to log the data responses from specific path requests, add them to the list.
-   * Unlike blackListPaths, the blackListResponseData will only skip the body response but will still display the request/response.
-   * This is recommend for long responses, for example image, binary, file, among others.
+   * path yang body response-nya tidak perlu di-log, tambahkan ke list ini.
+   * beda dengan blackListPaths, request/response tetap ditampilkan, hanya body-nya yang di-skip.
+   * cocok untuk response yang panjang seperti image, binary, atau file.
    */
   private readonly blackListResponseData = ["/ignore-body-response"];
 
@@ -75,7 +73,7 @@ export class LoggerMiddleware implements NestMiddleware {
     const maskedBody = { ...body };
     for (const field of this.sensitiveFields) {
       if (maskedBody[field]) {
-        maskedBody[field] = "********"; // mask the sensitive field
+        maskedBody[field] = "********";
       }
     }
     return maskedBody;

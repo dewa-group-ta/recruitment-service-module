@@ -18,8 +18,4 @@ export class Pagination<T> {
     this.pagination.total_items = paginationResults.total_items || 0;
     this.pagination.total_pages = paginationResults.total_pages || 0;
   }
-
-  /**
-   * pagination: page, limit, total_items, total_pages
-   */
 }

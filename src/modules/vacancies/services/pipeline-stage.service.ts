@@ -23,16 +23,10 @@ export class PipelineStageService {
     private readonly dataSource: DataSource
   ) {}
 
-  /**
-   * Create a new pipeline stage
-   * @param createPipelineStageDto - Data for creating pipeline stage
-   * @returns Created pipeline stage
-   */
   async create(
     createPipelineStageDto: CreatePipelineStageDto
   ): Promise<PipelineStageResponseDto> {
     try {
-      // Check if stage order already exists for this pipeline
       const existingStage = await this.pipelineStageRepository.findOne({
         where: {
           pipelineId: createPipelineStageDto.pipelineId,
@@ -61,12 +55,6 @@ export class PipelineStageService {
     }
   }
 
-  /**
-   * Find all pipeline stages with pagination and filtering
-   * @param paginationDto - Pagination parameters
-   * @param filters - Optional filters
-   * @returns Paginated list of pipeline stages
-   */
   async findAll(
     paginationDto: BaseFindAllDto,
     filters?: {
@@ -84,7 +72,6 @@ export class PipelineStageService {
       .leftJoinAndSelect("pipelineStage.stageTemplate", "stageTemplate")
       .where("1=1");
 
-    // Apply filters
     if (filters?.pipelineId) {
       queryBuilder.andWhere("pipelineStage.pipelineId = :pipelineId", {
         pipelineId: filters.pipelineId
@@ -107,14 +94,11 @@ export class PipelineStageService {
       );
     }
 
-    // Order by pipeline and stage order
     queryBuilder.orderBy("pipelineStage.pipelineId", "ASC");
     queryBuilder.addOrderBy("pipelineStage.stageOrder", "ASC");
 
-    // Get total count
     const totalItems = await queryBuilder.getCount();
 
-    // Apply pagination
     queryBuilder.skip(skip).take(limit);
 
     const pipelineStages = await queryBuilder.getMany();
@@ -130,11 +114,6 @@ export class PipelineStageService {
     };
   }
 
-  /**
-   * Find a pipeline stage by ID
-   * @param id - Pipeline stage ID
-   * @returns Pipeline stage
-   */
   async findOne(id: string): Promise<PipelineStageResponseDto> {
     const pipelineStage = await this.pipelineStageRepository.findOne({
       where: { id } as FindOptionsWhere<PipelineStage>,
@@ -148,12 +127,6 @@ export class PipelineStageService {
     return this.mapToResponseDto(pipelineStage);
   }
 
-  /**
-   * Update a pipeline stage
-   * @param id - Pipeline stage ID
-   * @param updatePipelineStageDto - Data for updating pipeline stage
-   * @returns Updated pipeline stage
-   */
   async update(
     id: string,
     updatePipelineStageDto: UpdatePipelineStageDto
@@ -168,7 +141,6 @@ export class PipelineStageService {
     }
 
     try {
-      // If stage order is being updated, check for conflicts
       if (
         updatePipelineStageDto.stageOrder &&
         updatePipelineStageDto.stageOrder !== pipelineStage.stageOrder
@@ -188,7 +160,6 @@ export class PipelineStageService {
         }
       }
 
-      // Update the pipeline stage
       Object.assign(pipelineStage, updatePipelineStageDto);
 
       const updatedPipelineStage =
@@ -201,11 +172,6 @@ export class PipelineStageService {
     }
   }
 
-  /**
-   * Delete a pipeline stage
-   * @param id - Pipeline stage ID
-   * @returns Success message
-   */
   async remove(id: string): Promise<{ message: string }> {
     const pipelineStage = await this.pipelineStageRepository.findOne({
       where: { id } as FindOptionsWhere<PipelineStage>
@@ -215,7 +181,7 @@ export class PipelineStageService {
       throw new NotFoundException(`Pipeline stage with ID ${id} not found`);
     }
 
-    // prevent deletion if any live application is currently at this stage
+    // cegah hapus stage kalau masih ada application yang aktif di stage ini
     const activeApplicationCount = await this.dataSource
       .getRepository(Application)
       .count({ where: { currentStageId: id } });
@@ -236,11 +202,6 @@ export class PipelineStageService {
     }
   }
 
-  /**
-   * Find pipeline stages by pipeline ID
-   * @param pipelineId - Pipeline ID
-   * @returns List of pipeline stages ordered by stage order
-   */
   async findByPipelineId(
     pipelineId: string
   ): Promise<PipelineStageResponseDto[]> {
@@ -253,11 +214,6 @@ export class PipelineStageService {
     return pipelineStages.map((stage) => this.mapToResponseDto(stage));
   }
 
-  /**
-   * Find pipeline stages by stage template ID
-   * @param stageTemplateId - Stage template ID
-   * @returns List of pipeline stages using this template
-   */
   async findByStageTemplateId(
     stageTemplateId: string
   ): Promise<PipelineStageResponseDto[]> {
@@ -270,19 +226,13 @@ export class PipelineStageService {
     return pipelineStages.map((stage) => this.mapToResponseDto(stage));
   }
 
-  /**
-   * Reorder pipeline stages
-   * @param pipelineId - Pipeline ID
-   * @param stageOrders - Array of stage IDs with their new orders
-   * @returns Success message
-   */
   async reorderStages(
     pipelineId: string,
     stageOrders: { stageId: string; newOrder: number }[]
   ): Promise<{ message: string }> {
     const stageIds = stageOrders.map((so) => so.stageId);
 
-    // validate all provided stage IDs belong to the given pipeline
+    // pastikan semua stage id yang dikirim memang milik pipeline ini
     const existingStages = await this.pipelineStageRepository.find({
       where: { pipelineId, id: In(stageIds) } as FindOptionsWhere<PipelineStage>
     });
@@ -293,7 +243,7 @@ export class PipelineStageService {
       );
     }
 
-    // wrap in transaction so partial reorder never leaves inconsistent order
+    // dibungkus transaksi supaya reorder yang gagal di tengah tidak meninggalkan urutan yang tidak konsisten
     await this.dataSource.transaction(async (manager) => {
       for (const stageOrder of stageOrders) {
         await manager.update(PipelineStage, stageOrder.stageId, {
@@ -305,11 +255,6 @@ export class PipelineStageService {
     return { message: "Pipeline stages reordered successfully" };
   }
 
-  /**
-   * Get next stage order for a pipeline
-   * @param pipelineId - Pipeline ID
-   * @returns Next available stage order
-   */
   async getNextStageOrder(pipelineId: string): Promise<number> {
     const lastStage = await this.pipelineStageRepository.findOne({
       where: { pipelineId } as FindOptionsWhere<PipelineStage>,
@@ -319,11 +264,6 @@ export class PipelineStageService {
     return lastStage ? lastStage.stageOrder + 1 : 1;
   }
 
-  /**
-   * Map entity to response DTO
-   * @param pipelineStage - Pipeline stage entity
-   * @returns Pipeline stage response DTO
-   */
   private mapToResponseDto(
     pipelineStage: PipelineStage
   ): PipelineStageResponseDto {

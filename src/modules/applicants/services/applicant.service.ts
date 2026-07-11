@@ -35,7 +35,10 @@ import { ApplicantProjectHistory } from "../entities/applicant-project-history.e
 import { ApplicantSource } from "../entities/applicant-source.entity";
 import { ApplyApplicantDto } from "../dto/apply-applicant.dto";
 import { QuickApplyDto, QuickApplyResponseDto } from "../dto/quick-apply.dto";
-import { ApplyFormBasedDto, ApplyFormBasedResponseDto } from "../dto/apply-form-based.dto";
+import {
+  ApplyFormBasedDto,
+  ApplyFormBasedResponseDto
+} from "../dto/apply-form-based.dto";
 import { PipelineStage } from "../../vacancies/entities/pipeline-stage.entity";
 import { StageActivity } from "../../vacancies/entities/stage-activity.entity";
 import { ApplicationTrackingResponseDto } from "../dto/application-tracking-response.dto";
@@ -48,16 +51,15 @@ import { File, FileType } from "../../../shared/entities/file.entity";
 import { ApplyApplicantResponseDto } from "../dto/apply-applicant-response.dto";
 import { EvaluationResultResponseDto } from "src/modules/applicant-results/dto/evaluation-result-response.dto";
 import { EvaluationResult } from "src/modules/applicant-results/entities/evaluation-results.entity";
-import { ApplicationTrackingPublicDto, ApplicationTrackingQueryDto } from "../dto/application-tracking-public.dto";
+import {
+  ApplicationTrackingPublicDto,
+  ApplicationTrackingQueryDto
+} from "../dto/application-tracking-public.dto";
 import { EmailService } from "../../../shared/services/email.service";
 import { SystemConfigEmailService } from "../../../shared/services/system-config-email.service";
 
 /**
- * Service for managing applicant operations
- * Handles applicant registration, authentication, profile management, and application tracking
- *
- * @class ApplicantService
- * @implements {IApplicantService}
+ * mengelola operasi pelamar: registrasi, autentikasi, profil, dan tracking aplikasi.
  */
 @Injectable()
 export class ApplicantService implements IApplicantService {
@@ -94,58 +96,48 @@ export class ApplicantService implements IApplicantService {
     private readonly fileRepository: Repository<File>,
     private readonly fileUploadService: FileUploadService,
     private readonly emailService: EmailService,
-    private readonly systemConfigEmailService: SystemConfigEmailService,
+    private readonly systemConfigEmailService: SystemConfigEmailService
   ) {}
 
   /**
-   * Register a new applicant
-   * Creates a new applicant record and associated application
-   *
-   * @param registerDto - Registration data containing applicant information and vacancy details
-   * @returns Promise<boolean> - Registration success status
-   * @throws BadRequestException - When validation fails or vacancy is not available
-   * @throws ConflictException - When applicant already exists or has already applied
-   *
-   * @example
-   * ```typescript
-   * const registerDto = {
-   *   fullName: 'John Doe',
-   *   email: 'john@example.com',
-   *   phone: '+6281234567890',
-   *   vacancyId: 'uuid-string',
-   *   applicantSourceIds: ['source-uuid-1', 'source-uuid-2']
-   * };
-   *
-   * const success = await applicantService.registerApplicant(registerDto);
-   * ```
+   * registrasi pelamar baru: buat record applicant + application terkait.
+   * @throws BadRequestException - validasi gagal atau vacancy tidak tersedia
+   * @throws ConflictException - pelamar sudah pernah apply ke vacancy ini
    */
-  async registerApplicant(registerDto: RegisterApplicantDto): Promise<{ applicantId: string; applicationId: string }> {
+  async registerApplicant(
+    registerDto: RegisterApplicantDto
+  ): Promise<{ applicantId: string; applicationId: string }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // Validate vacancy and application eligibility (without quota constraints)
+      // validasi vacancy dan eligibility application (tanpa batasan kuota)
       const vacancy = await this.validateVacancyAndEligibility(
         registerDto,
         queryRunner
       );
 
-      // Find or create applicant
+      // cari atau buat applicant
       const applicant = await this.findOrCreateApplicant(
         registerDto,
         queryRunner
       );
 
-      // Check for existing application inside the transaction to prevent race conditions
-      const existingApplication = await queryRunner.manager.findOne(Application, {
-        where: { applicantId: applicant.id, vacancyId: registerDto.vacancyId }
-      });
+      // cek application yang sudah ada di dalam transaksi untuk mencegah race condition
+      const existingApplication = await queryRunner.manager.findOne(
+        Application,
+        {
+          where: { applicantId: applicant.id, vacancyId: registerDto.vacancyId }
+        }
+      );
       if (existingApplication) {
-        throw new BadRequestException('You have already applied for this vacancy');
+        throw new BadRequestException(
+          "You have already applied for this vacancy"
+        );
       }
 
-      // Create application — capture returned entity to get applicationId
+      // buat application — tangkap entity yang dikembalikan untuk dapat applicationId
       const application = await this.createApplication(
         applicant,
         vacancy,
@@ -155,7 +147,7 @@ export class ApplicantService implements IApplicantService {
 
       await queryRunner.commitTransaction();
 
-      await this.sendLoginToken(applicant.id, vacancy.title);  // tetap kirim token
+      await this.sendLoginToken(applicant.id, vacancy.title); // tetap kirim token
 
       return { applicantId: applicant.id, applicationId: application.id };
     } catch (error) {
@@ -166,9 +158,6 @@ export class ApplicantService implements IApplicantService {
     }
   }
 
-  /**
-   * Validate vacancy and check application eligibility
-   */
   private async validateVacancyAndEligibility(
     registerDto: RegisterApplicantDto,
     queryRunner: any
@@ -215,9 +204,6 @@ export class ApplicantService implements IApplicantService {
     return vacancy;
   }
 
-  /**
-   * Find or create applicant
-   */
   private async findOrCreateApplicant(
     registerDto: RegisterApplicantDto,
     queryRunner: any
@@ -240,7 +226,7 @@ export class ApplicantService implements IApplicantService {
       throw new BadRequestException("Failed to create or update applicant");
     }
 
-    // Handle applicant sources if provided
+    // proses applicant source kalau disediakan
     if (
       registerDto.applicantSourceIds &&
       registerDto.applicantSourceIds.length > 0
@@ -255,15 +241,12 @@ export class ApplicantService implements IApplicantService {
     return applicant;
   }
 
-  /**
-   * Handle applicant sources for an applicant
-   */
   private async handleApplicantSources(
     applicant: Applicant,
     applicantSourceIds: string[],
     queryRunner: any
   ): Promise<void> {
-    // Validate that all applicant source IDs exist
+    // validasi semua id applicant source ada
     const applicantSources = await this.applicantSourceRepository.findBy({
       id: In(applicantSourceIds)
     });
@@ -278,14 +261,11 @@ export class ApplicantService implements IApplicantService {
       );
     }
 
-    // Update applicant sources relationship
+    // update relasi applicant sources
     applicant.applicantSources = applicantSources;
     await queryRunner.manager.save(Applicant, applicant);
   }
 
-  /**
-   * Check if applicant already applied for this vacancy
-   */
   private async checkExistingApplication(
     applicantId: string,
     vacancyId: string
@@ -304,9 +284,6 @@ export class ApplicantService implements IApplicantService {
     }
   }
 
-  /**
-   * Create application
-   */
   private async createApplication(
     applicant: Applicant,
     vacancy: Vacancy,
@@ -332,9 +309,6 @@ export class ApplicantService implements IApplicantService {
     return queryRunner.manager.save(application);
   }
 
-  /**
-   * Send login token
-   */
   private async sendLoginToken(
     applicantId: string,
     vacancyTitle: string
@@ -351,11 +325,7 @@ export class ApplicantService implements IApplicantService {
     }
   }
 
-  /**
-   * Get current applicant profile with all related data
-   * @param applicantId - Applicant ID from authenticated token
-   * @returns Applicant profile with relations
-   */
+  // ambil profil applicant beserta relasi terkait (applications, vacancy, jobCategory)
   async getMe(applicantId: string): Promise<Applicant> {
     const applicant = await this.applicantRepository.findOne({
       where: { id: applicantId },
@@ -402,16 +372,12 @@ export class ApplicantService implements IApplicantService {
     return applicant;
   }
 
-  /**
-   * Generate unique application number
-   * @returns Application number
-   */
   private async generateApplicationNumber(jobCode: string): Promise<string> {
     const year = new Date().getFullYear();
     const month = new Date().getMonth() + 1;
     const prefix = `${jobCode}${year}${month}`;
 
-    // Get the last application number for this year
+    // ambil nomor aplikasi terakhir untuk tahun ini
     const lastApplication = await this.applicationRepository
       .createQueryBuilder("application")
       .where("application.applicationNumber LIKE :prefix", {
@@ -431,11 +397,6 @@ export class ApplicantService implements IApplicantService {
     return `${prefix}-${sequence.toString().padStart(3, "0")}`;
   }
 
-  /**
-   * Update applicant profile
-   * @param applicantId - Applicant ID
-   * @param updateDto - Update data
-   */
   async updateProfile(
     applicantId: string,
     updateDto: UpdateApplicantProfileDto
@@ -448,19 +409,13 @@ export class ApplicantService implements IApplicantService {
       throw new NotFoundException("Applicant not found");
     }
 
-    // Update only provided fields
     Object.assign(applicant, updateDto);
 
     return await this.applicantRepository.save(applicant);
   }
 
-  // ========== ADDRESS MANAGEMENT ==========
+  // ========== manajemen alamat ==========
 
-  /**
-   * Create new address for applicant
-   * @param applicantId - Applicant ID
-   * @param createDto - Address data
-   */
   async createAddress(
     applicantId: string,
     createDto: CreateAddressDto
@@ -473,10 +428,6 @@ export class ApplicantService implements IApplicantService {
     return await this.addressRepository.save(address);
   }
 
-  /**
-   * Get all addresses for applicant
-   * @param applicantId - Applicant ID
-   */
   async getAddresses(applicantId: string): Promise<ApplicantAddress[]> {
     return await this.addressRepository.find({
       where: { applicantId },
@@ -484,12 +435,6 @@ export class ApplicantService implements IApplicantService {
     });
   }
 
-  /**
-   * Update address
-   * @param addressId - Address ID
-   * @param applicantId - Applicant ID
-   * @param updateDto - Update data
-   */
   async updateAddress(
     addressId: string,
     applicantId: string,
@@ -507,11 +452,6 @@ export class ApplicantService implements IApplicantService {
     return await this.addressRepository.save(address);
   }
 
-  /**
-   * Delete address
-   * @param addressId - Address ID
-   * @param applicantId - Applicant ID
-   */
   async deleteAddress(addressId: string, applicantId: string): Promise<void> {
     const result = await this.addressRepository.softDelete({
       id: addressId,
@@ -523,13 +463,8 @@ export class ApplicantService implements IApplicantService {
     }
   }
 
-  // ========== IDENTITY MANAGEMENT ==========
+  // ========== manajemen identitas ==========
 
-  /**
-   * Create new identity for applicant
-   * @param applicantId - Applicant ID
-   * @param createDto - Identity data
-   */
   async createIdentity(
     applicantId: string,
     createDto: CreateIdentityDto
@@ -542,10 +477,6 @@ export class ApplicantService implements IApplicantService {
     return await this.identityRepository.save(identity);
   }
 
-  /**
-   * Get all identities for applicant
-   * @param applicantId - Applicant ID
-   */
   async getIdentities(applicantId: string): Promise<ApplicantIdentity[]> {
     return await this.identityRepository.find({
       where: { applicantId },
@@ -553,12 +484,6 @@ export class ApplicantService implements IApplicantService {
     });
   }
 
-  /**
-   * Update identity
-   * @param identityId - Identity ID
-   * @param applicantId - Applicant ID
-   * @param updateDto - Update data
-   */
   async updateIdentity(
     identityId: string,
     applicantId: string,
@@ -576,11 +501,6 @@ export class ApplicantService implements IApplicantService {
     return await this.identityRepository.save(identity);
   }
 
-  /**
-   * Delete identity
-   * @param identityId - Identity ID
-   * @param applicantId - Applicant ID
-   */
   async deleteIdentity(identityId: string, applicantId: string): Promise<void> {
     const result = await this.identityRepository.softDelete({
       id: identityId,
@@ -592,13 +512,8 @@ export class ApplicantService implements IApplicantService {
     }
   }
 
-  // ========== EDUCATION MANAGEMENT ==========
+  // ========== manajemen pendidikan ==========
 
-  /**
-   * Create new education for applicant
-   * @param applicantId - Applicant ID
-   * @param createDto - Education data
-   */
   async createEducation(
     applicantId: string,
     createDto: CreateEducationDto
@@ -611,10 +526,6 @@ export class ApplicantService implements IApplicantService {
     return await this.educationRepository.save(education);
   }
 
-  /**
-   * Get all educations for applicant
-   * @param applicantId - Applicant ID
-   */
   async getEducations(applicantId: string): Promise<ApplicantEducation[]> {
     return await this.educationRepository.find({
       where: { applicantId },
@@ -622,12 +533,6 @@ export class ApplicantService implements IApplicantService {
     });
   }
 
-  /**
-   * Update education
-   * @param educationId - Education ID
-   * @param applicantId - Applicant ID
-   * @param updateDto - Update data
-   */
   async updateEducation(
     educationId: string,
     applicantId: string,
@@ -645,11 +550,6 @@ export class ApplicantService implements IApplicantService {
     return await this.educationRepository.save(education);
   }
 
-  /**
-   * Delete education
-   * @param educationId - Education ID
-   * @param applicantId - Applicant ID
-   */
   async deleteEducation(
     educationId: string,
     applicantId: string
@@ -664,13 +564,8 @@ export class ApplicantService implements IApplicantService {
     }
   }
 
-  // ========== JOB HISTORY MANAGEMENT ==========
+  // ========== manajemen riwayat pekerjaan ==========
 
-  /**
-   * Create new job history for applicant
-   * @param applicantId - Applicant ID
-   * @param createDto - Job history data
-   */
   async createJobHistory(
     applicantId: string,
     createDto: CreateJobHistoryDto
@@ -683,10 +578,6 @@ export class ApplicantService implements IApplicantService {
     return await this.jobHistoryRepository.save(jobHistory);
   }
 
-  /**
-   * Get all job histories for applicant
-   * @param applicantId - Applicant ID
-   */
   async getJobHistories(applicantId: string): Promise<ApplicantJobHistory[]> {
     return await this.jobHistoryRepository.find({
       where: { applicantId },
@@ -694,12 +585,6 @@ export class ApplicantService implements IApplicantService {
     });
   }
 
-  /**
-   * Update job history
-   * @param jobHistoryId - Job history ID
-   * @param applicantId - Applicant ID
-   * @param updateDto - Update data
-   */
   async updateJobHistory(
     jobHistoryId: string,
     applicantId: string,
@@ -717,11 +602,6 @@ export class ApplicantService implements IApplicantService {
     return await this.jobHistoryRepository.save(jobHistory);
   }
 
-  /**
-   * Delete job history
-   * @param jobHistoryId - Job history ID
-   * @param applicantId - Applicant ID
-   */
   async deleteJobHistory(
     jobHistoryId: string,
     applicantId: string
@@ -736,13 +616,8 @@ export class ApplicantService implements IApplicantService {
     }
   }
 
-  // ========== PROJECT HISTORY MANAGEMENT ==========
+  // ========== manajemen riwayat proyek ==========
 
-  /**
-   * Create new project history for applicant
-   * @param applicantId - Applicant ID
-   * @param createDto - Project history data
-   */
   async createProjectHistory(
     applicantId: string,
     createDto: CreateProjectHistoryDto
@@ -755,10 +630,6 @@ export class ApplicantService implements IApplicantService {
     return await this.projectHistoryRepository.save(projectHistory);
   }
 
-  /**
-   * Get all project histories for applicant
-   * @param applicantId - Applicant ID
-   */
   async getProjectHistories(
     applicantId: string
   ): Promise<ApplicantProjectHistory[]> {
@@ -768,12 +639,6 @@ export class ApplicantService implements IApplicantService {
     });
   }
 
-  /**
-   * Update project history
-   * @param projectHistoryId - Project history ID
-   * @param applicantId - Applicant ID
-   * @param updateDto - Update data
-   */
   async updateProjectHistory(
     projectHistoryId: string,
     applicantId: string,
@@ -791,11 +656,6 @@ export class ApplicantService implements IApplicantService {
     return await this.projectHistoryRepository.save(projectHistory);
   }
 
-  /**
-   * Delete project history
-   * @param projectHistoryId - Project history ID
-   * @param applicantId - Applicant ID
-   */
   async deleteProjectHistory(
     projectHistoryId: string,
     applicantId: string
@@ -810,324 +670,378 @@ export class ApplicantService implements IApplicantService {
     }
   }
 
-async applyForPosition(
-  applicationId: string,
-  applyDto: ApplyApplicantDto
-): Promise<ApplyApplicantResponseDto> {
+  async applyForPosition(
+    applicationId: string,
+    applyDto: ApplyApplicantDto
+  ): Promise<ApplyApplicantResponseDto> {
+    // 1. cari application
+    const application = await this.applicationRepository.findOne({
+      where: { id: applicationId },
+      relations: ["applicant"]
+    });
 
-  // 1. Cari application (tetap sama)
-  const application = await this.applicationRepository.findOne({
-    where: { id: applicationId },
-    relations: ["applicant"]
-  });
+    if (!application) throw new NotFoundException("Application not found");
 
-  if (!application) throw new NotFoundException("Application not found");
-
-  if (application.status === ApplicantStatus.HIRED || application.status === ApplicantStatus.REJECTED) {
-    throw new BadRequestException(`Cannot apply for this position. Application has already been finalized.`);
-  }
-
-  const applicantId = application.applicantId;
-
-  // 2. Validasi CV (tetap sama)
-  const cvFile = await this.fileRepository.findOne({
-    where: {
-      relatedEntity:   "applicant",
-      relatedEntityId: applicantId,
-      fileType:        FileType.CV,
-      isActive:        true
+    if (
+      application.status === ApplicantStatus.HIRED ||
+      application.status === ApplicantStatus.REJECTED
+    ) {
+      throw new BadRequestException(
+        `Cannot apply for this position. Application has already been finalized.`
+      );
     }
-  });
 
-  if (!cvFile) {
-    throw new BadRequestException("CV belum diupload...");
-  }
+    const applicantId = application.applicantId;
 
-  // 3. ✅ SCORING DULU sebelum transaksi DB
-  let scoringResult: any = null;
-  let scoringError: string | null = null;
-  try {
-    scoringResult = await this.applicantResultsService.runScoring(
-      applicationId,
-      cvFile.filePath,
-      cvFile.mimeType ?? "application/pdf"
-    );
-  } catch (err) {
-    scoringError = err instanceof Error ? err.message : "CV analysis failed";
-    this.logger.error(`Scoring failed for applicationId=${applicationId}: ${scoringError}`);
-    // Lanjut dengan transaksi, simpan error message nanti
-  }
-
-  // 4. ✅ Scoring berhasil → baru jalankan transaksi DB
-  const result = await this.dataSource.transaction(async (manager) => {
-    const applicant = await manager.findOne(Applicant, { where: { id: applicantId } });
-    if (!applicant) throw new NotFoundException("Applicant not found");
-
-    Object.assign(applicant, {
-      fullName:         applyDto.fullName,
-      phone:            applyDto.phone,
-      alternativePhone: applyDto.alternativePhone,
-      gender:           applyDto.gender,
-      maritalStatus:    applyDto.maritalStatus,
-      placeOfBirth:     applyDto.placeOfBirth,
-      dateOfBirth:      new Date(applyDto.dateOfBirth),
-      linkedinUrl:      applyDto.linkedinUrl,
-      socialMediaUrl:   applyDto.socialMediaUrl,
-      availability:     applyDto.availability,
-      availabilityAt:   applyDto.availabilityAt ? new Date(applyDto.availabilityAt) : null
+    // 2. validasi cv
+    const cvFile = await this.fileRepository.findOne({
+      where: {
+        relatedEntity: "applicant",
+        relatedEntityId: applicantId,
+        fileType: FileType.CV,
+        isActive: true
+      }
     });
 
-    const updatedApplicant = await manager.save(Applicant, applicant);
+    if (!cvFile) {
+      throw new BadRequestException("CV belum diupload...");
+    }
 
-    await manager.softDelete(ApplicantAddress, { applicantId });
-    await manager.save(ApplicantAddress, applyDto.addresses.map(a =>
-      manager.create(ApplicantAddress, { ...a, applicantId })
-    ));
-
-    await manager.softDelete(ApplicantIdentity, { applicantId });
-    await manager.save(ApplicantIdentity, applyDto.identities.map(i =>
-      manager.create(ApplicantIdentity, { ...i, applicantId })
-    ));
-
-    application.status    = ApplicantStatus.APPLIED;
-    application.appliedAt = new Date();
-    const updatedApplication = await manager.save(Application, application);
-
-    const firstStage = await manager.findOne(PipelineStage, {
-      where: { pipelineId: application.pipelineId },
-      order: { stageOrder: "ASC" }
-    });
-    if (!firstStage) throw new NotFoundException("First stage not found");
-
-    await manager.save(StageActivity, manager.create(StageActivity, {
-      applicationId: application.id,
-      stageId:       firstStage.id,
-      createdAt:     new Date(),
-      status:        StageActivityStatus.IN_PROGRESS
-    }));
-
-    application.currentStageId = firstStage.id;
-    application.lastActivityAt = new Date();
-    await manager.save(Application, application);
-
-    await manager.save(File, manager.create(File, {
-      fileName:        cvFile.fileName,
-      originalName:    cvFile.originalName,
-      filePath:        cvFile.filePath,
-      fileSize:        cvFile.fileSize,
-      mimeType:        cvFile.mimeType,
-      bucket:          cvFile.bucket,
-      fileType:        FileType.CV,
-      relatedEntity:   "application",
-      relatedEntityId: application.id,
-      uploadedById:    applicantId,
-      description:     `CV snapshot - ${application.applicationNumber}`
-    }));
-
-    return { applicant: updatedApplicant, application: updatedApplication };
-  });
-
-  // 5. ✅ Simpan hasil scoring ke DB atau error message
-  if (scoringError) {
-    // Jika scoring gagal, simpan error message
-    await this.applicantResultsService.saveEvaluationError(applicationId, scoringError);
-  } else if (scoringResult) {
-    // Jika scoring berhasil, simpan hasil
+    // 3. scoring dulu sebelum transaksi db
+    let scoringResult: any = null;
+    let scoringError: string | null = null;
     try {
-      await this.applicantResultsService.saveResults(scoringResult, applicantId);
+      scoringResult = await this.applicantResultsService.runScoring(
+        applicationId,
+        cvFile.filePath,
+        cvFile.mimeType ?? "application/pdf"
+      );
     } catch (err) {
-      this.logger.error('Failed to persist scoring results', err);
+      scoringError = err instanceof Error ? err.message : "CV analysis failed";
+      this.logger.error(
+        `Scoring failed for applicationId=${applicationId}: ${scoringError}`
+      );
+      // lanjut dengan transaksi, simpan error message nanti
     }
+
+    // 4. scoring berhasil → baru jalankan transaksi db
+    const result = await this.dataSource.transaction(async (manager) => {
+      const applicant = await manager.findOne(Applicant, {
+        where: { id: applicantId }
+      });
+      if (!applicant) throw new NotFoundException("Applicant not found");
+
+      Object.assign(applicant, {
+        fullName: applyDto.fullName,
+        phone: applyDto.phone,
+        alternativePhone: applyDto.alternativePhone,
+        gender: applyDto.gender,
+        maritalStatus: applyDto.maritalStatus,
+        placeOfBirth: applyDto.placeOfBirth,
+        dateOfBirth: new Date(applyDto.dateOfBirth),
+        linkedinUrl: applyDto.linkedinUrl,
+        socialMediaUrl: applyDto.socialMediaUrl,
+        availability: applyDto.availability,
+        availabilityAt: applyDto.availabilityAt
+          ? new Date(applyDto.availabilityAt)
+          : null
+      });
+
+      const updatedApplicant = await manager.save(Applicant, applicant);
+
+      await manager.softDelete(ApplicantAddress, { applicantId });
+      await manager.save(
+        ApplicantAddress,
+        applyDto.addresses.map((a) =>
+          manager.create(ApplicantAddress, { ...a, applicantId })
+        )
+      );
+
+      await manager.softDelete(ApplicantIdentity, { applicantId });
+      await manager.save(
+        ApplicantIdentity,
+        applyDto.identities.map((i) =>
+          manager.create(ApplicantIdentity, { ...i, applicantId })
+        )
+      );
+
+      application.status = ApplicantStatus.APPLIED;
+      application.appliedAt = new Date();
+      const updatedApplication = await manager.save(Application, application);
+
+      const firstStage = await manager.findOne(PipelineStage, {
+        where: { pipelineId: application.pipelineId },
+        order: { stageOrder: "ASC" }
+      });
+      if (!firstStage) throw new NotFoundException("First stage not found");
+
+      await manager.save(
+        StageActivity,
+        manager.create(StageActivity, {
+          applicationId: application.id,
+          stageId: firstStage.id,
+          createdAt: new Date(),
+          status: StageActivityStatus.IN_PROGRESS
+        })
+      );
+
+      application.currentStageId = firstStage.id;
+      application.lastActivityAt = new Date();
+      await manager.save(Application, application);
+
+      await manager.save(
+        File,
+        manager.create(File, {
+          fileName: cvFile.fileName,
+          originalName: cvFile.originalName,
+          filePath: cvFile.filePath,
+          fileSize: cvFile.fileSize,
+          mimeType: cvFile.mimeType,
+          bucket: cvFile.bucket,
+          fileType: FileType.CV,
+          relatedEntity: "application",
+          relatedEntityId: application.id,
+          uploadedById: applicantId,
+          description: `CV snapshot - ${application.applicationNumber}`
+        })
+      );
+
+      return { applicant: updatedApplicant, application: updatedApplication };
+    });
+
+    // 5. simpan hasil scoring ke db atau error message
+    if (scoringError) {
+      // scoring gagal, simpan error message
+      await this.applicantResultsService.saveEvaluationError(
+        applicationId,
+        scoringError
+      );
+    } else if (scoringResult) {
+      // scoring berhasil, simpan hasil
+      try {
+        await this.applicantResultsService.saveResults(
+          scoringResult,
+          applicantId
+        );
+      } catch (err) {
+        this.logger.error("Failed to persist scoring results", err);
+      }
+    }
+
+    const maxScore = scoringResult.experience?.length
+      ? Math.max(...scoringResult.experience.map((e) => e.similarity ?? 0))
+      : 0;
+
+    const evaluationResult: EvaluationResultResponseDto = {
+      maxExperienceScore: maxScore,
+      evaluatedAt: new Date(),
+      scoringBreakdown: {
+        experiences: (scoringResult.experience ?? []).map((e) => ({
+          role: e.role ?? null,
+          description: e.description ?? null,
+          start: e.start ?? null,
+          end: e.end ?? null,
+          durationYears: e.duration_years ?? null,
+          similarity: e.similarity ?? null,
+          isTopMatch: Math.abs((e.similarity ?? 0) - maxScore) < 0.0001
+        })),
+        educations: (scoringResult.educations ?? []).map((e) => ({
+          level: e.level ?? null,
+          major: e.major ?? null,
+          institution: e.institution ?? null
+        }))
+      }
+    };
+
+    return {
+      applicant: result.applicant,
+      application: result.application,
+      evaluationResult
+    };
   }
 
-  const maxScore = scoringResult.experience?.length
-    ? Math.max(...scoringResult.experience.map(e => e.similarity ?? 0))
-    : 0;
-
-  const evaluationResult: EvaluationResultResponseDto = {
-    maxExperienceScore: maxScore,
-    evaluatedAt: new Date(),
-    scoringBreakdown: {
-      experiences: (scoringResult.experience ?? []).map(e => ({
-        role:          e.role          ?? null,
-        description:   e.description   ?? null,
-        start:         e.start         ?? null,
-        end:           e.end           ?? null,
-        durationYears: e.duration_years ?? null,
-        similarity:    e.similarity    ?? null,
-        isTopMatch:    Math.abs((e.similarity ?? 0) - maxScore) < 0.0001
-      })),
-      educations: (scoringResult.educations ?? []).map(e => ({
-        level:       e.level       ?? null,
-        major:       e.major       ?? null,
-        institution: e.institution ?? null
-      }))
-    }
-  };
-
-  return {
-    applicant:       result.applicant,
-    application:     result.application,
-    evaluationResult
-  };
-}
-
-  /**
-   * Quick Apply — single atomic endpoint.
-   * Combines register + upload-cv + apply into one request.
-   * No auth required (@Public on controller).
-   */
+  // quick apply — satu endpoint atomik, gabungkan register + upload cv + apply. tidak butuh auth (@Public di controller).
   async quickApply(
     dto: QuickApplyDto,
     cvFile: Express.Multer.File,
     photoFile?: Express.Multer.File
   ): Promise<QuickApplyResponseDto> {
-
-    // ── 1. Validate vacancy (read-only, before any side effect) ────────────
+    // ── 1. validasi vacancy (read-only, sebelum ada side effect) ───────────
     const vacancy = await this.vacancyRepository.findOne({
       where: { id: dto.vacancyId },
       relations: ["pipeline"]
     });
     if (!vacancy) throw new NotFoundException("Vacancy not found");
     if (vacancy.status !== JobStatus.PUBLISHED) {
-      throw new BadRequestException("Vacancy is not currently accepting applications");
+      throw new BadRequestException(
+        "Vacancy is not currently accepting applications"
+      );
     }
     if (vacancy.endDate && new Date(vacancy.endDate) < new Date()) {
       throw new BadRequestException("Application deadline has passed");
     }
 
-    // ── 2. Early duplicate guard by email (read-only, before file upload) ──
-    // If the email already has an application for this vacancy, reject early
-    // so we don't waste time uploading files that will never be used.
+    // ── 2. guard duplikat awal berdasarkan email (read-only, sebelum upload file) ──
+    // kalau email sudah punya application untuk vacancy ini, tolak lebih awal
+    // supaya tidak buang waktu upload file yang tidak akan terpakai.
     const existingApplicantByEmail = await this.applicantRepository.findOne({
       where: { email: dto.email }
     });
     if (existingApplicantByEmail) {
       const existingApplication = await this.applicationRepository.findOne({
-        where: { applicantId: existingApplicantByEmail.id, vacancyId: dto.vacancyId }
+        where: {
+          applicantId: existingApplicantByEmail.id,
+          vacancyId: dto.vacancyId
+        }
       });
       if (existingApplication) {
-        throw new BadRequestException("You have already applied to this vacancy");
+        throw new BadRequestException(
+          "You have already applied to this vacancy"
+        );
       }
     }
 
-    // ── 3. Generate registration code (with collision retry) ────────────────
+    // ── 3. generate registration code (dengan retry kalau collision) ───────
     let registrationCode = this.generateRegistrationCode();
     for (let attempt = 0; attempt < 3; attempt++) {
-      const collision = await this.applicationRepository.findOne({ where: { registrationCode } });
+      const collision = await this.applicationRepository.findOne({
+        where: { registrationCode }
+      });
       if (!collision) break;
-      if (attempt === 2) throw new Error('Failed to generate unique registration code after 3 attempts');
+      if (attempt === 2)
+        throw new Error(
+          "Failed to generate unique registration code after 3 attempts"
+        );
       registrationCode = this.generateRegistrationCode();
     }
 
-    // ── 4. Upload files to MinIO (must be outside transaction) ─────────────
-    // MinIO is not transactional. Files are uploaded first so their paths are
-    // available inside the DB transaction. On any subsequent failure, cleanup
-    // is performed in the catch block below.
-    // relatedEntityId is intentionally omitted for new applicants (not yet persisted).
-    // The File record's relatedEntityId will remain NULL until the applicant is created
-    // inside the transaction below. This is acceptable — the CV snapshot created inside
-    // the transaction (step 4h) carries the correct relatedEntityId='application'.
+    // ── 4. upload file ke minio (harus di luar transaksi) ──────────────────
+    // minio tidak transactional. file diupload duluan supaya path-nya
+    // tersedia di dalam transaksi db. kalau ada kegagalan setelahnya, cleanup
+    // dilakukan di blok catch di bawah.
+    // relatedEntityId sengaja dikosongkan untuk applicant baru (belum tersimpan).
+    // relatedEntityId record File akan tetap NULL sampai applicant dibuat
+    // di dalam transaksi di bawah. ini aman — cv snapshot yang dibuat di dalam
+    // transaksi (step 4h) sudah punya relatedEntityId='application' yang benar.
     const cvUploadDto: FileUploadDto = {
-      fileType:      FileType.CV,
-      folder:        "applicants/cv",
+      fileType: FileType.CV,
+      folder: "applicants/cv",
       relatedEntity: "applicant",
-      relatedEntityId: existingApplicantByEmail?.id,
+      relatedEntityId: existingApplicantByEmail?.id
     };
-    const uploadedFile = await this.fileUploadService.uploadFile(cvFile, cvUploadDto, existingApplicantByEmail?.id);
+    const uploadedFile = await this.fileUploadService.uploadFile(
+      cvFile,
+      cvUploadDto,
+      existingApplicantByEmail?.id
+    );
 
     let photoUrl: string | null = null;
     if (photoFile) {
       const photoUploadDto: FileUploadDto = {
-        fileType:        FileType.PHOTO,
-        folder:          "applicants/photos",
-        relatedEntity:   "applicant",
-        relatedEntityId: existingApplicantByEmail?.id,
+        fileType: FileType.PHOTO,
+        folder: "applicants/photos",
+        relatedEntity: "applicant",
+        relatedEntityId: existingApplicantByEmail?.id
       };
-      const uploadedPhoto = await this.fileUploadService.uploadFile(photoFile, photoUploadDto, existingApplicantByEmail?.id);
+      const uploadedPhoto = await this.fileUploadService.uploadFile(
+        photoFile,
+        photoUploadDto,
+        existingApplicantByEmail?.id
+      );
       photoUrl = uploadedPhoto.filePath ?? null;
     }
 
-    // ── 5. Single atomic transaction ────────────────────────────────────────
-    // All DB writes happen here. If anything fails, the entire transaction
-    // rolls back and uploaded MinIO files are cleaned up in the catch block.
+    // ── 5. transaksi atomik tunggal ─────────────────────────────────────────
+    // semua db write terjadi di sini. kalau ada yang gagal, seluruh transaksi
+    // di-rollback dan file minio yang sudah terupload dibersihkan di blok catch.
     let txResult!: { applicant: Applicant; application: Application };
     try {
       txResult = await this.dataSource.transaction(async (manager) => {
-        // 4a. Find or create applicant inside the transaction
-        let applicant = await manager.findOne(Applicant, { where: { email: dto.email } });
+        // 4a. cari atau buat applicant di dalam transaksi
+        let applicant = await manager.findOne(Applicant, {
+          where: { email: dto.email }
+        });
         if (!applicant) {
           applicant = manager.create(Applicant, {
-            email:    dto.email,
+            email: dto.email,
             fullName: dto.fullName,
-            phone:    dto.phone,
+            phone: dto.phone
           });
           applicant = await manager.save(Applicant, applicant);
         }
 
-        // 4b. Second duplicate guard inside transaction (prevents race condition)
+        // 4b. guard duplikat kedua di dalam transaksi (mencegah race condition)
         const duplicate = await manager.findOne(Application, {
           where: { applicantId: applicant.id, vacancyId: dto.vacancyId }
         });
         if (duplicate) {
-          throw new BadRequestException("You have already applied to this vacancy");
+          throw new BadRequestException(
+            "You have already applied to this vacancy"
+          );
         }
 
-        // 4c. Update applicant profile with submitted data
+        // 4c. update profil applicant dengan data yang disubmit
         Object.assign(applicant, {
-          fullName:      dto.fullName,
-          phone:         dto.phone,
-          gender:        dto.gender,
+          fullName: dto.fullName,
+          phone: dto.phone,
+          gender: dto.gender,
           maritalStatus: dto.maritalStatus,
-          placeOfBirth:  dto.placeOfBirth,
-          dateOfBirth:   new Date(dto.dateOfBirth),
-          cvUrl:         uploadedFile.filePath,
-          ...(photoUrl ? { photoUrl } : {}),
+          placeOfBirth: dto.placeOfBirth,
+          dateOfBirth: new Date(dto.dateOfBirth),
+          cvUrl: uploadedFile.filePath,
+          ...(photoUrl ? { photoUrl } : {})
         });
         const savedApplicant = await manager.save(Applicant, applicant);
 
-        // 4d. Save address if provided
+        // 4d. simpan address kalau disediakan
         if (dto.address) {
           await manager.save(
             ApplicantAddress,
             manager.create(ApplicantAddress, {
               fullAddress: dto.address,
-              applicantId: savedApplicant.id,
+              applicantId: savedApplicant.id
             })
           );
         }
 
-        // 4e. Generate application number (inside tx — uses manager to read committed data)
-        const applicationNumber = await this.generateApplicationNumberWithManager(manager, vacancy.jobCode);
+        // 4e. generate application number (di dalam tx — pakai manager untuk baca data yang sudah commit)
+        const applicationNumber =
+          await this.generateApplicationNumberWithManager(
+            manager,
+            vacancy.jobCode
+          );
 
-        // 4f. Create application
+        // 4f. buat application
         const now = new Date();
         let application = manager.create(Application, {
           applicationNumber,
           registrationCode,
-          applicantId:    savedApplicant.id,
-          vacancyId:      vacancy.id,
-          pipelineId:     vacancy.pipelineId,
-          status:         ApplicantStatus.APPLIED,
-          appliedAt:      now,
-          lastActivityAt: now,
+          applicantId: savedApplicant.id,
+          vacancyId: vacancy.id,
+          pipelineId: vacancy.pipelineId,
+          status: ApplicantStatus.APPLIED,
+          appliedAt: now,
+          lastActivityAt: now
         });
         application = await manager.save(Application, application);
 
-        // 4g. Find first pipeline stage and create StageActivity
+        // 4g. cari stage pipeline pertama dan buat StageActivity
         const firstStage = await manager.findOne(PipelineStage, {
           where: { pipelineId: vacancy.pipelineId },
           order: { stageOrder: "ASC" }
         });
-        if (!firstStage) throw new BadRequestException("This vacancy has no pipeline stages configured");
+        if (!firstStage)
+          throw new BadRequestException(
+            "This vacancy has no pipeline stages configured"
+          );
 
         await manager.save(
           StageActivity,
           manager.create(StageActivity, {
             applicationId: application.id,
-            stageId:       firstStage.id,
-            createdAt:     now,
-            status:        StageActivityStatus.IN_PROGRESS,
+            stageId: firstStage.id,
+            createdAt: now,
+            status: StageActivityStatus.IN_PROGRESS
           })
         );
 
@@ -1135,28 +1049,28 @@ async applyForPosition(
         application.lastActivityAt = now;
         const finalApplication = await manager.save(Application, application);
 
-        // 4h. CV snapshot for permanent audit trail
+        // 4h. cv snapshot untuk audit trail permanen
         await manager.save(
           File,
           manager.create(File, {
-            fileName:        uploadedFile.fileName,
-            originalName:    uploadedFile.originalName ?? uploadedFile.fileName,
-            filePath:        uploadedFile.filePath,
-            fileSize:        uploadedFile.fileSize,
-            mimeType:        uploadedFile.mimeType,
-            bucket:          "recruitment-files",
-            fileType:        FileType.CV,
-            relatedEntity:   "application",
+            fileName: uploadedFile.fileName,
+            originalName: uploadedFile.originalName ?? uploadedFile.fileName,
+            filePath: uploadedFile.filePath,
+            fileSize: uploadedFile.fileSize,
+            mimeType: uploadedFile.mimeType,
+            bucket: "recruitment-files",
+            fileType: FileType.CV,
+            relatedEntity: "application",
             relatedEntityId: finalApplication.id,
-            uploadedById:    savedApplicant.id,
-            description:     `CV snapshot - ${finalApplication.applicationNumber}`,
+            uploadedById: savedApplicant.id,
+            description: `CV snapshot - ${finalApplication.applicationNumber}`
           })
         );
 
-        // 4i. Create placeholder EvaluationResult to guarantee data structure consistency
-        // This ensures evaluationResult is ALWAYS present for the frontend,
-        // even before async scoring completes. Scoring will update this record with actual data.
-        // This is essential for robust frontend data binding.
+        // 4i. buat placeholder EvaluationResult untuk menjamin konsistensi struktur data.
+        // ini memastikan evaluationResult SELALU ada untuk frontend, bahkan
+        // sebelum scoring async selesai. scoring akan update record ini dengan data asli.
+        // penting untuk data binding frontend yang robust.
         const placeholder = manager.create(EvaluationResult);
         placeholder.applicationId = finalApplication.id;
         placeholder.evaluateDetail = { experiences: [], educations: [] };
@@ -1165,22 +1079,29 @@ async applyForPosition(
         return { applicant: savedApplicant, application: finalApplication };
       });
     } catch (txError) {
-      // Transaction rolled back — clean up MinIO files to prevent orphans
-      await this.fileUploadService.deleteFileByPath(uploadedFile.filePath).catch((e) =>
-        this.logger.error("Failed to delete orphaned CV after tx failure", e)
-      );
-      if (photoUrl) {
-        await this.fileUploadService.deleteFileByPath(photoUrl).catch((e) =>
-          this.logger.error("Failed to delete orphaned photo after tx failure", e)
+      // transaksi di-rollback — bersihkan file minio supaya tidak jadi orphan
+      await this.fileUploadService
+        .deleteFileByPath(uploadedFile.filePath)
+        .catch((e) =>
+          this.logger.error("Failed to delete orphaned CV after tx failure", e)
         );
+      if (photoUrl) {
+        await this.fileUploadService
+          .deleteFileByPath(photoUrl)
+          .catch((e) =>
+            this.logger.error(
+              "Failed to delete orphaned photo after tx failure",
+              e
+            )
+          );
       }
       throw txError;
     }
 
-    // ── 6. Fire-and-forget: CV scoring (non-blocking) ───────────────────────
-    // Scoring runs after the application is fully committed. Failure here does
-    // NOT affect the application — the candidate is already registered.
-    // EvaluationResult will simply be absent until scoring succeeds (or is retried).
+    // ── 6. fire-and-forget: cv scoring (non-blocking) ──────────────────────
+    // scoring jalan setelah application fully committed. kalau gagal di sini
+    // TIDAK mempengaruhi application — kandidat sudah teregistrasi.
+    // EvaluationResult akan tetap absen sampai scoring berhasil (atau di-retry).
     void this.runScoringAsync(
       txResult.application.id,
       uploadedFile.filePath,
@@ -1188,177 +1109,211 @@ async applyForPosition(
       txResult.applicant.id
     );
 
-    // ── 7. Fire-and-forget: confirmation email (non-blocking) ───────────────
-    // Email failure must NOT fail the quick apply response. Candidate already
-    // has the registrationCode on the submitted page before the email arrives.
-    const trackingLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tracking-application?email=${encodeURIComponent(txResult.applicant.email)}&code=${txResult.application.registrationCode}`;
-    void this.systemConfigEmailService.sendEmailFromConfig(
-      'notification_applicant_apply',
-      { email: txResult.applicant.email, name: txResult.applicant.fullName },
-      {
-        applicant_name: txResult.applicant.fullName,
-        vacancy_name: vacancy.title,
-        registration_code: txResult.application.registrationCode,
-        tracking_link: trackingLink,
-        application_link: trackingLink,
-      }
-    ).catch((err) => this.logger.error('Failed to send quick apply confirmation email', err));
+    // ── 7. fire-and-forget: email konfirmasi (non-blocking) ────────────────
+    // kegagalan email TIDAK BOLEH menggagalkan response quick apply. kandidat
+    // sudah punya registrationCode di halaman submitted sebelum emailnya sampai.
+    const trackingLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/tracking-application?email=${encodeURIComponent(txResult.applicant.email)}&code=${txResult.application.registrationCode}`;
+    void this.systemConfigEmailService
+      .sendEmailFromConfig(
+        "notification_applicant_apply",
+        { email: txResult.applicant.email, name: txResult.applicant.fullName },
+        {
+          applicant_name: txResult.applicant.fullName,
+          vacancy_name: vacancy.title,
+          registration_code: txResult.application.registrationCode,
+          tracking_link: trackingLink,
+          application_link: trackingLink
+        }
+      )
+      .catch((err) =>
+        this.logger.error("Failed to send quick apply confirmation email", err)
+      );
 
     return {
       applicant: {
-        id:       txResult.applicant.id,
+        id: txResult.applicant.id,
         fullName: txResult.applicant.fullName,
-        email:    txResult.applicant.email,
+        email: txResult.applicant.email
       },
       application: {
-        id:                txResult.application.id,
+        id: txResult.application.id,
         applicationNumber: txResult.application.applicationNumber,
-        registrationCode:  txResult.application.registrationCode,
-        status:            txResult.application.status,
-        appliedAt:         txResult.application.appliedAt,
-      },
+        registrationCode: txResult.application.registrationCode,
+        status: txResult.application.status,
+        appliedAt: txResult.application.appliedAt
+      }
     };
   }
 
-  async applyFormBased(dto: ApplyFormBasedDto): Promise<ApplyFormBasedResponseDto> {
-    // ── 1. Validate vacancy ────────────────────────────────────────────────
+  async applyFormBased(
+    dto: ApplyFormBasedDto
+  ): Promise<ApplyFormBasedResponseDto> {
+    // ── 1. validasi vacancy ─────────────────────────────────────────────────
     const vacancy = await this.vacancyRepository.findOne({
       where: { id: dto.vacancyId },
       relations: ["pipeline"]
     });
     if (!vacancy) throw new NotFoundException("Vacancy not found");
     if (vacancy.status !== JobStatus.PUBLISHED) {
-      throw new BadRequestException("Vacancy is not currently accepting applications");
+      throw new BadRequestException(
+        "Vacancy is not currently accepting applications"
+      );
     }
     if (vacancy.endDate && new Date(vacancy.endDate) < new Date()) {
       throw new BadRequestException("Application deadline has passed");
     }
 
-    // ── 2. Early duplicate guard ────────────────────────────────────────────
-    const existingApplicant = await this.applicantRepository.findOne({ where: { email: dto.email } });
+    // ── 2. guard duplikat awal ──────────────────────────────────────────────
+    const existingApplicant = await this.applicantRepository.findOne({
+      where: { email: dto.email }
+    });
     if (existingApplicant) {
       const existingApplication = await this.applicationRepository.findOne({
         where: { applicantId: existingApplicant.id, vacancyId: dto.vacancyId }
       });
       if (existingApplication) {
-        throw new BadRequestException("You have already applied to this vacancy");
+        throw new BadRequestException(
+          "You have already applied to this vacancy"
+        );
       }
     }
 
-    // ── 3. Generate registration code ──────────────────────────────────────
+    // ── 3. generate registration code ───────────────────────────────────────
     let registrationCode = this.generateRegistrationCode();
     for (let attempt = 0; attempt < 3; attempt++) {
-      const collision = await this.applicationRepository.findOne({ where: { registrationCode } });
+      const collision = await this.applicationRepository.findOne({
+        where: { registrationCode }
+      });
       if (!collision) break;
-      if (attempt === 2) throw new Error("Failed to generate unique registration code after 3 attempts");
+      if (attempt === 2)
+        throw new Error(
+          "Failed to generate unique registration code after 3 attempts"
+        );
       registrationCode = this.generateRegistrationCode();
     }
 
-    // ── 4. Atomic DB transaction ────────────────────────────────────────────
+    // ── 4. transaksi db atomik ──────────────────────────────────────────────
     const txResult = await this.dataSource.transaction(async (manager) => {
-      // 4a. Find or create applicant
-      let applicant = await manager.findOne(Applicant, { where: { email: dto.email } });
+      // 4a. cari atau buat applicant
+      let applicant = await manager.findOne(Applicant, {
+        where: { email: dto.email }
+      });
       if (!applicant) {
-        applicant = manager.create(Applicant, { email: dto.email, fullName: dto.fullName, phone: dto.phone });
+        applicant = manager.create(Applicant, {
+          email: dto.email,
+          fullName: dto.fullName,
+          phone: dto.phone
+        });
         applicant = await manager.save(Applicant, applicant);
       }
 
-      // 4b. Second duplicate guard (race condition protection)
+      // 4b. guard duplikat kedua (proteksi race condition)
       const duplicate = await manager.findOne(Application, {
         where: { applicantId: applicant.id, vacancyId: dto.vacancyId }
       });
-      if (duplicate) throw new BadRequestException("You have already applied to this vacancy");
+      if (duplicate)
+        throw new BadRequestException(
+          "You have already applied to this vacancy"
+        );
 
-      // 4c. Update applicant profile
+      // 4c. update profil applicant
       Object.assign(applicant, {
-        fullName:      dto.fullName,
-        phone:         dto.phone,
-        gender:        dto.gender,
+        fullName: dto.fullName,
+        phone: dto.phone,
+        gender: dto.gender,
         maritalStatus: dto.maritalStatus,
-        placeOfBirth:  dto.placeOfBirth,
-        dateOfBirth:   new Date(dto.dateOfBirth),
-        availability:  dto.availability,
-        ...(dto.availabilityAt ? { availabilityAt: new Date(dto.availabilityAt) } : {}),
-        ...(dto.photoUrl        ? { photoUrl: dto.photoUrl }              : {}),
-        ...(dto.cvUrl           ? { cvUrl: dto.cvUrl }                   : {}),
-        ...(dto.socialMediaUrl  ? { socialMediaUrl: dto.socialMediaUrl } : {}),
-        ...(dto.linkedinUrl     ? { linkedinUrl: dto.linkedinUrl }       : {}),
+        placeOfBirth: dto.placeOfBirth,
+        dateOfBirth: new Date(dto.dateOfBirth),
+        availability: dto.availability,
+        ...(dto.availabilityAt
+          ? { availabilityAt: new Date(dto.availabilityAt) }
+          : {}),
+        ...(dto.photoUrl ? { photoUrl: dto.photoUrl } : {}),
+        ...(dto.cvUrl ? { cvUrl: dto.cvUrl } : {}),
+        ...(dto.socialMediaUrl ? { socialMediaUrl: dto.socialMediaUrl } : {}),
+        ...(dto.linkedinUrl ? { linkedinUrl: dto.linkedinUrl } : {})
       });
       const savedApplicant = await manager.save(Applicant, applicant);
 
-      // 4d. Save address
+      // 4d. simpan address
       await manager.save(
         ApplicantAddress,
         manager.create(ApplicantAddress, {
           applicantId: savedApplicant.id,
-          province:    dto.address.province,
-          regency:     dto.address.regency,
-          district:    dto.address.district,
-          village:     dto.address.village,
-          fullAddress: dto.address.fullAddress,
+          province: dto.address.province,
+          regency: dto.address.regency,
+          district: dto.address.district,
+          village: dto.address.village,
+          fullAddress: dto.address.fullAddress
         })
       );
 
-      // 4e. Save education
+      // 4e. simpan education
       await manager.save(
         ApplicantEducation,
         manager.create(ApplicantEducation, {
-          applicantId:  savedApplicant.id,
-          schoolName:   dto.education.institutionName,
-          degree:       dto.education.degree,
-          major:        dto.education.major ?? null,
-          startMonth:   dto.education.monthStart,
-          endMonth:     dto.education.monthEnd,
+          applicantId: savedApplicant.id,
+          schoolName: dto.education.institutionName,
+          degree: dto.education.degree,
+          major: dto.education.major ?? null,
+          startMonth: dto.education.monthStart,
+          endMonth: dto.education.monthEnd
         })
       );
 
-      // 4f. Save experiences as job histories
+      // 4f. simpan experiences sebagai job history
       for (let i = 0; i < dto.experiences.length; i++) {
         const exp = dto.experiences[i];
         await manager.save(
           ApplicantJobHistory,
           manager.create(ApplicantJobHistory, {
-            applicantId:    savedApplicant.id,
-            position:       exp.position,
-            company:        exp.company || null,
+            applicantId: savedApplicant.id,
+            position: exp.position,
+            company: exp.company || null,
             employeeStatus: exp.employeeStatus,
-            startDate:      new Date(exp.startDate),
-            endDate:        exp.endDate ? new Date(exp.endDate) : null,
-            description:    exp.description,
-            order:          i + 1,
+            startDate: new Date(exp.startDate),
+            endDate: exp.endDate ? new Date(exp.endDate) : null,
+            description: exp.description,
+            order: i + 1
           })
         );
       }
 
-      // 4g. Generate application number and create application
-      const applicationNumber = await this.generateApplicationNumberWithManager(manager, vacancy.jobCode);
+      // 4g. generate application number dan buat application
+      const applicationNumber = await this.generateApplicationNumberWithManager(
+        manager,
+        vacancy.jobCode
+      );
       const now = new Date();
       let application = manager.create(Application, {
         applicationNumber,
         registrationCode,
-        applicantId:    savedApplicant.id,
-        vacancyId:      vacancy.id,
-        pipelineId:     vacancy.pipelineId,
-        status:         ApplicantStatus.APPLIED,
-        appliedAt:      now,
-        lastActivityAt: now,
+        applicantId: savedApplicant.id,
+        vacancyId: vacancy.id,
+        pipelineId: vacancy.pipelineId,
+        status: ApplicantStatus.APPLIED,
+        appliedAt: now,
+        lastActivityAt: now
       });
       application = await manager.save(Application, application);
 
-      // 4h. Initialize first pipeline stage
+      // 4h. inisialisasi stage pipeline pertama
       const firstStage = await manager.findOne(PipelineStage, {
         where: { pipelineId: vacancy.pipelineId },
         order: { stageOrder: "ASC" }
       });
-      if (!firstStage) throw new BadRequestException("This vacancy has no pipeline stages configured");
+      if (!firstStage)
+        throw new BadRequestException(
+          "This vacancy has no pipeline stages configured"
+        );
 
       await manager.save(
         StageActivity,
         manager.create(StageActivity, {
           applicationId: application.id,
-          stageId:       firstStage.id,
-          createdAt:     now,
-          status:        StageActivityStatus.IN_PROGRESS,
+          stageId: firstStage.id,
+          createdAt: now,
+          status: StageActivityStatus.IN_PROGRESS
         })
       );
 
@@ -1366,8 +1321,8 @@ async applyForPosition(
       application.lastActivityAt = now;
       const finalApplication = await manager.save(Application, application);
 
-      // 4i. Create EvaluationResult placeholder — same guarantee as quickApply (step 4i).
-      // Frontend detects evaluatedAt === null to show "Processing..." while scoring runs.
+      // 4i. buat placeholder EvaluationResult — jaminan yang sama seperti quickApply (step 4i).
+      // frontend deteksi evaluatedAt === null untuk tampilkan "Processing..." selama scoring jalan.
       const placeholder = manager.create(EvaluationResult);
       placeholder.applicationId = finalApplication.id;
       placeholder.evaluateDetail = { experiences: [], educations: [] };
@@ -1376,43 +1331,56 @@ async applyForPosition(
       return { applicant: savedApplicant, application: finalApplication };
     });
 
-    // ── 5. Fire-and-forget: SBERT scoring ──────────────────────────────────
-    const experiencesWithCompany = dto.experiences.filter(e => e.company);
+    // ── 5. fire-and-forget: sbert scoring ───────────────────────────────────
+    const experiencesWithCompany = dto.experiences.filter((e) => e.company);
     if (experiencesWithCompany.length > 0) {
       void this.runFormBasedScoringAsync(
         txResult.application.id,
         vacancy.responsibilities ?? "",
-        experiencesWithCompany.map(e => ({ position: e.position, company: e.company!, description: e.description, startDate: e.startDate, endDate: e.endDate }))
+        experiencesWithCompany.map((e) => ({
+          position: e.position,
+          company: e.company!,
+          description: e.description,
+          startDate: e.startDate,
+          endDate: e.endDate
+        }))
       );
     }
 
-    // ── 6. Fire-and-forget: confirmation email ──────────────────────────────
+    // ── 6. fire-and-forget: email konfirmasi ────────────────────────────────
     const trackingLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/tracking-application?email=${encodeURIComponent(txResult.applicant.email)}&code=${txResult.application.registrationCode}`;
-    void this.systemConfigEmailService.sendEmailFromConfig(
-      "notification_applicant_apply",
-      { email: txResult.applicant.email, name: txResult.applicant.fullName },
-      {
-        applicant_name:    txResult.applicant.fullName,
-        vacancy_name:      vacancy.title,
-        registration_code: txResult.application.registrationCode,
-        tracking_link:     trackingLink,
-        application_link:  trackingLink,
-      }
-    ).catch((err) => this.logger.error("Failed to send form-based apply confirmation email", err));
+    void this.systemConfigEmailService
+      .sendEmailFromConfig(
+        "notification_applicant_apply",
+        { email: txResult.applicant.email, name: txResult.applicant.fullName },
+        {
+          applicant_name: txResult.applicant.fullName,
+          vacancy_name: vacancy.title,
+          registration_code: txResult.application.registrationCode,
+          tracking_link: trackingLink,
+          application_link: trackingLink
+        }
+      )
+      .catch((err) =>
+        this.logger.error(
+          "Failed to send form-based apply confirmation email",
+          err
+        )
+      );
 
     return {
       applicant: {
-        id:       txResult.applicant.id,
+        id: txResult.applicant.id,
         fullName: txResult.applicant.fullName,
-        email:    txResult.applicant.email,
+        email: txResult.applicant.email
       },
       application: {
-        id:                txResult.application.id,
+        id: txResult.application.id,
         applicationNumber: txResult.application.applicationNumber,
-        registrationCode:  txResult.application.registrationCode,
-        status:            txResult.application.status,
-        appliedAt:         txResult.application.appliedAt,
-      },
+        registrationCode: txResult.application.registrationCode,
+        status: txResult.application.status,
+        appliedAt: txResult.application.appliedAt
+      }
     };
   }
 
@@ -1422,32 +1390,36 @@ async applyForPosition(
     const { email, registrationCode } = query;
 
     const application = await this.applicationRepository
-      .createQueryBuilder('app')
-      .leftJoinAndSelect('app.applicant', 'applicant')
-      .leftJoinAndSelect('app.vacancy', 'vacancy')
-      .leftJoinAndSelect('app.currentStage', 'currentStage')
-      .leftJoinAndSelect('currentStage.stageTemplate', 'currentStageTemplate')
-      .where('applicant.email = :email', { email })
-      .andWhere('app.registrationCode = :registrationCode', { registrationCode })
+      .createQueryBuilder("app")
+      .leftJoinAndSelect("app.applicant", "applicant")
+      .leftJoinAndSelect("app.vacancy", "vacancy")
+      .leftJoinAndSelect("app.currentStage", "currentStage")
+      .leftJoinAndSelect("currentStage.stageTemplate", "currentStageTemplate")
+      .where("applicant.email = :email", { email })
+      .andWhere("app.registrationCode = :registrationCode", {
+        registrationCode
+      })
       .getOne();
 
     if (!application) {
-      throw new NotFoundException('Application not found');
+      throw new NotFoundException("Application not found");
     }
 
     const stageActivities = await this.stageActivityRepository
-      .createQueryBuilder('sa')
-      .leftJoinAndSelect('sa.stage', 'stage')
-      .leftJoinAndSelect('stage.stageTemplate', 'stageTemplate')
-      .where('sa.applicationId = :applicationId', { applicationId: application.id })
-      .orderBy('stage.stageOrder', 'ASC')
+      .createQueryBuilder("sa")
+      .leftJoinAndSelect("sa.stage", "stage")
+      .leftJoinAndSelect("stage.stageTemplate", "stageTemplate")
+      .where("sa.applicationId = :applicationId", {
+        applicationId: application.id
+      })
+      .orderBy("stage.stageOrder", "ASC")
       .getMany();
 
     const stageStatusMap: Record<string, string> = {
-      pending:     'Pending',
-      in_progress: 'In Progress',
-      done:        'Completed',
-      failed:      'Failed',
+      pending: "Pending",
+      in_progress: "In Progress",
+      done: "Completed",
+      failed: "Failed"
     };
 
     const currentStageActivity = stageActivities.find(
@@ -1456,49 +1428,72 @@ async applyForPosition(
 
     return {
       application: {
-        id:                application.id,
+        id: application.id,
         applicationNumber: application.applicationNumber,
-        registrationCode:  application.registrationCode,
-        vacancyTitle:      application.vacancy?.title ?? '',
-        status:            application.status,
-        appliedAt:         application.appliedAt,
-        lastActivityAt:    application.lastActivityAt ?? null,
-        applicantName:     application.applicant?.fullName ?? '',
+        registrationCode: application.registrationCode,
+        vacancyTitle: application.vacancy?.title ?? "",
+        status: application.status,
+        appliedAt: application.appliedAt,
+        lastActivityAt: application.lastActivityAt ?? null,
+        applicantName: application.applicant?.fullName ?? ""
       },
-      currentStage: application.currentStage ? {
-        name:   application.currentStage.stageTemplate?.name ?? '',
-        status: stageStatusMap[currentStageActivity?.status ?? ''] ?? 'In Progress',
-      } : null,
+      currentStage: application.currentStage
+        ? {
+            name: application.currentStage.stageTemplate?.name ?? "",
+            status:
+              stageStatusMap[currentStageActivity?.status ?? ""] ??
+              "In Progress"
+          }
+        : null,
       stages: stageActivities.map((sa) => ({
-        name:        sa.stage?.stageTemplate?.name ?? '',
-        status:      stageStatusMap[sa.status] ?? sa.status,
-        notes:       sa.notes ?? null,
-        completedAt: sa.status === 'done' || sa.status === 'failed' ? sa.createdAt : null,
-      })),
+        name: sa.stage?.stageTemplate?.name ?? "",
+        status: stageStatusMap[sa.status] ?? sa.status,
+        notes: sa.notes ?? null,
+        completedAt:
+          sa.status === "done" || sa.status === "failed" ? sa.createdAt : null
+      }))
     };
   }
 
   private generateRegistrationCode(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    const code = Array.from({ length: 8 }, () =>
-      chars[Math.floor(Math.random() * chars.length)]
-    ).join('');
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const code = Array.from(
+      { length: 8 },
+      () => chars[Math.floor(Math.random() * chars.length)]
+    ).join("");
     return `REG-${code}`;
   }
 
   private async runFormBasedScoringAsync(
     applicationId: string,
     jobResponsibilities: string,
-    experiences: { position: string; company: string; description: string; startDate?: string; endDate?: string }[]
+    experiences: {
+      position: string;
+      company: string;
+      description: string;
+      startDate?: string;
+      endDate?: string;
+    }[]
   ): Promise<void> {
     try {
-      await this.applicantResultsService.runFormBasedScoring(applicationId, jobResponsibilities, experiences);
+      await this.applicantResultsService.runFormBasedScoring(
+        applicationId,
+        jobResponsibilities,
+        experiences
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : "CV analysis failed";
-      this.logger.error(`Form-based scoring failed for applicationId=${applicationId}: ${message}`);
-      await this.applicantResultsService.saveEvaluationError(applicationId, message).catch((saveErr) =>
-        this.logger.error(`Failed to persist evaluation error for applicationId=${applicationId}`, saveErr)
+      this.logger.error(
+        `Form-based scoring failed for applicationId=${applicationId}: ${message}`
       );
+      await this.applicantResultsService
+        .saveEvaluationError(applicationId, message)
+        .catch((saveErr) =>
+          this.logger.error(
+            `Failed to persist evaluation error for applicationId=${applicationId}`,
+            saveErr
+          )
+        );
     }
   }
 
@@ -1514,13 +1509,23 @@ async applyForPosition(
         cvFilePath,
         cvMimeType
       );
-      await this.applicantResultsService.saveResults(scoringResult, applicantId);
+      await this.applicantResultsService.saveResults(
+        scoringResult,
+        applicantId
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : "CV analysis failed";
-      this.logger.error(`Background scoring failed for applicationId=${applicationId}: ${message}`);
-      await this.applicantResultsService.saveEvaluationError(applicationId, message).catch((saveErr) =>
-        this.logger.error(`Failed to persist evaluation error for applicationId=${applicationId}`, saveErr)
+      this.logger.error(
+        `Background scoring failed for applicationId=${applicationId}: ${message}`
       );
+      await this.applicantResultsService
+        .saveEvaluationError(applicationId, message)
+        .catch((saveErr) =>
+          this.logger.error(
+            `Failed to persist evaluation error for applicationId=${applicationId}`,
+            saveErr
+          )
+        );
     }
   }
 
@@ -1528,72 +1533,64 @@ async applyForPosition(
     manager: import("typeorm").EntityManager,
     jobCode: string
   ): Promise<string> {
-    const year   = new Date().getFullYear();
-    const month  = new Date().getMonth() + 1;
+    const year = new Date().getFullYear();
+    const month = new Date().getMonth() + 1;
     const prefix = `${jobCode}${year}${month}`;
 
     const lastApplication = await manager
       .createQueryBuilder(Application, "application")
-      .where("application.applicationNumber LIKE :prefix", { prefix: `${prefix}-%` })
+      .where("application.applicationNumber LIKE :prefix", {
+        prefix: `${prefix}-%`
+      })
       .orderBy("application.applicationNumber", "DESC")
       .getOne();
 
     let sequence = 1;
     if (lastApplication) {
       const parts = lastApplication.applicationNumber.split("-");
-      const last  = parseInt(parts[parts.length - 1], 10);
+      const last = parseInt(parts[parts.length - 1], 10);
       if (!isNaN(last)) sequence = last + 1;
     }
 
     return `${prefix}-${sequence.toString().padStart(3, "0")}`;
   }
 
-
-/**
- * Memeriksa apakah suatu path file CV masih direferensikan oleh
- * application-level snapshot (relatedEntity = 'application').
- *
- * Dipanggil dari controller saat pelamar mengupload CV baru, sebelum
- * file lama dihapus dari MinIO, untuk mencegah penghapusan file yang
- * masih dipakai oleh lamaran sebelumnya.
- *
- * @param filePath - Path file di MinIO yang ingin diperiksa
- * @returns true jika masih ada snapshot aktif yang mereferensikan path ini
- */
-async isReferencedByApplication(filePath: string): Promise<boolean> {
-  const snapshot = await this.fileRepository.findOne({
-    where: {
-      filePath:      filePath,
-      relatedEntity: "application",
-      isActive:      true
-    }
-  });
-  return snapshot !== null;
-}
-
   /**
-   * Parse date from DD-MM-YY format to Date object
-   * @param dateString - Date string in DD-MM-YY format
+   * Memeriksa apakah suatu path file CV masih direferensikan oleh
+   * application-level snapshot (relatedEntity = 'application').
+   *
+   * Dipanggil dari controller saat pelamar mengupload CV baru, sebelum
+   * file lama dihapus dari MinIO, untuk mencegah penghapusan file yang
+   * masih dipakai oleh lamaran sebelumnya.
+   *
+   * @returns true jika masih ada snapshot aktif yang mereferensikan path ini
    */
+  async isReferencedByApplication(filePath: string): Promise<boolean> {
+    const snapshot = await this.fileRepository.findOne({
+      where: {
+        filePath: filePath,
+        relatedEntity: "application",
+        isActive: true
+      }
+    });
+    return snapshot !== null;
+  }
+
+  // parse tanggal dari format dd-mm-yy ke objek date
   private parseDate(dateString: string): Date | undefined {
     if (!dateString) return undefined;
 
     const [day, month, year] = dateString.split("-");
-    // Convert 2-digit year to 4-digit year (assuming 20xx)
+    // konversi tahun 2 digit ke 4 digit (asumsi 20xx)
     const fullYear =
       parseInt(year) < 50 ? 2000 + parseInt(year) : 1900 + parseInt(year);
     return new Date(fullYear, parseInt(month) - 1, parseInt(day));
   }
 
-  /**
-   * Get application tracking information for the latest application
-   * @param applicantId - Applicant ID
-   * @returns Application tracking data with stages and progress
-   */
   async getApplicationTracking(
     applicantId: string
   ): Promise<ApplicationTrackingResponseDto> {
-    // 1. Get the latest application for this applicant
+    // 1. ambil application terbaru milik applicant ini
     const latestApplication = await this.applicationRepository.findOne({
       where: { applicantId },
       order: { createdAt: "DESC" },
@@ -1604,25 +1601,28 @@ async isReferencedByApplication(filePath: string): Promise<boolean> {
       throw new NotFoundException("No application found for this applicant");
     }
 
-    // 2. Get all stages from the pipeline
+    // 2. ambil semua stage dari pipeline
     const pipelineStages = await this.pipelineStageRepository.find({
       where: { pipelineId: latestApplication.pipelineId },
       order: { stageOrder: "ASC" },
       relations: ["stageTemplate"]
     });
 
-    // 3. Get activities for this application
+    // 3. ambil activities untuk application ini
     const activities = await this.stageActivityRepository.find({
       where: { applicationId: latestApplication.id },
       order: { createdAt: "ASC" }
     });
 
-    // 4. Map stages with status based on current stage and activities
+    // 4. petakan stage dengan status berdasarkan current stage dan activities
     const stagesWithStatus = pipelineStages.map((stage) => {
       const stageActivities = activities.filter(
         (activity) => activity.stageId === stage.id
       );
-      const status = stageActivities.length > 0 ? stageActivities[stageActivities.length - 1].status : "pending";
+      const status =
+        stageActivities.length > 0
+          ? stageActivities[stageActivities.length - 1].status
+          : "pending";
 
       return {
         id: stage.id,
@@ -1646,13 +1646,13 @@ async isReferencedByApplication(filePath: string): Promise<boolean> {
       };
     });
 
-    // 5. Get current stage info
+    // 5. ambil info current stage
     const currentStage = this.getCurrentStageInfo(
       latestApplication,
       stagesWithStatus
     );
 
-    // 6. Calculate progress
+    // 6. hitung progress
     const progress = this.calculateProgress(
       stagesWithStatus,
       latestApplication
@@ -1672,9 +1672,6 @@ async isReferencedByApplication(filePath: string): Promise<boolean> {
       progress
     };
   }
-  /**
-   * Get current stage information
-   */
   private getCurrentStageInfo(application: Application, stages: any[]): any {
     const currentStage = stages.find(
       (stage) => stage.id === application.currentStageId
@@ -1712,9 +1709,6 @@ async isReferencedByApplication(filePath: string): Promise<boolean> {
     };
   }
 
-  /**
-   * Calculate overall progress
-   */
   private calculateProgress(stages: any[], application: Application): any {
     const totalStages = stages.length;
     const completedStages = stages.filter(
@@ -1732,7 +1726,7 @@ async isReferencedByApplication(filePath: string): Promise<boolean> {
         )
       : 0;
 
-    // Estimate completion date (rough calculation)
+    // estimasi tanggal selesai (perhitungan kasar)
     const estimatedCompletionDate = new Date();
     estimatedCompletionDate.setDate(
       estimatedCompletionDate.getDate() + (totalStages - completedStages) * 3
@@ -1748,12 +1742,6 @@ async isReferencedByApplication(filePath: string): Promise<boolean> {
     };
   }
 
-  /**
-   * Login applicant and generate token
-   * @param email - Applicant email
-   * @returns Promise<string> - JWT token
-   * @throws UnauthorizedException - When credentials are invalid
-   */
   async loginApplicant(email: string): Promise<string> {
     const applicant = await this.applicantRepository.findOne({
       where: { email }
@@ -1769,12 +1757,6 @@ async isReferencedByApplication(filePath: string): Promise<boolean> {
     );
   }
 
-  /**
-   * Get applicant profile by ID
-   * @param id - Applicant ID
-   * @returns Promise<Applicant> - Applicant profile
-   * @throws NotFoundException - When applicant not found
-   */
   async findById(id: string): Promise<Applicant> {
     const applicant = await this.applicantRepository.findOne({
       where: { id }
@@ -1787,19 +1769,10 @@ async isReferencedByApplication(filePath: string): Promise<boolean> {
     return applicant;
   }
 
-  /**
-   * Apply for a vacancy
-   * @param applicantId - Applicant ID
-   * @param vacancyId - Vacancy ID
-   * @returns Promise<Application> - Created application
-   * @throws BadRequestException - When validation fails
-   * @throws ConflictException - When already applied
-   */
   async applyForVacancy(
     applicantId: string,
     vacancyId: string
   ): Promise<Application> {
-    // Check if already applied
     const existingApplication = await this.applicationRepository.findOne({
       where: {
         applicantId,
@@ -1811,7 +1784,6 @@ async isReferencedByApplication(filePath: string): Promise<boolean> {
       throw new ConflictException("Already applied for this vacancy");
     }
 
-    // Create new application
     const application = this.applicationRepository.create({
       applicantId,
       vacancyId,
@@ -1821,11 +1793,6 @@ async isReferencedByApplication(filePath: string): Promise<boolean> {
     return await this.applicationRepository.save(application);
   }
 
-  /**
-   * Get all applications for an applicant
-   * @param applicantId - Applicant ID
-   * @returns Promise<Application[]> - List of applications
-   */
   async getApplicantApplications(applicantId: string): Promise<Application[]> {
     return await this.applicationRepository.find({
       where: { applicantId },

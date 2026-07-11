@@ -41,11 +41,9 @@ export class StageTemplate {
   @Column({ name: "created_by" })
   createdById: string;
 
-  // Relations
   @OneToMany(() => PipelineStage, (stage) => stage.stageTemplate)
   pipelineStages: PipelineStage[];
 
-  // Audit fields
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 

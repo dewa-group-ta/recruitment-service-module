@@ -127,7 +127,7 @@ export class VacancyController {
     @Body() updateData: UpdateVacancyDto,
     @Request() req: AuthenticatedRequest
   ): Promise<VacancyResponseDto> {
-    // In a real implementation, you would get the user ID from the authenticated request
+    // fallback ke placeholder kalau req.user belum ter-set (auth belum lengkap di semua jalur)
     const updatedById = req.user?.id || "placeholder-user-id";
 
     return await this.vacancyService.update(
@@ -348,61 +348,135 @@ export class VacancyController {
   @Patch(":id/publish")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESSFULLY_UPDATED)
-  @ApiOperation({ summary: "Publish a draft vacancy", description: "Transition vacancy from draft to published. Only draft vacancies can be published." })
+  @ApiOperation({
+    summary: "Publish a draft vacancy",
+    description:
+      "Transition vacancy from draft to published. Only draft vacancies can be published."
+  })
   @ApiParam({ name: "id", description: "Vacancy ID" })
-  @ApiResponse({ status: 200, description: "Vacancy published successfully", type: VacancyResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: "Vacancy published successfully",
+    type: VacancyResponseDto
+  })
   @ApiResponse({ status: 400, description: "Vacancy is not in draft status" })
   @ApiResponse({ status: 404, description: "Vacancy not found" })
-  async publish(@Param("id") id: string, @Request() req: AuthenticatedRequest): Promise<VacancyResponseDto> {
-    return this.vacancyService.publishVacancy(id, req.user?.id || "placeholder-user-id");
+  async publish(
+    @Param("id") id: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<VacancyResponseDto> {
+    return this.vacancyService.publishVacancy(
+      id,
+      req.user?.id || "placeholder-user-id"
+    );
   }
 
   @Patch(":id/unpublish")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESSFULLY_UPDATED)
-  @ApiOperation({ summary: "Unpublish a vacancy back to draft", description: "Transition vacancy from published back to draft." })
+  @ApiOperation({
+    summary: "Unpublish a vacancy back to draft",
+    description: "Transition vacancy from published back to draft."
+  })
   @ApiParam({ name: "id", description: "Vacancy ID" })
-  @ApiResponse({ status: 200, description: "Vacancy unpublished successfully", type: VacancyResponseDto })
-  @ApiResponse({ status: 400, description: "Vacancy is not in published status" })
+  @ApiResponse({
+    status: 200,
+    description: "Vacancy unpublished successfully",
+    type: VacancyResponseDto
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Vacancy is not in published status"
+  })
   @ApiResponse({ status: 404, description: "Vacancy not found" })
-  async unpublish(@Param("id") id: string, @Request() req: AuthenticatedRequest): Promise<VacancyResponseDto> {
-    return this.vacancyService.unpublishVacancy(id, req.user?.id || "placeholder-user-id");
+  async unpublish(
+    @Param("id") id: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<VacancyResponseDto> {
+    return this.vacancyService.unpublishVacancy(
+      id,
+      req.user?.id || "placeholder-user-id"
+    );
   }
 
   @Patch(":id/close")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESSFULLY_UPDATED)
-  @ApiOperation({ summary: "Close a published vacancy", description: "Transition vacancy from published to closed. Applicants can no longer apply." })
+  @ApiOperation({
+    summary: "Close a published vacancy",
+    description:
+      "Transition vacancy from published to closed. Applicants can no longer apply."
+  })
   @ApiParam({ name: "id", description: "Vacancy ID" })
-  @ApiResponse({ status: 200, description: "Vacancy closed successfully", type: VacancyResponseDto })
-  @ApiResponse({ status: 400, description: "Vacancy is not in published status" })
+  @ApiResponse({
+    status: 200,
+    description: "Vacancy closed successfully",
+    type: VacancyResponseDto
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Vacancy is not in published status"
+  })
   @ApiResponse({ status: 404, description: "Vacancy not found" })
-  async close(@Param("id") id: string, @Request() req: AuthenticatedRequest): Promise<VacancyResponseDto> {
-    return this.vacancyService.closeVacancy(id, req.user?.id || "placeholder-user-id");
+  async close(
+    @Param("id") id: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<VacancyResponseDto> {
+    return this.vacancyService.closeVacancy(
+      id,
+      req.user?.id || "placeholder-user-id"
+    );
   }
 
   @Patch(":id/reopen")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESSFULLY_UPDATED)
-  @ApiOperation({ summary: "Reopen a closed vacancy", description: "Transition vacancy from closed back to published." })
+  @ApiOperation({
+    summary: "Reopen a closed vacancy",
+    description: "Transition vacancy from closed back to published."
+  })
   @ApiParam({ name: "id", description: "Vacancy ID" })
-  @ApiResponse({ status: 200, description: "Vacancy reopened successfully", type: VacancyResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: "Vacancy reopened successfully",
+    type: VacancyResponseDto
+  })
   @ApiResponse({ status: 400, description: "Vacancy is not in closed status" })
   @ApiResponse({ status: 404, description: "Vacancy not found" })
-  async reopen(@Param("id") id: string, @Request() req: AuthenticatedRequest): Promise<VacancyResponseDto> {
-    return this.vacancyService.reopenVacancy(id, req.user?.id || "placeholder-user-id");
+  async reopen(
+    @Param("id") id: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<VacancyResponseDto> {
+    return this.vacancyService.reopenVacancy(
+      id,
+      req.user?.id || "placeholder-user-id"
+    );
   }
 
   @Patch(":id/archive")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESSFULLY_UPDATED)
-  @ApiOperation({ summary: "Archive a vacancy", description: "Archive a vacancy. This is a terminal state — archived vacancies cannot be transitioned further." })
+  @ApiOperation({
+    summary: "Archive a vacancy",
+    description:
+      "Archive a vacancy. This is a terminal state — archived vacancies cannot be transitioned further."
+  })
   @ApiParam({ name: "id", description: "Vacancy ID" })
-  @ApiResponse({ status: 200, description: "Vacancy archived successfully", type: VacancyResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: "Vacancy archived successfully",
+    type: VacancyResponseDto
+  })
   @ApiResponse({ status: 400, description: "Vacancy is already archived" })
   @ApiResponse({ status: 404, description: "Vacancy not found" })
-  async archive(@Param("id") id: string, @Request() req: AuthenticatedRequest): Promise<VacancyResponseDto> {
-    return this.vacancyService.archiveVacancy(id, req.user?.id || "placeholder-user-id");
+  async archive(
+    @Param("id") id: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<VacancyResponseDto> {
+    return this.vacancyService.archiveVacancy(
+      id,
+      req.user?.id || "placeholder-user-id"
+    );
   }
 
   @Post(":id/upload-job-description")

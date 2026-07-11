@@ -56,7 +56,6 @@ describe("BearerAuthGuard", () => {
     reflector = module.get(Reflector);
     tokenService = module.get(TokenService);
 
-    // Setup default mocks
     mockExecutionContext.switchToHttp().getRequest.mockReturnValue(mockRequest);
   });
 
@@ -66,15 +65,12 @@ describe("BearerAuthGuard", () => {
 
   describe("canActivate", () => {
     it("should return true for public routes", async () => {
-      // Arrange
       reflector.getAllAndOverride
         .mockReturnValueOnce(true) // IS_PUBLIC_KEY
         .mockReturnValueOnce(undefined); // ROLES
 
-      // Act
       const result = await guard.canActivate(mockExecutionContext);
 
-      // Assert
       expect(result).toBe(true);
       expect(reflector.getAllAndOverride).toHaveBeenCalledWith(IS_PUBLIC_KEY, [
         mockExecutionContext.getHandler(),
@@ -83,7 +79,6 @@ describe("BearerAuthGuard", () => {
     });
 
     it("should throw UnauthorizedException when no token provided", async () => {
-      // Arrange
       const requestWithoutToken = {
         ...mockRequest,
         headers: {}
@@ -95,14 +90,12 @@ describe("BearerAuthGuard", () => {
         .mockReturnValueOnce(false) // IS_PUBLIC_KEY
         .mockReturnValueOnce(undefined); // ROLES
 
-      // Act & Assert
       await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
         UnauthorizedException
       );
     });
 
     it("should throw UnauthorizedException when invalid token format", async () => {
-      // Arrange
       const requestWithInvalidToken = {
         ...mockRequest,
         headers: {
@@ -116,23 +109,19 @@ describe("BearerAuthGuard", () => {
         .mockReturnValueOnce(false) // IS_PUBLIC_KEY
         .mockReturnValueOnce(undefined); // ROLES
 
-      // Act & Assert
       await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
         UnauthorizedException
       );
     });
 
     it("should validate applicant token successfully", async () => {
-      // Arrange
       reflector.getAllAndOverride
         .mockReturnValueOnce(false) // IS_PUBLIC_KEY
         .mockReturnValueOnce([role.APPLICANT]); // ROLES
       tokenService.validateToken.mockResolvedValue("applicant-1");
 
-      // Act
       const result = await guard.canActivate(mockExecutionContext);
 
-      // Assert
       expect(tokenService.validateToken).toHaveBeenCalledWith(
         "valid-token",
         "127.0.0.1",
@@ -143,20 +132,17 @@ describe("BearerAuthGuard", () => {
     });
 
     it("should throw UnauthorizedException when applicant token validation fails", async () => {
-      // Arrange
       reflector.getAllAndOverride
         .mockReturnValueOnce(false) // IS_PUBLIC_KEY
         .mockReturnValueOnce([role.APPLICANT]); // ROLES
       tokenService.validateToken.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
         UnauthorizedException
       );
     });
 
     it("should throw BadRequestException when applicant token validation throws error", async () => {
-      // Arrange
       reflector.getAllAndOverride
         .mockReturnValueOnce(false) // IS_PUBLIC_KEY
         .mockReturnValueOnce([role.APPLICANT]); // ROLES
@@ -164,22 +150,18 @@ describe("BearerAuthGuard", () => {
         new Error("Token validation failed")
       );
 
-      // Act & Assert
       await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(
         BadRequestException
       );
     });
 
     it("should set user from token for non-applicant routes", async () => {
-      // Arrange
       reflector.getAllAndOverride
         .mockReturnValueOnce(false) // IS_PUBLIC_KEY
         .mockReturnValueOnce(undefined); // ROLES
 
-      // Act
       const result = await guard.canActivate(mockExecutionContext);
 
-      // Assert
       expect(result).toBe(true);
       expect(mockRequest["user"]).toEqual({
         id: "valid-token"
@@ -188,15 +170,12 @@ describe("BearerAuthGuard", () => {
     });
 
     it("should handle routes with other roles", async () => {
-      // Arrange
       reflector.getAllAndOverride
         .mockReturnValueOnce(false) // IS_PUBLIC_KEY
         .mockReturnValueOnce(["ADMIN"]); // ROLES
 
-      // Act
       const result = await guard.canActivate(mockExecutionContext);
 
-      // Assert
       expect(result).toBe(true);
       expect(mockRequest["user"]).toEqual({
         id: "valid-token"
@@ -207,75 +186,60 @@ describe("BearerAuthGuard", () => {
 
   describe("extractTokenFromHeader", () => {
     it("should extract token from Bearer authorization header", () => {
-      // Arrange
       const request = {
         headers: {
           authorization: "Bearer valid-token"
         }
       } as Request;
 
-      // Act
       const token = (guard as any).extractTokenFromHeader(request);
 
-      // Assert
       expect(token).toBe("valid-token");
     });
 
     it("should return undefined for non-Bearer authorization", () => {
-      // Arrange
       const request = {
         headers: {
           authorization: "Basic dXNlcjpwYXNz"
         }
       } as Request;
 
-      // Act
       const token = (guard as any).extractTokenFromHeader(request);
 
-      // Assert
       expect(token).toBeUndefined();
     });
 
     it("should return undefined when no authorization header", () => {
-      // Arrange
       const request = {
         headers: {}
       } as Request;
 
-      // Act
       const token = (guard as any).extractTokenFromHeader(request);
 
-      // Assert
       expect(token).toBeUndefined();
     });
 
     it("should return undefined for malformed authorization header", () => {
-      // Arrange
       const request = {
         headers: {
           authorization: "Bearer"
         }
       } as Request;
 
-      // Act
       const token = (guard as any).extractTokenFromHeader(request);
 
-      // Assert
       expect(token).toBeUndefined();
     });
 
     it("should handle authorization header with multiple spaces", () => {
-      // Arrange
       const request = {
         headers: {
           authorization: "Bearer  valid-token  "
         }
       } as Request;
 
-      // Act
       const token = (guard as any).extractTokenFromHeader(request);
 
-      // Assert
       expect(token).toBe("valid-token  ");
     });
   });

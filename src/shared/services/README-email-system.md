@@ -5,15 +5,18 @@ Sistem email recruitment service telah diupdate untuk menggunakan template dari 
 ## Komponen Utama
 
 ### 1. SystemConfigEmailService
+
 Service utama yang mengintegrasikan system configuration dengan email sending.
 
 **Fitur:**
+
 - Mengambil template dari system configuration
 - Menggabungkan data company dengan template data
 - Render template dengan placeholder replacement
 - Fallback ke default template jika system config tidak tersedia
 
 **Contoh Penggunaan:**
+
 ```typescript
 // Send email menggunakan template dari system configuration
 await this.systemConfigEmailService.sendEmailFromConfig(
@@ -27,9 +30,11 @@ await this.systemConfigEmailService.sendEmailFromConfig(
 ```
 
 ### 2. NotificationService
+
 Service wrapper yang menyediakan method khusus untuk berbagai jenis notifikasi.
 
 **Method yang tersedia:**
+
 - `sendApplicantRegistrationNotification()`
 - `sendApplicantApplicationNotification()`
 - `sendApplicantStatusUpdateNotification()`
@@ -37,6 +42,7 @@ Service wrapper yang menyediakan method khusus untuk berbagai jenis notifikasi.
 - `sendBulkNotifications()`
 
 **Contoh Penggunaan:**
+
 ```typescript
 // Send registration notification
 await this.notificationService.sendApplicantRegistrationNotification(
@@ -58,9 +64,11 @@ await this.notificationService.sendCustomNotification(
 ```
 
 ### 3. EmailTemplateService (Updated)
+
 Service template yang telah diupdate untuk mendukung system configuration.
 
 **Fitur Baru:**
+
 - Async `getTemplate()` method
 - Fallback ke system configuration
 - Support untuk JSON template dari database
@@ -93,6 +101,7 @@ Template email disimpan di system configuration dengan format JSON:
 ## Integrasi dengan Existing Services
 
 ### TokenService
+
 TokenService telah diupdate untuk menggunakan NotificationService dengan fallback ke direct email:
 
 ```typescript
@@ -116,6 +125,7 @@ if (!notificationSent) {
 ## Configuration
 
 ### Environment Variables
+
 Pastikan environment variables untuk SMTP sudah dikonfigurasi:
 
 ```bash
@@ -129,11 +139,13 @@ SMTP_FROM_EMAIL=noreply@yourcompany.com
 ```
 
 ### System Configuration
+
 Template email dapat dikonfigurasi melalui system configuration API atau langsung di database.
 
 ## Error Handling
 
 Sistem memiliki multiple layer fallback:
+
 1. System configuration template
 2. Default hardcoded template
 3. Direct email sending
@@ -143,6 +155,7 @@ Jika system configuration template tidak tersedia atau error, sistem akan otomat
 ## Logging
 
 Semua email sending activity di-log dengan detail:
+
 - Template yang digunakan
 - Recipient information
 - Success/failure status

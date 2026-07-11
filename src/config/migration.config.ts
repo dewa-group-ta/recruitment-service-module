@@ -4,8 +4,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 /**
- * Database configuration for TypeORM migrations
- * This configuration is used by the TypeORM CLI for running migrations
+ * konfigurasi database untuk typeorm cli migration.
  */
 const migrationConfig: DataSourceOptions = {
   type: "postgres",
@@ -16,11 +15,11 @@ const migrationConfig: DataSourceOptions = {
   database: process.env.DB_NAME || "recruitment_db",
   entities: [__dirname + "/../**/*.entity.{js,ts}"],
   migrations: [__dirname + "/../migrations/*.{js,ts}"],
-  synchronize: false, // Never use synchronize in production
+  synchronize: false, // jangan pernah pakai synchronize di production
   logging: process.env.NODE_ENV === "development",
   migrationsRun: false,
   migrationsTableName: "migrations",
-  migrationsTransactionMode: "each" // Run each migration in a separate transaction
+  migrationsTransactionMode: "each" // tiap migration dijalankan dalam transaksi terpisah
 };
 
 export default new DataSource(migrationConfig);

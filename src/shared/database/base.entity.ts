@@ -1,4 +1,3 @@
-// base.entity.ts
 import {
   BaseEntity as TypeORMBaseEntity,
   CreateDateColumn,

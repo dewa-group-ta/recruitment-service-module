@@ -1,9 +1,6 @@
 import { CommonDtoInterface } from "src/shared/interface/common-dto.interface";
 import { Pagination } from "src/shared/paginate";
 
-/**
- * common service interface
- */
 export interface CommonServiceInterface<T> {
   create(filter: CommonDtoInterface): Promise<T>;
   findAll(filter: CommonDtoInterface): Promise<Pagination<T>>;

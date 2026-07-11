@@ -1,1 +1,4 @@
-export { EvaluationResult, EvaluationDecision } from "./entities/evaluation-results.entity";
+export {
+  EvaluationResult,
+  EvaluationDecision
+} from "./entities/evaluation-results.entity";

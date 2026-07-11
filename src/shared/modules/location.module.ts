@@ -4,10 +4,6 @@ import { LocationService } from "../services/location.service";
 import { LocationApiClient } from "../services/location-api.client";
 import { LOCATION_API_CLIENT } from "../interface/location.interface";
 
-/**
- * Location module
- * Provides location data services and API client
- */
 @Module({
   imports: [ConfigModule],
   providers: [

@@ -20,17 +20,10 @@ export class TokenService {
     private readonly notificationService: NotificationService
   ) {}
 
-  /**
-   * Generate and send login token for applicant
-   * @param applicantId - Applicant ID
-   * @param jobTitle - Job title for email context
-   * @returns Generated token
-   */
   async generateAndSendLoginToken(
     applicantId: string,
     jobTitle: string
   ): Promise<string> {
-    // Get applicant details
     const applicant = await this.applicantRepository.findOne({
       where: { id: applicantId }
     });
@@ -39,14 +32,11 @@ export class TokenService {
       throw new Error("Applicant not found");
     }
 
-    // Generate unique token
     const token = this.generateToken();
 
-    // Set expiration time (24 hours from now)
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
 
-    // Create token record
     const authToken = this.tokenRepository.create({
       email: applicant.email,
       token,
@@ -60,7 +50,6 @@ export class TokenService {
 
     const applicationLink = `${process.env.FRONTEND_URL}/validate-token?token=${token}`;
 
-    // Send token via email
     await this.emailService.sendApplicationReceivedEmail(
       applicant.email,
       applicant.fullName,
@@ -71,20 +60,12 @@ export class TokenService {
     return token;
   }
 
-  /**
-   * Validate login token and return applicantId if valid.
-   * Optionally records IP address and user agent for auditing.
-   * @param token - The login token to validate
-   * @param ipAddress - (Optional) IP address of the requester
-   * @param userAgent - (Optional) User agent string of the requester
-   * @returns Applicant ID if valid, null if invalid or expired
-   */
+  // validasi login token, opsional mencatat ip address dan user agent untuk audit.
   async validateLoginToken(
     token: string,
     ipAddress: string,
     userAgent: string
   ): Promise<string | null> {
-    // Find the token record
     const authToken = await this.tokenRepository.findOne({
       where: {
         token,
@@ -94,16 +75,15 @@ export class TokenService {
     });
 
     if (!authToken) {
-      // Token not found or already used
+      // null berarti token tidak ditemukan ATAU sudah pernah dipakai
       return null;
     }
 
-    // Check if token is expired
     if (new Date() > authToken.expiresAt) {
       return null;
     }
 
-    // Mark token as used and record audit info
+    // tandai token sudah dipakai dan catat info audit
     authToken.isUsed = true;
     authToken.usedAt = new Date();
     authToken.ipAddress = ipAddress;
@@ -114,11 +94,6 @@ export class TokenService {
     return authToken.applicantId;
   }
 
-  /**
-   * Validate login token
-   * @param token - Token to validate
-   * @returns Applicant ID if valid, null if invalid
-   */
   async validateToken(
     token: string,
     ipAddress?: string,
@@ -129,8 +104,6 @@ export class TokenService {
         token,
         type: TokenType.LOGIN,
         isUsed: true,
-        // ipAddress,
-        // userAgent,
         expiresAt: MoreThan(new Date())
       }
     });
@@ -139,7 +112,6 @@ export class TokenService {
       return null;
     }
 
-    // Check if token is expired
     if (new Date() > authToken.expiresAt) {
       return null;
     }
@@ -147,18 +119,14 @@ export class TokenService {
     return authToken.applicantId;
   }
 
-  /**
-   * Generate unique token
-   * @returns Generated token
-   */
   private generateToken(): string {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let result = "";
 
-    // Use crypto randomBytes for secure random selection
+    // pakai crypto randomBytes supaya pemilihan karakternya aman secara kriptografis
     const randomBuffer = randomBytes(8);
     for (let i = 0; i < 8; i++) {
-      // Convert each byte to a valid index in chars
+      // konversi tiap byte jadi index yang valid di chars
       const idx = randomBuffer[i] % chars.length;
       result += chars.charAt(idx);
     }
@@ -166,13 +134,7 @@ export class TokenService {
     return bcrypt.hashSync(result, 10);
   }
 
-  /**
-   * Generate and send login token for existing applicant
-   * @param email - Applicant email address
-   * @returns Generated token
-   */
   async generateAndSendLoginTokenByEmail(email: string): Promise<string> {
-    // Check if applicant exists
     const applicant = await this.applicantRepository.findOne({
       where: { email }
     });
@@ -181,7 +143,7 @@ export class TokenService {
       throw new Error("Applicant not found with this email address");
     }
 
-    // Check for recent token requests (rate limiting - 1 minute cooldown)
+    // cek request token terbaru untuk rate limiting (cooldown 1 menit)
     const oneMinuteAgo = new Date();
     oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1);
 
@@ -220,14 +182,11 @@ export class TokenService {
       }
     }
 
-    // Generate unique token
     const token = this.generateToken();
 
-    // Set expiration time (24 hours from now)
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
 
-    // Create token record
     const authToken = this.tokenRepository.create({
       email: applicant.email,
       token,
@@ -241,7 +200,7 @@ export class TokenService {
 
     const loginLink = `${process.env.FRONTEND_URL}/validate-token?token=${token}`;
 
-    // Try to send using system configuration template first, fallback to direct email
+    // coba kirim pakai template system configuration dulu, fallback ke email langsung kalau gagal
     try {
       const notificationSent =
         await this.notificationService.sendCustomNotification(
@@ -254,7 +213,6 @@ export class TokenService {
         );
 
       if (!notificationSent) {
-        // Fallback to direct email if notification template not found
         await this.emailService.sendEmail({
           to: { email: applicant.email, name: applicant.fullName },
           subject: "Your Login Token - Recruitment System",
@@ -298,7 +256,6 @@ export class TokenService {
         });
       }
     } catch (error) {
-      // Log the error and fallback to direct email if notification service fails
       console.error(
         "Notification service failed, falling back to direct email:",
         error
@@ -349,9 +306,6 @@ export class TokenService {
     return token;
   }
 
-  /**
-   * Clean up expired tokens
-   */
   async cleanupExpiredTokens(): Promise<void> {
     const expiredTokens = await this.tokenRepository
       .createQueryBuilder()

@@ -66,15 +66,12 @@ describe("DepartmentService", () => {
     };
 
     it("should create a new department successfully", async () => {
-      // Arrange
       departmentRepository.findOne.mockResolvedValue(null); // No existing department
       departmentRepository.create.mockReturnValue(mockDepartment as any);
       departmentRepository.save.mockResolvedValue(mockDepartment as any);
 
-      // Act
       const result = await service.create(createDepartmentDto);
 
-      // Assert
       expect(departmentRepository.findOne).toHaveBeenCalledWith({
         where: { name: "Engineering", deletedAt: IsNull() }
       });
@@ -87,10 +84,8 @@ describe("DepartmentService", () => {
     });
 
     it("should throw ConflictException when department with same name already exists", async () => {
-      // Arrange
       departmentRepository.findOne.mockResolvedValue(mockDepartment as any);
 
-      // Act & Assert
       await expect(service.create(createDepartmentDto)).rejects.toThrow(
         ConflictException
       );
@@ -100,13 +95,11 @@ describe("DepartmentService", () => {
     });
 
     it("should throw ConflictException when department with same code already exists", async () => {
-      // Arrange
       const dtoWithCode = { ...createDepartmentDto, code: "ENG" };
       departmentRepository.findOne
         .mockResolvedValueOnce(null) // No existing department by name
         .mockResolvedValueOnce(mockDepartment as any); // Existing department by code
 
-      // Act & Assert
       await expect(service.create(dtoWithCode)).rejects.toThrow(
         ConflictException
       );
@@ -116,12 +109,10 @@ describe("DepartmentService", () => {
     });
 
     it("should throw BadRequestException when creation fails", async () => {
-      // Arrange
       departmentRepository.findOne.mockResolvedValue(null);
       departmentRepository.create.mockReturnValue(mockDepartment as any);
       departmentRepository.save.mockRejectedValue(new Error("Database error"));
 
-      // Act & Assert
       await expect(service.create(createDepartmentDto)).rejects.toThrow(
         BadRequestException
       );
@@ -139,16 +130,13 @@ describe("DepartmentService", () => {
     };
 
     it("should return paginated departments with filters", async () => {
-      // Arrange
       departmentRepository.findAndCount.mockResolvedValue([
         [mockDepartment],
         1
       ]);
 
-      // Act
       const result = await service.findAll(queryDto);
 
-      // Assert
       expect(departmentRepository.findAndCount).toHaveBeenCalledWith({
         where: {
           deletedAt: IsNull(),
@@ -170,17 +158,14 @@ describe("DepartmentService", () => {
     });
 
     it("should return departments without filters when not provided", async () => {
-      // Arrange
       const simpleQueryDto = { page: 1, limit: 10 };
       departmentRepository.findAndCount.mockResolvedValue([
         [mockDepartment],
         1
       ]);
 
-      // Act
       const result = await service.findAll(simpleQueryDto);
 
-      // Assert
       expect(departmentRepository.findAndCount).toHaveBeenCalledWith({
         where: {
           deletedAt: IsNull()
@@ -197,13 +182,10 @@ describe("DepartmentService", () => {
 
   describe("findOne", () => {
     it("should return department when found", async () => {
-      // Arrange
       departmentRepository.findOne.mockResolvedValue(mockDepartment as any);
 
-      // Act
       const result = await service.findOne("dept-1");
 
-      // Assert
       expect(departmentRepository.findOne).toHaveBeenCalledWith({
         where: { id: "dept-1", deletedAt: IsNull() }
       });
@@ -213,10 +195,8 @@ describe("DepartmentService", () => {
     });
 
     it("should throw NotFoundException when department not found", async () => {
-      // Arrange
       departmentRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.findOne("nonexistent-id")).rejects.toThrow(
         NotFoundException
       );
@@ -230,17 +210,14 @@ describe("DepartmentService", () => {
     };
 
     it("should update department successfully", async () => {
-      // Arrange
       const updatedDepartment = { ...mockDepartment, ...updateDepartmentDto };
       departmentRepository.findOne
         .mockResolvedValueOnce(mockDepartment as any) // First call for finding existing department
         .mockResolvedValueOnce(null); // No conflict with name
       departmentRepository.save.mockResolvedValue(updatedDepartment as any);
 
-      // Act
       const result = await service.update("dept-1", updateDepartmentDto);
 
-      // Assert
       expect(departmentRepository.findOne).toHaveBeenCalledWith({
         where: { id: "dept-1", deletedAt: IsNull() }
       });
@@ -250,30 +227,25 @@ describe("DepartmentService", () => {
     });
 
     it("should throw NotFoundException when department not found", async () => {
-      // Arrange
       departmentRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(
         service.update("nonexistent-id", updateDepartmentDto)
       ).rejects.toThrow(NotFoundException);
     });
 
     it("should throw ConflictException when updating to existing name", async () => {
-      // Arrange
       const existingDepartment = { ...mockDepartment, id: "dept-2" };
       departmentRepository.findOne
         .mockResolvedValueOnce(mockDepartment as any) // First call for finding existing department
         .mockResolvedValueOnce(existingDepartment as any); // Conflict with name
 
-      // Act & Assert
       await expect(
         service.update("dept-1", updateDepartmentDto)
       ).rejects.toThrow(ConflictException);
     });
 
     it("should throw ConflictException when updating to existing code", async () => {
-      // Arrange
       const updateWithCode = { ...updateDepartmentDto, code: "SE" };
       const existingDepartment = {
         ...mockDepartment,
@@ -285,18 +257,15 @@ describe("DepartmentService", () => {
         .mockResolvedValueOnce(null) // No conflict with name
         .mockResolvedValueOnce(existingDepartment as any); // Conflict with code
 
-      // Act & Assert
       await expect(service.update("dept-1", updateWithCode)).rejects.toThrow(
         ConflictException
       );
     });
 
     it("should throw BadRequestException when update fails", async () => {
-      // Arrange
       departmentRepository.findOne.mockResolvedValue(mockDepartment as any);
       departmentRepository.save.mockRejectedValue(new Error("Database error"));
 
-      // Act & Assert
       await expect(
         service.update("dept-1", updateDepartmentDto)
       ).rejects.toThrow(BadRequestException);
@@ -305,14 +274,11 @@ describe("DepartmentService", () => {
 
   describe("remove", () => {
     it("should soft delete department successfully", async () => {
-      // Arrange
       departmentRepository.findOne.mockResolvedValue(mockDepartment as any);
       departmentRepository.update.mockResolvedValue({ affected: 1 } as any);
 
-      // Act
       const result = await service.remove("dept-1", "user-1");
 
-      // Assert
       expect(departmentRepository.findOne).toHaveBeenCalledWith({
         where: { id: "dept-1", deletedAt: IsNull() }
       });
@@ -325,23 +291,19 @@ describe("DepartmentService", () => {
     });
 
     it("should throw NotFoundException when department not found", async () => {
-      // Arrange
       departmentRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.remove("nonexistent-id", "user-1")).rejects.toThrow(
         NotFoundException
       );
     });
 
     it("should throw BadRequestException when deletion fails", async () => {
-      // Arrange
       departmentRepository.findOne.mockResolvedValue(mockDepartment as any);
       departmentRepository.update.mockRejectedValue(
         new Error("Database error")
       );
 
-      // Act & Assert
       await expect(service.remove("dept-1", "user-1")).rejects.toThrow(
         BadRequestException
       );
@@ -356,16 +318,13 @@ describe("DepartmentService", () => {
     };
 
     it("should restore soft deleted department successfully", async () => {
-      // Arrange
       departmentRepository.findOne
         .mockResolvedValueOnce(deletedDepartment as any) // First call with deleted department
         .mockResolvedValueOnce(mockDepartment as any); // Second call after restore
       departmentRepository.query.mockResolvedValue({ affected: 1 } as any);
 
-      // Act
       const result = await service.restore("dept-1");
 
-      // Assert
       expect(departmentRepository.findOne).toHaveBeenCalledWith({
         where: { id: "dept-1" },
         withDeleted: true
@@ -379,44 +338,36 @@ describe("DepartmentService", () => {
     });
 
     it("should throw NotFoundException when department not found", async () => {
-      // Arrange
       departmentRepository.findOne.mockResolvedValue(null);
 
-      // Act & Assert
       await expect(service.restore("nonexistent-id")).rejects.toThrow(
         NotFoundException
       );
     });
 
     it("should throw BadRequestException when department is not deleted", async () => {
-      // Arrange
       departmentRepository.findOne.mockResolvedValue(mockDepartment as any);
 
-      // Act & Assert
       await expect(service.restore("dept-1")).rejects.toThrow(
         BadRequestException
       );
     });
 
     it("should throw NotFoundException when department not found after restore", async () => {
-      // Arrange
       departmentRepository.findOne
         .mockResolvedValueOnce(deletedDepartment as any) // First call with deleted department
         .mockResolvedValueOnce(null); // Second call after restore returns null
       departmentRepository.query.mockResolvedValue({ affected: 1 } as any);
 
-      // Act & Assert
       await expect(service.restore("dept-1")).rejects.toThrow(
         NotFoundException
       );
     });
 
     it("should throw BadRequestException when restore fails", async () => {
-      // Arrange
       departmentRepository.findOne.mockResolvedValue(deletedDepartment as any);
       departmentRepository.query.mockRejectedValue(new Error("Database error"));
 
-      // Act & Assert
       await expect(service.restore("dept-1")).rejects.toThrow(
         BadRequestException
       );
@@ -425,14 +376,11 @@ describe("DepartmentService", () => {
 
   describe("findActive", () => {
     it("should return all active departments", async () => {
-      // Arrange
       const activeDepartments = [mockDepartment];
       departmentRepository.find.mockResolvedValue(activeDepartments as any);
 
-      // Act
       const result = await service.findActive();
 
-      // Assert
       expect(departmentRepository.find).toHaveBeenCalledWith({
         where: { isActive: true, deletedAt: IsNull() },
         order: { name: "ASC" }
@@ -443,13 +391,10 @@ describe("DepartmentService", () => {
     });
 
     it("should return empty array when no active departments found", async () => {
-      // Arrange
       departmentRepository.find.mockResolvedValue([]);
 
-      // Act
       const result = await service.findActive();
 
-      // Assert
       expect(result).toBeDefined();
       expect(result).toHaveLength(0);
     });

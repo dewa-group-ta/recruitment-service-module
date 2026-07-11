@@ -18,34 +18,38 @@ export class MinioService implements OnModuleInit {
     const accessKey = this.configService.get<string>("minio.accessKey");
     const secretKey = this.configService.get<string>("minio.secretKey");
     if (!accessKey || !secretKey) {
-      throw new Error("MinIO credentials (MINIO_ACCESS_KEY, MINIO_SECRET_KEY) must be set in environment");
+      throw new Error(
+        "MinIO credentials (MINIO_ACCESS_KEY, MINIO_SECRET_KEY) must be set in environment"
+      );
     }
 
     try {
       this.minioClient = new Minio.Client({
-        endPoint: this.configService.get<string>("minio.endPoint") ?? "localhost",
+        endPoint:
+          this.configService.get<string>("minio.endPoint") ?? "localhost",
         port: this.configService.get<number>("minio.port") ?? 9000,
         useSSL: this.configService.get<boolean>("minio.useSSL") ?? false,
         accessKey,
-        secretKey,
+        secretKey
       });
 
-      // Check if bucket exists, create if not
       const bucketExists = await this.minioClient.bucketExists(this.bucketName);
       if (!bucketExists) {
         await this.minioClient.makeBucket(this.bucketName, "us-east-1");
         this.logger.log(`Bucket ${this.bucketName} created successfully`);
       }
 
-      // Ensure bucket allows public GET so frontend CDN URLs resolve without auth
+      // bucket dibuat public-read supaya url cdn di frontend bisa diakses tanpa auth
       const publicReadPolicy = JSON.stringify({
         Version: "2012-10-17",
-        Statement: [{
-          Effect: "Allow",
-          Principal: { AWS: ["*"] },
-          Action: ["s3:GetObject"],
-          Resource: [`arn:aws:s3:::${this.bucketName}/*`]
-        }]
+        Statement: [
+          {
+            Effect: "Allow",
+            Principal: { AWS: ["*"] },
+            Action: ["s3:GetObject"],
+            Resource: [`arn:aws:s3:::${this.bucketName}/*`]
+          }
+        ]
       });
       await this.minioClient.setBucketPolicy(this.bucketName, publicReadPolicy);
 
@@ -114,8 +118,8 @@ export class MinioService implements OnModuleInit {
       const url = await this.minioClient.presignedGetObject(
         this.bucketName,
         filePath,
-        24 * 60 * 60
-      ); // 24 hours
+        24 * 60 * 60 // 24 jam
+      );
       return url;
     } catch (error) {
       this.logger.error(`Failed to get file URL for ${filePath}`, error);
@@ -124,12 +128,7 @@ export class MinioService implements OnModuleInit {
   }
 
   /**
-   * Mengambil file dari MinIO sebagai Buffer.
-   * Digunakan oleh scoring service untuk mengirim dokumen CV ke FastAPI
-   * dalam bentuk multipart/form-data.
-   *
-   * @param filePath - Path file di dalam bucket (contoh: "cv/1234-abc.pdf")
-   * @returns Buffer isi file
+   * ambil file dari minio sebagai buffer, dipakai scoring service untuk kirim cv ke fastapi via multipart/form-data.
    */
   async getFileBuffer(filePath: string): Promise<Buffer> {
     try {

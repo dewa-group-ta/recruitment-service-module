@@ -24,11 +24,11 @@ import { File } from "../../shared/entities/file.entity";
       StageActivity,
       ApplicationNotes,
       EvaluationResult,
-      File,
+      File
     ]),
     EmailModule,
     ApplicantResultsModule,
-    FileUploadModule,
+    FileUploadModule
   ],
   controllers: [CandidatesController],
   providers: [CandidatesService],

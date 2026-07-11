@@ -1,8 +1,5 @@
 /**
- * Email Service Usage Examples
- *
- * This file demonstrates how to use the EmailService in your application.
- * Remove this file in production.
+ * contoh penggunaan EmailService (tidak dipakai oleh kode aplikasi, referensi saja).
  */
 
 import { Injectable, Logger } from "@nestjs/common";
@@ -59,12 +56,12 @@ export class EmailExampleService {
       attachments: [
         {
           filename: "interview-guidelines.pdf",
-          content: Buffer.from("PDF content here"), // In real usage, read from file
+          content: Buffer.from("PDF content here"), // di penggunaan nyata, baca dari file
           contentType: "application/pdf"
         },
         {
           filename: "company-profile.pdf",
-          content: Buffer.from("Company profile content"), // In real usage, read from file
+          content: Buffer.from("Company profile content"), // di penggunaan nyata, baca dari file
           contentType: "application/pdf"
         }
       ]

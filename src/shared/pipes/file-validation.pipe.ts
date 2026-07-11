@@ -1,7 +1,7 @@
 import { PipeTransform, Injectable, BadRequestException } from "@nestjs/common";
 
 export interface FileValidationOptions {
-  maxSize?: number; // in bytes
+  maxSize?: number; // dalam bytes
   allowedMimeTypes?: string[];
   allowedExtensions?: string[];
 }
@@ -15,14 +15,12 @@ export class FileValidationPipe implements PipeTransform {
       throw new BadRequestException("No file provided");
     }
 
-    // Check file size
     if (this.options.maxSize && file.size > this.options.maxSize) {
       throw new BadRequestException(
         `File size exceeds maximum allowed size of ${this.options.maxSize} bytes`
       );
     }
 
-    // Check MIME type
     if (
       this.options.allowedMimeTypes &&
       !this.options.allowedMimeTypes.includes(file.mimetype)
@@ -32,7 +30,6 @@ export class FileValidationPipe implements PipeTransform {
       );
     }
 
-    // Check file extension
     if (this.options.allowedExtensions) {
       const fileExtension = file.originalname.split(".").pop()?.toLowerCase();
       if (

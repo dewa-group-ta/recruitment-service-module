@@ -28,7 +28,7 @@ export class ApplicantProjectHistory {
   @Column({ type: "varchar", length: 255 })
   position: string;
 
-  @Column({ type: "varchar", length: 4, nullable: true }) // Format: YYYY
+  @Column({ type: "varchar", length: 4, nullable: true }) // format: YYYY
   year: string;
 
   @Column({ type: "varchar", length: 500, nullable: true })
@@ -38,7 +38,7 @@ export class ApplicantProjectHistory {
   description: string;
 
   @Column({ type: "text", nullable: true })
-  technologies: string; // comma-separated technologies used
+  technologies: string; // teknologi yang dipakai, dipisah koma
 
   @Column({ type: "text", nullable: true })
   achievements: string;
@@ -46,7 +46,6 @@ export class ApplicantProjectHistory {
   @Column({ type: "int", default: 1 })
   order: number; // untuk multiple project records
 
-  // Audit fields
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 

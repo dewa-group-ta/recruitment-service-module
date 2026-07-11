@@ -39,9 +39,6 @@ export class ApplicantSourceController {
     private readonly applicantSourceService: ApplicantSourceService
   ) {}
 
-  /**
-   * Create a new applicant source
-   */
   @Post()
   @IsRole(role.HR_MANAGER)
   @HttpCode(HttpStatus.CREATED)
@@ -89,9 +86,6 @@ export class ApplicantSourceController {
     return await this.applicantSourceService.create(createApplicantSourceDto);
   }
 
-  /**
-   * Get all applicant sources with pagination and filtering
-   */
   @Get()
   @Public()
   @HttpCode(HttpStatus.OK)
@@ -104,9 +98,6 @@ export class ApplicantSourceController {
     return await this.applicantSourceService.findWithPagination(queryDto);
   }
 
-  /**
-   * Get all applicant sources (simple list without pagination)
-   */
   @Get("all")
   @Public()
   @HttpCode(HttpStatus.OK)
@@ -125,9 +116,6 @@ export class ApplicantSourceController {
     return await this.applicantSourceService.findAll();
   }
 
-  /**
-   * Get all active applicant sources
-   */
   @Get("active")
   @Public()
   @HttpCode(HttpStatus.OK)
@@ -145,9 +133,6 @@ export class ApplicantSourceController {
     return await this.applicantSourceService.findActive();
   }
 
-  /**
-   * Get applicant source by ID
-   */
   @Get(":id")
   @Public()
   @HttpCode(HttpStatus.OK)
@@ -183,9 +168,6 @@ export class ApplicantSourceController {
     return await this.applicantSourceService.findOne(id);
   }
 
-  /**
-   * Update applicant source
-   */
   @Patch(":id")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESSFULLY_UPDATED)
@@ -242,9 +224,6 @@ export class ApplicantSourceController {
     );
   }
 
-  /**
-   * Toggle active status
-   */
   @Patch(":id/toggle-active")
   @HttpCode(HttpStatus.OK)
   @ResponseMessage(responseMessage.SUCCESSFULLY_UPDATED)
@@ -292,9 +271,6 @@ export class ApplicantSourceController {
     return await this.applicantSourceService.toggleActive(id);
   }
 
-  /**
-   * Get applicant source statistics
-   */
   @Get("statistics")
   @Public()
   @HttpCode(HttpStatus.OK)
@@ -329,9 +305,6 @@ export class ApplicantSourceController {
     return statistics;
   }
 
-  /**
-   * Delete applicant source
-   */
   @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
   @ResponseMessage(responseMessage.SUCCESSFULLY_DELETED)

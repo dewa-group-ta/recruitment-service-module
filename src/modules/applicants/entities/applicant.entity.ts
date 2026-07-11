@@ -51,39 +51,30 @@ export class Applicant {
   @Column({ type: "date", nullable: true })
   dateOfBirth!: Date;
 
-  // photo
   @Column({ type: "varchar", length: 500, nullable: true })
   photoUrl!: string;
 
-  // cv
   @Column({ type: "varchar", length: 500, nullable: true })
   cvUrl!: string;
 
-  // linkedin url
   @Column({ type: "varchar", length: 500, nullable: true })
   linkedinUrl!: string;
 
-  // portfolio url
   @Column({ type: "varchar", length: 500, nullable: true })
   portfolioUrl!: string;
 
-  // social media url
   @Column({ type: "varchar", length: 500, nullable: true })
   socialMediaUrl!: string;
 
-  // is internal
   @Column({ type: "boolean", default: false })
   isInternal!: boolean;
 
-  // availability
   @Column({ type: "enum", enum: AvailabilityEnum, nullable: true })
   availability!: AvailabilityEnum;
 
-  // availability date
   @Column({ type: "date", nullable: true })
   availabilityAt!: Date;
 
-  // Applicant sources (many-to-many relationship)
   @ManyToMany(
     () => ApplicantSource,
     (applicantSource) => applicantSource.applicants
@@ -128,7 +119,6 @@ export class Applicant {
   })
   identities!: ApplicantIdentity[];
 
-  // Audit fields
   @CreateDateColumn({ name: "created_at" })
   createdAt!: Date;
 

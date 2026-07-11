@@ -35,7 +35,7 @@ export enum EmployeeStatus {
   INTERNSHIP = "internship",
   FREELANCE = "freelance",
   PERMANENT_EMPLOYEE = "permanent_employee",
-  PROJECT = "project",
+  PROJECT = "project"
 }
 
 export enum AvailabilityEnum {

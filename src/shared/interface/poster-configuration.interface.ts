@@ -1,6 +1,5 @@
 /**
- * Interface for poster configuration
- * Defines which fields should be included in the generated job poster
+ * konfigurasi field mana saja yang ditampilkan di poster lowongan yang di-generate.
  */
 export interface PosterConfiguration {
   jobDetails: {
@@ -32,7 +31,7 @@ export interface PosterConfiguration {
 }
 
 /**
- * Default poster configuration with all fields enabled
+ * konfigurasi default poster, semua field aktif.
  */
 export const DEFAULT_POSTER_CONFIGURATION: PosterConfiguration = {
   jobDetails: {

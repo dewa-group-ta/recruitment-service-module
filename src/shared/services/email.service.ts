@@ -14,8 +14,7 @@ import {
 import { EmailTemplateName } from "../enums/email.enum";
 
 /**
- * Email service implementation using Nodemailer
- * Handles SMTP email sending functionality
+ * kirim email via smtp pakai nodemailer.
  */
 @Injectable()
 export class EmailService implements IEmailService {
@@ -31,10 +30,6 @@ export class EmailService implements IEmailService {
     this.initializeTransporter();
   }
 
-  /**
-   * Initialize the SMTP transporter
-   * @private
-   */
   private initializeTransporter(): void {
     try {
       const smtpUser = this.configService.get<string>("SMTP_USER");
@@ -78,11 +73,6 @@ export class EmailService implements IEmailService {
     }
   }
 
-  /**
-   * Send email with the provided options
-   * @param options Email send options
-   * @returns Promise<boolean> Success status
-   */
   async sendEmail(options: EmailSendOptions): Promise<boolean> {
     try {
       const mailOptions = {
@@ -120,13 +110,6 @@ export class EmailService implements IEmailService {
     }
   }
 
-  /**
-   * Send email using a template
-   * @param templateName Template name
-   * @param to Recipients
-   * @param data Template data
-   * @returns Promise<boolean> Success status
-   */
   async sendTemplateEmail(
     templateName: string,
     to: EmailRecipient | EmailRecipient[],
@@ -171,10 +154,6 @@ export class EmailService implements IEmailService {
     }
   }
 
-  /**
-   * Verify email configuration
-   * @returns Promise<boolean> Configuration validity
-   */
   async verifyConnection(): Promise<boolean> {
     try {
       await this.transporter.verify();
@@ -186,12 +165,6 @@ export class EmailService implements IEmailService {
     }
   }
 
-  /**
-   * Format recipients for nodemailer
-   * @param recipients Email recipients
-   * @returns Formatted recipient string
-   * @private
-   */
   private formatRecipients(
     recipients: EmailRecipient | EmailRecipient[]
   ): string {
@@ -210,13 +183,6 @@ export class EmailService implements IEmailService {
       : recipients.email;
   }
 
-  /**
-   * Send application received email
-   * @param applicantEmail Applicant email
-   * @param applicantName Applicant name
-   * @param jobTitle Job title
-   * @returns Promise<boolean> Success status
-   */
   async sendApplicationReceivedEmail(
     applicantEmail: string,
     applicantName: string,
@@ -244,14 +210,6 @@ export class EmailService implements IEmailService {
     );
   }
 
-  /**
-   * Send application status update email
-   * @param applicantEmail Applicant email
-   * @param applicantName Applicant name
-   * @param jobTitle Job title
-   * @param status New status
-   * @returns Promise<boolean> Success status
-   */
   async sendApplicationStatusUpdateEmail(
     applicantEmail: string,
     applicantName: string,
@@ -265,15 +223,6 @@ export class EmailService implements IEmailService {
     );
   }
 
-  /**
-   * Send interview invitation email
-   * @param applicantEmail Applicant email
-   * @param applicantName Applicant name
-   * @param jobTitle Job title
-   * @param interviewDate Interview date
-   * @param interviewLocation Interview location
-   * @returns Promise<boolean> Success status
-   */
   async sendInterviewInvitationEmail(
     applicantEmail: string,
     applicantName: string,

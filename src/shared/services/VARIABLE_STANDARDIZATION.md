@@ -15,47 +15,58 @@ Semua template email telah distandarisasi untuk menggunakan variable yang konsis
 ### ✅ File yang Diupdate
 
 #### 1. System Configuration Seeder
+
 **File**: `src/seeders/system-configuration.seeder.ts`
 
 **Perubahan**:
+
 - `notification_applicant_register`: Menggunakan `{{application_link}}` dan `{{company_name}}`, `{{company_website}}`
 - `notification_applicant_apply`: Menggunakan variable standar
 - `notification_applicant_status_update`: Menggunakan `{{application_link}}` dan variable standar
 - `notification_applicant_login_token`: Menggunakan `{{application_link}}` dan `{{company_name}}`
 
 #### 2. SystemConfigEmailService
+
 **File**: `src/shared/services/system-config-email.service.ts`
 
 **Perubahan**:
+
 - Method `getCompanyTemplateData()`: Return `company_name` dan `company_website`
 - Method `sendApplicantRegistrationNotification()`: Menggunakan `application_link`
 - Method `sendApplicantStatusUpdateNotification()`: Menggunakan `application_link`
 
 #### 3. TokenService
+
 **File**: `src/modules/applicants/services/token.service.ts`
 
 **Perubahan**:
+
 - Menggunakan `application_link` untuk login token
 - Menghapus `token_expiry` variable (hardcoded di template)
 
 #### 4. Dokumentasi
+
 **File**: `src/shared/services/README-email-system.md`
 
 **Perubahan**:
+
 - Update placeholder documentation
 - Update template mapping
 - Update best practices
 
 #### 5. Contoh Penggunaan
+
 **File**: `src/shared/services/email-usage-examples.ts`
 
 **Perubahan**:
+
 - Update semua contoh untuk menggunakan variable standar
 - Konsistensi dalam contoh code
 
 ### ✅ Template yang Tersedia
 
 #### 1. notification_applicant_register
+
 ```json
 {
   "subject": "Registration Success - {{applicant_name}}",
@@ -64,6 +75,7 @@ Semua template email telah distandarisasi untuk menggunakan variable yang konsis
 ```
 
 #### 2. notification_applicant_apply
+
 ```json
 {
   "subject": "Application Received - {{vacancy_name}}",
@@ -72,6 +84,7 @@ Semua template email telah distandarisasi untuk menggunakan variable yang konsis
 ```
 
 #### 3. notification_applicant_status_update
+
 ```json
 {
   "subject": "Application Status Update - {{vacancy_name}}",
@@ -80,6 +93,7 @@ Semua template email telah distandarisasi untuk menggunakan variable yang konsis
 ```
 
 #### 4. notification_applicant_login_token
+
 ```json
 {
   "subject": "Your Login Token - {{company_name}}",
@@ -90,6 +104,7 @@ Semua template email telah distandarisasi untuk menggunakan variable yang konsis
 ### ✅ Contoh Penggunaan
 
 #### SystemConfigEmailService
+
 ```typescript
 await this.systemConfigEmailService.sendEmailFromConfig(
   "notification_applicant_register",
@@ -102,6 +117,7 @@ await this.systemConfigEmailService.sendEmailFromConfig(
 ```
 
 #### NotificationService
+
 ```typescript
 await this.notificationService.sendApplicantRegistrationNotification(
   "applicant@example.com",
@@ -111,6 +127,7 @@ await this.notificationService.sendApplicantRegistrationNotification(
 ```
 
 #### Custom Notification
+
 ```typescript
 await this.notificationService.sendCustomNotification(
   "notification_applicant_apply",
@@ -135,14 +152,14 @@ await this.notificationService.sendCustomNotification(
 
 Jika ada template lama yang menggunakan variable berbeda:
 
-| Variable Lama | Variable Baru |
-|---------------|---------------|
-| `{{companyName}}` | `{{company_name}}` |
-| `{{companyWebsite}}` | `{{company_website}}` |
-| `{{login_link}}` | `{{application_link}}` |
+| Variable Lama            | Variable Baru          |
+| ------------------------ | ---------------------- |
+| `{{companyName}}`        | `{{company_name}}`     |
+| `{{companyWebsite}}`     | `{{company_website}}`  |
+| `{{login_link}}`         | `{{application_link}}` |
 | `{{apply_for_job_link}}` | `{{application_link}}` |
-| `{{login_url}}` | `{{application_link}}` |
-| `{{token_expiry}}` | Hardcoded di template |
+| `{{login_url}}`          | `{{application_link}}` |
+| `{{token_expiry}}`       | Hardcoded di template  |
 
 ### ✅ Testing
 
@@ -150,7 +167,9 @@ Untuk test template dengan variable baru:
 
 ```typescript
 // Test template validation
-const isValid = await this.notificationService.validateTemplate("notification_applicant_register");
+const isValid = await this.notificationService.validateTemplate(
+  "notification_applicant_register"
+);
 
 // Test dengan data sample
 await this.notificationService.sendCustomNotification(
@@ -166,6 +185,7 @@ await this.notificationService.sendCustomNotification(
 ### ✅ Monitoring
 
 Monitor penggunaan template dengan:
+
 - Log success/failure rate
 - Track variable usage
 - Monitor email delivery

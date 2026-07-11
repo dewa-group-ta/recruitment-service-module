@@ -37,7 +37,6 @@ export class NotificationTemplate {
   @Column({ type: "boolean", default: true })
   isActive: boolean;
 
-  // Audit fields
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 

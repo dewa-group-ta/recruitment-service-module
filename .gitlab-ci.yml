@@ -2,4 +2,4 @@ include:
   - project: template/devops
     ref: main
     file:
-      - config-yaml-aplikasi/template-recruitment-be.yaml 
+      - config-yaml-aplikasi/template-recruitment-be.yaml

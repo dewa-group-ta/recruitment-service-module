@@ -15,7 +15,7 @@ async function bootstrap() {
 
   appHttp.enableCors();
 
-  // Configure class-validator to use NestJS container
+  // supaya class-validator bisa pakai dependency injection dari nestjs (misal validator custom yang butuh service)
   useContainer(appHttp.select(AppModule), { fallbackOnErrors: true });
 
   appHttp.useGlobalPipes(
@@ -26,7 +26,6 @@ async function bootstrap() {
     })
   );
 
-  // Swagger configuration
   setupSwagger(appHttp);
 
   await appHttp.listen(process.env.PORT ?? 3000);
