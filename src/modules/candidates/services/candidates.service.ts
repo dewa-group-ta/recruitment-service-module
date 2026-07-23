@@ -532,7 +532,7 @@ export class CandidatesService {
       evalResults.map((e) => [e.applicationId, e.maxExperienceScore ?? null])
     );
 
-    // transform ke dto — inject maxExperienceScore dari wsm scoring
+    // transfpac ke dto — inject maxExperienceScore dari wsm scoring
     const transformed = applications.map((app) => ({
       ...this.transformToApplicantTableItem(app),
       maxExperienceScore: evalMap.get(app.id) ?? null
@@ -782,7 +782,7 @@ export class CandidatesService {
         isTopMatch:
           maxScore !== null &&
           typeof e?.similarity === "number" &&
-          Math.abs(e.similarity - maxScore) < 0.0001
+          e.similarity === maxScore
       }));
 
       // 2. parse educations dengan null handling yang aman
