@@ -25,6 +25,9 @@
   - [Candidates & Pemeringkatan](#candidates--pemeringkatan-hr-view)
 - [Integrasi FastAPI Screening Service](#integrasi-fastapi-screening-service)
 - [Pengujian dengan Postman](#pengujian-dengan-postman)
+- [Format Response](#format-response)
+- [Status Aplikasi](#status-aplikasi)
+- [Status Vacancy](#status-vacancy)
 
 ---
 
@@ -43,7 +46,7 @@ Recruitment Service Module adalah layanan REST API yang menjadi tulang punggung 
 ## Teknologi yang Digunakan
 
 | Kategori           | Teknologi                      |
-| ------------------ | ------------------------------ |
+| ------------------ | ------------------------------- |
 | Runtime            | Node.js                        |
 | Framework          | NestJS 11                      |
 | Language           | TypeScript 5                   |
@@ -56,7 +59,7 @@ Recruitment Service Module adalah layanan REST API yang menjadi tulang punggung 
 | File Upload        | Multer                         |
 | Email              | Nodemailer                     |
 | Logging            | Pino (`nestjs-pino`)           |
-| AI Scoring Service | FastAPI + SBERT + Groq LLM     |
+| AI Scoring Service | FastAPI + SBERT + Ollama LLM   |
 
 ---
 
@@ -400,20 +403,18 @@ Satu pelamar **tidak dapat** melamar ke vacancy yang sama dua kali. Namun pelama
 
 ## API Endpoints
 
-### 🔒 Keterangan Auth
+### Keterangan Auth
 
 | Simbol        | Keterangan                               |
-| ------------- | ---------------------------------------- |
+| ------------- | ----------------------------------------- |
 | `[HR]`        | Bearer token apapun (UUID), tidak cek DB |
 | `[PUBLIC]`    | Tanpa token                              |
 | `[APPLICANT]` | `applicantId` di query/body, bukan JWT   |
 
----
-
 ### Recruitment Pipelines
 
 | Method   | Endpoint                                                         | Auth   | Deskripsi                        |
-| -------- | ---------------------------------------------------------------- | ------ | -------------------------------- |
+| -------- | ------------------------------------------------------------------ | ------ | --------------------------------- |
 | `GET`    | `/recruitment-pipelines/default-template`                        | `[HR]` | Ambil template pipeline default  |
 | `GET`    | `/recruitment-pipelines/templates`                               | `[HR]` | List semua template pipeline     |
 | `GET`    | `/recruitment-pipelines/default`                                 | `[HR]` | Ambil pipeline default           |
@@ -429,12 +430,10 @@ Satu pelamar **tidak dapat** melamar ke vacancy yang sama dua kali. Namun pelama
 | `PATCH`  | `/recruitment-pipelines/:id/replace-stages-from-template/:tplId` | `[HR]` | Ganti stages dari template       |
 | `DELETE` | `/recruitment-pipelines/:id`                                     | `[HR]` | Hapus pipeline                   |
 
----
-
 ### Vacancies (HR)
 
 | Method   | Endpoint         | Auth   | Deskripsi                                     |
-| -------- | ---------------- | ------ | --------------------------------------------- |
+| -------- | ----------------- | ------ | ----------------------------------------------- |
 | `POST`   | `/vacancies`     | `[HR]` | Buat vacancy baru (title saja, status: draft) |
 | `GET`    | `/vacancies`     | `[HR]` | List semua vacancy (pagination, filter)       |
 | `GET`    | `/vacancies/:id` | `[HR]` | Detail vacancy by ID                          |
@@ -444,28 +443,24 @@ Satu pelamar **tidak dapat** melamar ke vacancy yang sama dua kali. Namun pelama
 **Query params `GET /vacancies`:**
 
 | Param         | Tipe   | Deskripsi                                         |
-| ------------- | ------ | ------------------------------------------------- |
+| ------------- | ------ | --------------------------------------------------- |
 | `page`        | number | Nomor halaman (default: 1)                        |
 | `limit`       | number | Item per halaman (default: 10)                    |
 | `status`      | string | Filter by status (`draft`, `published`, `closed`) |
 | `jobCategory` | string | Filter by kategori pekerjaan                      |
 | `search`      | string | Pencarian by judul                                |
 
----
-
 ### Vacancies (Public)
 
 | Method | Endpoint                | Auth       | Deskripsi                        |
-| ------ | ----------------------- | ---------- | -------------------------------- |
+| ------ | -------------------------- | ---------- | ----------------------------------- |
 | `GET`  | `/public/vacancies`     | `[PUBLIC]` | List vacancy yang dipublikasikan |
 | `GET`  | `/public/vacancies/:id` | `[PUBLIC]` | Detail vacancy publik by ID      |
-
----
 
 ### Applicants
 
 | Method | Endpoint                           | Auth       | Deskripsi                                    |
-| ------ | ---------------------------------- | ---------- | -------------------------------------------- |
+| ------ | ------------------------------------- | ---------- | ----------------------------------------------- |
 | `POST` | `/applicants/register`             | `[PUBLIC]` | Daftar sebagai pelamar, kirim token ke email |
 | `POST` | `/applicants/login`                | `[PUBLIC]` | Login dengan email (kirim ulang token)       |
 | `POST` | `/applicants/validate-login-token` | `[PUBLIC]` | Validasi token login, dapat `applicantId`    |
@@ -556,8 +551,6 @@ Satu pelamar **tidak dapat** melamar ke vacancy yang sama dua kali. Namun pelama
 }
 ```
 
----
-
 ### Candidates & Pemeringkatan (HR View)
 
 Modul `candidates` adalah inti dari fitur **pemeringkatan dan seleksi kandidat** oleh HR. Data scoring dari FastAPI (SBERT semantic similarity) ditampilkan di sini sebagai dasar pengambilan keputusan rekrutmen.
@@ -565,7 +558,7 @@ Modul `candidates` adalah inti dari fitur **pemeringkatan dan seleksi kandidat**
 #### Daftar Endpoint
 
 | Method   | Endpoint                                     | Auth   | Deskripsi                                           |
-| -------- | -------------------------------------------- | ------ | --------------------------------------------------- |
+| -------- | ----------------------------------------------- | ------ | ------------------------------------------------------ |
 | `GET`    | `/candidates`                                | `[HR]` | List semua kandidat (semua vacancy, pagination)     |
 | `GET`    | `/candidates/table`                          | `[HR]` | Tabel kandidat dengan sort by skor & filter lengkap |
 | `GET`    | `/candidates/summary`                        | `[HR]` | Statistik ringkasan pelamar                         |
@@ -585,8 +578,6 @@ Modul `candidates` adalah inti dari fitur **pemeringkatan dan seleksi kandidat**
 | `PATCH`  | `/candidates/notes/:noteId`                  | `[HR]` | Update catatan                                      |
 | `DELETE` | `/candidates/notes/:noteId`                  | `[HR]` | Hapus catatan                                       |
 
----
-
 #### `GET /candidates/table` — Tabel Pemeringkatan Utama
 
 Endpoint ini adalah **tampilan utama pemeringkatan kandidat**. Mendukung sorting berdasarkan skor semantic similarity dari FastAPI.
@@ -594,7 +585,7 @@ Endpoint ini adalah **tampilan utama pemeringkatan kandidat**. Mendukung sorting
 **Query Parameters:**
 
 | Param       | Tipe            | Default     | Deskripsi                                                 |
-| ----------- | --------------- | ----------- | --------------------------------------------------------- |
+| ----------- | ------------------ | ------------- | -------------------------------------------------------------- |
 | `page`      | number          | `1`         | Halaman                                                   |
 | `limit`     | number          | `10`        | Item per halaman                                          |
 | `search`    | string          | -           | Cari by nama, email, judul vacancy                        |
@@ -653,8 +644,6 @@ Kandidat tanpa skor (belum di-scoring) otomatis diletakkan paling bawah (`NULLS 
   }
 }
 ```
-
----
 
 #### `GET /candidates/:applicationId` — Detail Kandidat + Breakdown Scoring
 
@@ -724,8 +713,6 @@ Menampilkan detail lengkap kandidat termasuk **breakdown similarity score per pe
 }
 ```
 
----
-
 #### `GET /candidates/compare` — Komparasi Kandidat
 
 Bandingkan beberapa kandidat sekaligus untuk memudahkan keputusan seleksi. Maksimal 10 kandidat.
@@ -763,8 +750,6 @@ Authorization: Bearer <hr-token>
 }
 ```
 
----
-
 #### `PATCH /candidates/:applicationId/move-stage` — Pindah Stage
 
 Setelah HR meninjau, kandidat dapat dipindahkan ke stage berikutnya. Skor manual per stage dapat ditambahkan.
@@ -778,8 +763,6 @@ Setelah HR meninjau, kandidat dapat dipindahkan ke stage berikutnya. Skor manual
 
 Sistem akan menghitung `currentScore` secara otomatis sebagai **rata-rata semua skor stage** yang telah dilalui.
 
----
-
 #### `PATCH /candidates/:applicationId/status` — Update Status
 
 ```json
@@ -790,8 +773,6 @@ Sistem akan menghitung `currentScore` secara otomatis sebagai **rata-rata semua 
 ```
 
 **Nilai status yang valid:** `applied`, `in_review`, `shortlisted`, `hired`, `rejected`
-
----
 
 #### Alur Pemeringkatan di Sistem
 
@@ -808,7 +789,7 @@ HR buka GET /candidates/table
 ┌──────┴────────────────────────────────────────┐
 │  Peringkat  │  Nama            │  Skor        │
 │─────────────┼──────────────────┼──────────────│
-│  #1         │  Prima N.        │  0.382  ⭐   │
+│  #1         │  Prima N.        │  0.382       │
 │  #2         │  Ridho F.        │  0.271       │
 │  #3         │  Naufal H.       │  0.203       │
 └──────────────────────────────────────────────┘
@@ -886,7 +867,7 @@ FASTAPI_BASE_URL=http://localhost:8000
 
 Untuk FastAPI Screening Service, pastikan:
 
-- File `screening-service/.env` memiliki konfigurasi model LLM (Groq/Ollama)
+- File `screening-service/.env` memiliki konfigurasi model LLM
 - Service berjalan di port `8000` sebelum endpoint apply dipanggil
 
 ---
@@ -957,7 +938,7 @@ Semua endpoint menggunakan format response yang konsisten:
 ```
 
 | responseCode | Keterangan            |
-| ------------ | --------------------- |
+| ------------- | ------------------------ |
 | `200--00`    | Success               |
 | `201--00`    | Successfully Created  |
 | `400--00`    | Bad Request           |
@@ -970,7 +951,7 @@ Semua endpoint menggunakan format response yang konsisten:
 ## Status Aplikasi
 
 | Status      | Keterangan                                  |
-| ----------- | ------------------------------------------- |
+| ----------- | --------------------------------------------- |
 | `new`       | Application baru dibuat saat register       |
 | `applied`   | Pelamar sudah submit data + scoring selesai |
 | `in_review` | Sedang ditinjau HR                          |
@@ -982,7 +963,7 @@ Semua endpoint menggunakan format response yang konsisten:
 ## Status Vacancy
 
 | Status      | Keterangan                                    |
-| ----------- | --------------------------------------------- |
+| ----------- | ------------------------------------------------ |
 | `draft`     | Masih dalam pengerjaan, tidak terlihat publik |
 | `published` | Aktif dan terlihat di `/public/vacancies`     |
 | `closed`    | Pendaftaran ditutup                           |
@@ -990,4 +971,4 @@ Semua endpoint menggunakan format response yang konsisten:
 
 ---
 
-_Sistem Rekrutmen dengan Pemeringkatan Pelamar Bendasarkan Kesesuaian Pengalaman Kerja Berbasis Semantic Similarity._
+_Sistem Rekrutmen dengan Pemeringkatan Pelamar Berdasarkan Kesesuaian Pengalaman Kerja Berbasis Semantic Similarity._
